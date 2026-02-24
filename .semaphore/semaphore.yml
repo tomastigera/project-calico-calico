@@ -264,6 +264,10 @@ promotions:
     pipeline_file: push-images/voltron.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push webhooks images
+    pipeline_file: push-images/webhooks.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push webhooks-processor images
     pipeline_file: push-images/webhooks-processor.yml
     auto_promote:

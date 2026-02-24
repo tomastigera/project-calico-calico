@@ -14,11 +14,12 @@ venv/
 
 # Test binary, built with `go test -c`
 *.test
-*.coverprofile
 
 # Code coverage files
-cover.out
+*.coverprofile
 cover.html
+cover.out
+coverage.profile
 
 # Produced as part of release
 node/windows-packaging/CalicoWindows/confd/config-bgp.ps1
