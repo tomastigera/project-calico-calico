@@ -42,7 +42,7 @@ bin/LICENSE: ../LICENSE.md
 ###############################################################################
 # UTs
 ###############################################################################
-ci: static-checks ut
+ci: clean static-checks image ut
 ut:
 	$(DOCKER_GO_BUILD) go test ./... -coverprofile coverage.profile -race -count 1
 
