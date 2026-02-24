@@ -1,8 +1,8 @@
-# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 
 FROM almalinux:10 AS builder
 
-ARG DAQ_VERSION=3.0.23
+ARG DAQ_VERSION=3.0.25
 ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
