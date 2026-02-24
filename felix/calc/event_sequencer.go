@@ -52,8 +52,8 @@ type EndpointComputedData interface {
 // EndpointUpdate contains information about updates applied to the endpoint.
 type endpointUpdate struct {
 	endpoint     any
-	peerData     *EndpointBGPPeer
 	computedData []EndpointComputedData
+	peerData     *EndpointBGPPeer
 	tierInfo     []TierInfo
 }
 
@@ -450,12 +450,7 @@ func (buf *EventSequencer) flushProfileDeletes() {
 	}
 }
 
-func ModelWorkloadEndpointToProto(
-	ep *model.WorkloadEndpoint,
-	computedData []EndpointComputedData,
-	peerData *EndpointBGPPeer,
-	tiers []*proto.TierInfo,
-) *proto.WorkloadEndpoint {
+func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, computedData []EndpointComputedData, peerData *EndpointBGPPeer, tiers []*proto.TierInfo) *proto.WorkloadEndpoint {
 	mac := ""
 	if ep.Mac != nil {
 		mac = ep.Mac.String()
@@ -575,8 +570,8 @@ func (buf *EventSequencer) OnEndpointTierUpdate(
 		buf.pendingEndpointDeletes.Discard(endpointKey)
 		buf.pendingEndpointUpdates[endpointKey] = endpointUpdate{
 			endpoint:     endpoint,
-			peerData:     peerData,
 			computedData: computedData,
+			peerData:     peerData,
 			tierInfo:     filteredTiers,
 		}
 	}
@@ -592,15 +587,13 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
 
-			protoEp := ModelWorkloadEndpointToProto(wlep, endpointUpdate.computedData, endpointUpdate.peerData, tiers)
-
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,
 					WorkloadId:     key.WorkloadID,
 					EndpointId:     key.EndpointID,
 				},
-				Endpoint: protoEp,
+				Endpoint: ModelWorkloadEndpointToProto(wlep, endpointUpdate.computedData, endpointUpdate.peerData, tiers),
 			})
 
 		case model.HostEndpointKey:
