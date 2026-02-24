@@ -64,7 +64,7 @@ func generateStateFile(path string, stateTokens map[string]string) error {
 }
 
 func writeStateFile(name, token string) error {
-	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}

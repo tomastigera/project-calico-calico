@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -81,5 +82,8 @@ func getToken(ctx context.Context, logs *cloudwatchlogs.Client, group, stream st
 		return "", err
 	}
 
+	if resp.NextForwardToken == nil {
+		return "", fmt.Errorf("no forward token returned for stream %s", stream)
+	}
 	return *resp.NextForwardToken, nil
 }
