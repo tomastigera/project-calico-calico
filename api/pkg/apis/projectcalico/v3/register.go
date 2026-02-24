@@ -71,8 +71,6 @@ var (
 		// Enterprise-only types.
 		&AlertException{},
 		&AlertExceptionList{},
-		&AuthenticationReview{},
-		&AuthenticationReviewList{},
 		&AuthorizationReview{},
 		&AuthorizationReviewList{},
 		&DeepPacketInspection{},

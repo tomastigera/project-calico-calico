@@ -139,22 +139,6 @@ func (_m *MockClientSet) AppsV1beta2() v1beta2.AppsV1beta2Interface {
 	return r0
 }
 
-// AuthenticationReviews provides a mock function with given fields:
-func (_m *MockClientSet) AuthenticationReviews() v3.AuthenticationReviewInterface {
-	ret := _m.Called()
-
-	var r0 v3.AuthenticationReviewInterface
-	if rf, ok := ret.Get(0).(func() v3.AuthenticationReviewInterface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v3.AuthenticationReviewInterface)
-		}
-	}
-
-	return r0
-}
-
 // AuthenticationV1 provides a mock function with given fields:
 func (_m *MockClientSet) AuthenticationV1() authenticationv1.AuthenticationV1Interface {
 	ret := _m.Called()

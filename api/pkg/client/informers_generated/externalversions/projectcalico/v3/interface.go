@@ -12,8 +12,6 @@ import (
 type Interface interface {
 	// AlertExceptions returns a AlertExceptionInformer.
 	AlertExceptions() AlertExceptionInformer
-	// AuthenticationReviews returns a AuthenticationReviewInformer.
-	AuthenticationReviews() AuthenticationReviewInformer
 	// AuthorizationReviews returns a AuthorizationReviewInformer.
 	AuthorizationReviews() AuthorizationReviewInformer
 	// BFDConfigurations returns a BFDConfigurationInformer.
@@ -112,11 +110,6 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // AlertExceptions returns a AlertExceptionInformer.
 func (v *version) AlertExceptions() AlertExceptionInformer {
 	return &alertExceptionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// AuthenticationReviews returns a AuthenticationReviewInformer.
-func (v *version) AuthenticationReviews() AuthenticationReviewInformer {
-	return &authenticationReviewInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // AuthorizationReviews returns a AuthorizationReviewInformer.

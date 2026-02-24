@@ -45,7 +45,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -3592,62 +3591,6 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("expected error creating invalidClusterInfo with name other than \"default\"")
 	}
 
-	return nil
-}
-
-// TestAuthenticationReviewsClient exercises the AuthenticationReviews client.
-func TestAuthenticationReviewsClient(t *testing.T) {
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
-				return &v3.AuthenticationReview{}
-			}, true)
-			defer shutdownServer()
-			if err := testAuthenticationReviewsClient(client); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-
-	if !t.Run("test-authentication-reviews", rootTestFunc()) {
-		t.Errorf("test-authentication-reviews failed")
-	}
-}
-
-func testAuthenticationReviewsClient(client calicoclient.Interface) error {
-	ar := v3.AuthenticationReview{}
-	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-
-	name := "name"
-	groups := []string{name}
-	extra := map[string][]string{name: groups}
-	uid := "uid"
-
-	ctx := request.NewContext()
-	ctx = request.WithUser(ctx, &user.DefaultInfo{
-		Name:   name,
-		Groups: groups,
-		Extra:  extra,
-		UID:    uid,
-	})
-
-	auth := authenticationreview.NewREST()
-	obj, err := auth.Create(ctx, auth.New(), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	if obj == nil {
-		return errors.New("expected an authentication review")
-	}
-
-	status := obj.(*v3.AuthenticationReview).Status
-	if status.Name != name || status.Groups[0] != name || status.UID != uid || status.Extra[name][0] != name {
-		return errors.New("unexpected user info from authentication review")
-	}
 	return nil
 }
 

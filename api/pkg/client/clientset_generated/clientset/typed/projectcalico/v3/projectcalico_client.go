@@ -15,7 +15,6 @@ import (
 type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
 	AlertExceptionsGetter
-	AuthenticationReviewsGetter
 	AuthorizationReviewsGetter
 	BFDConfigurationsGetter
 	BGPConfigurationsGetter
@@ -66,10 +65,6 @@ type ProjectcalicoV3Client struct {
 
 func (c *ProjectcalicoV3Client) AlertExceptions() AlertExceptionInterface {
 	return newAlertExceptions(c)
-}
-
-func (c *ProjectcalicoV3Client) AuthenticationReviews() AuthenticationReviewInterface {
-	return newAuthenticationReviews(c)
 }
 
 func (c *ProjectcalicoV3Client) AuthorizationReviews() AuthorizationReviewInterface {

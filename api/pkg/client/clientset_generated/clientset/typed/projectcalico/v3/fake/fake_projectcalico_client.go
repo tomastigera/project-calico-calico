@@ -19,10 +19,6 @@ func (c *FakeProjectcalicoV3) AlertExceptions() v3.AlertExceptionInterface {
 	return newFakeAlertExceptions(c)
 }
 
-func (c *FakeProjectcalicoV3) AuthenticationReviews() v3.AuthenticationReviewInterface {
-	return newFakeAuthenticationReviews(c)
-}
-
 func (c *FakeProjectcalicoV3) AuthorizationReviews() v3.AuthorizationReviewInterface {
 	return newFakeAuthorizationReviews(c)
 }
