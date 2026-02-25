@@ -710,6 +710,7 @@ rules:
       - licensekeys
       - globalalerts
       - globalalerttemplates
+      - uisettings
       - uisettingsgroups
       - uisettingsgroups/data
       - networkpolicies
