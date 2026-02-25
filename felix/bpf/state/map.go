@@ -133,7 +133,8 @@ type State struct {
 	_ [56]byte
 }
 
-const expectedSize = 512
+const expectedSize = 528
+const entrySize = 528
 
 func (s *State) AsBytes() []byte {
 	bPtr := (*[expectedSize]byte)(unsafe.Pointer(s))
@@ -152,10 +153,10 @@ func StateFromBytes(bytes []byte) State {
 var MapParameters = maps.MapParameters{
 	Type:       "percpu_array",
 	KeySize:    4,
-	ValueSize:  expectedSize,
+	ValueSize:  entrySize,
 	MaxEntries: 2,
 	Name:       "cali_state",
-	Version:    5,
+	Version:    7,
 }
 
 func Map() maps.Map {
@@ -166,7 +167,7 @@ func MapForTest() maps.Map {
 	return maps.NewPinnedMap(maps.MapParameters{
 		Type:       "array",
 		KeySize:    4,
-		ValueSize:  expectedSize,
+		ValueSize:  entrySize,
 		MaxEntries: 2,
 		Name:       "test_state",
 	})

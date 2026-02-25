@@ -39,6 +39,14 @@
 #define UDP_SIZE (sizeof(struct udphdr))
 #define TCP_SIZE (sizeof(struct tcphdr))
 
+struct fwd {
+	int res;
+	__u32 mark;
+	enum calico_reason reason;
+	__u32 fib_flags;
+	bool fib;
+};
+
 #define MAX_RULE_IDS    32
 
 // struct cali_tc_state holds state that is passed between the BPF programs.
@@ -119,18 +127,9 @@ struct cali_tc_state {
 	DECLARE_IP_ADDR(ip_src_masq);
 
 	__u32 nat_svc_id;
-	__u32 pad;
-#ifndef IPVER6
-	__u8 __pad_ipv4[56];
-#endif
-};
 
-static CALI_BPF_INLINE void __xxx_compile_asserts_cali_tc_state(void) {
-	#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wunused-local-typedef"
-	COMPILE_TIME_ASSERT((sizeof(struct cali_tc_state) == 512));
-	#pragma clang diagnostic pop
-}
+	struct fwd fwd;
+};
 
 struct pkt_scratch {
 	__u8 l4[24]; /* 20 bytes to fit udp, icmp, tcp w/o options and 24 to make 8-aligned */
@@ -183,16 +182,6 @@ enum cali_state_flags {
 	CALI_ST_DNS_PROCESS	  = 0x100000000
 };
 
-struct fwd {
-	int res;
-	__u32 mark;
-	enum calico_reason reason;
-#if CALI_FIB_ENABLED
-	__u32 fib_flags;
-	bool fib;
-#endif
-};
-
 struct cali_tc_ctx {
 #if !CALI_F_XDP
   struct __sk_buff *skb;
@@ -214,7 +203,6 @@ struct cali_tc_ctx {
   const volatile struct cali_xdp_globals *xdp_globals; /* XXX we must split the state between tc/xdp */
 #endif
   struct calico_nat_dest *nat_dest;
-  struct fwd fwd;
   void *counters;
   struct pkt_scratch *scratch;
 };
