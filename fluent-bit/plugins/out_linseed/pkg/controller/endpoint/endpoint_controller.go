@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package endpoint
 
 import (
@@ -45,12 +45,10 @@ func (c *EndpointController) Run(stopCh <-chan struct{}) error {
 	if c.endpoint == "" {
 		logrus.Debug("empty endpoint from environment variable or plugin config. read cluster resource instead")
 
-		endpoint, err := c.getAndWatchEndpoint()
-		if err != nil {
+		if err := c.getAndWatchEndpoint(); err != nil {
 			return err
 		}
-		c.endpoint = endpoint
-		logrus.Infof("log ingestion endpoint is set to %q", c.endpoint)
+		logrus.Infof("log ingestion endpoint is set to %q", c.Endpoint())
 
 		// Start initializes all requested informers. They are handled in goroutines
 		// which run until the stop channel gets closed.
@@ -70,7 +68,7 @@ func (c *EndpointController) Endpoint() string {
 	return c.endpoint
 }
 
-func (c *EndpointController) getAndWatchEndpoint() (string, error) {
+func (c *EndpointController) getAndWatchEndpoint() error {
 	backoff := wait.Backoff{
 		Duration: 15 * time.Second,
 		Factor:   2,
@@ -78,25 +76,34 @@ func (c *EndpointController) getAndWatchEndpoint() (string, error) {
 		Steps:    6,
 	}
 
-	// get NonClusterHost resource
+	// Context timeout must exceed the maximum total backoff duration.
+	// With Steps=6, Factor=2, Duration=15s, Jitter=0.2:
+	// Worst-case total sleep = 15*(1+2+4+8+16)*1.2 ≈ 9m18s, plus API call latency per step.
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+
 	var nch *unstructured.Unstructured
 	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		var err error
-		nch, err = nonclusterhost.GetNonClusterHost(context.TODO(), c.dynamicClient)
+		nch, err = nonclusterhost.GetNonClusterHost(ctx, c.dynamicClient)
 		if err != nil {
+			// If the context has expired, return a permanent error to stop retrying
+			// instead of burning remaining backoff steps on dead calls.
+			if ctx.Err() != nil {
+				return false, ctx.Err()
+			}
 			logrus.WithError(err).Info("failed to get nonclusterhost resource. will retry...")
-			// if we failed to get the resource due to network or cluster issues, we will retry.
 			return false, nil
 		}
 		return true, nil
 	}); err != nil {
-		return "", err
+		return err
 	}
 
 	// extract endpoint from the NonClusterHost resource
 	endpoint, err := extractEndpoint(nch)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// watch for NonClusterHost resource changes
@@ -104,10 +111,16 @@ func (c *EndpointController) getAndWatchEndpoint() (string, error) {
 	if _, err = nonClusterHostInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: c.updateFunc,
 	}); err != nil {
-		return "", err
+		return err
 	}
 
-	return endpoint, nil
+	// Set the endpoint under the lock since the informer's updateFunc may
+	// already be writing to c.endpoint concurrently after cache sync.
+	c.mu.Lock()
+	c.endpoint = endpoint
+	c.mu.Unlock()
+
+	return nil
 }
 
 func (c *EndpointController) updateFunc(oldObj, newObj any) {

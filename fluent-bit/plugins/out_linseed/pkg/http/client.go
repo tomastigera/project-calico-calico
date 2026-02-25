@@ -1,10 +1,9 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package http
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -43,9 +42,9 @@ func NewClient(cfg *config.Config) (*Client, error) {
 	return &Client{
 		Client: &http.Client{
 			Transport: &http.Transport{
-				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-					return net.DialTimeout(network, addr, defaultConnectTimeout)
-				},
+				DialContext: (&net.Dialer{
+					Timeout: defaultConnectTimeout,
+				}).DialContext,
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: cfg.InsecureSkipVerify,
 					RootCAs:            certPool(cfg),
@@ -68,7 +67,7 @@ func (c *Client) Do(endpoint, tag string, ndjsonBuffer *bytes.Buffer) error {
 	}
 
 	logrus.WithField("tag", tag).Debugf("sending logs to %q", url)
-	req, err := http.NewRequest("POST", url, io.NopCloser(bytes.NewBuffer(ndjsonBuffer.Bytes())))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(ndjsonBuffer.Bytes()))
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,12 @@ func (c *Client) Do(endpoint, tag string, ndjsonBuffer *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		// Drain the body before closing so the underlying TCP connection can be
+		// reused by the transport's connection pool.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -96,6 +100,12 @@ func (c *Client) Do(endpoint, tag string, ndjsonBuffer *bytes.Buffer) error {
 			if _, err := c.tokenProvider.Refresh(); err != nil {
 				logrus.WithError(err).Warn("failed to refresh token")
 			}
+		}
+
+		// Read a truncated excerpt of the response body for diagnostics.
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		if len(body) > 0 {
+			return fmt.Errorf("error response from server %q: %s", resp.Status, string(body))
 		}
 		return fmt.Errorf("error response from server %q", resp.Status)
 	}

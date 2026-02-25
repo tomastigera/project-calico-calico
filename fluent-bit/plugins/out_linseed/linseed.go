@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -72,6 +72,11 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		return output.FLB_ERROR
 	}
 
+	if count == 0 {
+		logrus.Debug("empty flush buffer, skipping")
+		return output.FLB_OK
+	}
+
 	// post to the cluster ingestion endpoint
 	// when FLB_RETRY is returned to the fluent-bit engine, it will ask the scheduler to retry
 	// to flush the data. The fluent-bit scheduler will decide how many seconds to wait.
@@ -91,7 +96,9 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 
 //export FLBPluginExit
 func FLBPluginExit() int {
-	close(stopCh)
+	if stopCh != nil {
+		close(stopCh)
+	}
 	return output.FLB_OK
 }
 
@@ -106,7 +113,7 @@ func configureLogging() {
 		if err == nil {
 			logLevel = parsedLevel
 		} else {
-			logrus.WithError(err).Warnf("failed to parse log level %q, defaulting to INFO.", parsedLevel)
+			logrus.WithError(err).Warnf("failed to parse log level %q, defaulting to INFO.", rawLogLevel)
 		}
 	}
 

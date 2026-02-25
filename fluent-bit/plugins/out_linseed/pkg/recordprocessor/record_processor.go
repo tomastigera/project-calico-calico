@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package recordprocessor
 
 import (
@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/sirupsen/logrus"
 )
 
 type Record map[any]any
@@ -45,7 +46,7 @@ func (rp *RecordProcessor) Process(data unsafe.Pointer, length int) (*bytes.Buff
 // prevent base64-encoding []byte values (default json.Encoder rule) by
 // converting them to strings
 func toStringSlice(slice []any) []any {
-	var s []any
+	s := make([]any, 0, len(slice))
 	for _, v := range slice {
 		switch t := v.(type) {
 		case []byte:
@@ -62,10 +63,11 @@ func toStringSlice(slice []any) []any {
 }
 
 func toStringMap(record Record) map[string]any {
-	m := make(map[string]any)
+	m := make(map[string]any, len(record))
 	for k, v := range record {
 		key, ok := k.(string)
 		if !ok {
+			logrus.Debugf("dropping non-string record key: %v (type %T)", k, k)
 			continue
 		}
 		switch t := v.(type) {

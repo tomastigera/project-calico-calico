@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package nonclusterhost
 
@@ -35,6 +35,7 @@ const (
 	typhaClientCommonName = "typha-client"
 
 	nonClusterHostSuffix = "-noncluster-host"
+	caBundleKey          = "caBundle"
 )
 
 type byo struct {
@@ -99,12 +100,12 @@ func NewCertificateManager(ctx context.Context, caFile, pkFile, certFile string,
 }
 
 func (m *CertificateManager) MaybeRenewCertificate(renewalThreshold time.Duration) error {
-	valid, err := m.isCertificateValid(renewalThreshold)
+	renew, err := m.shouldRenewCertificate(renewalThreshold)
 	if err != nil {
-		return err
+		logrus.WithError(err).Warn("Certificate validation failed")
 	}
 
-	if !valid {
+	if renew {
 		logrus.Info("Certificate is not valid or is nearing expiry, attempting to renew")
 
 		if byo, err := m.fetchBYOSecrets(); err != nil {
@@ -118,28 +119,12 @@ func (m *CertificateManager) MaybeRenewCertificate(renewalThreshold time.Duratio
 			}
 		} else {
 			// Send a CSR to the Tigera Operator signer to request a new certificate.
+			// Note: requestAndWriteCertificate already uses m.ctx internally, so
+			// context cancellation is handled within the called functions.
 			logrus.Info("Requesting new certificate from Tigera Operator")
 
-			resCh := make(chan error, 1)
-			defer close(resCh)
-
-			go func() {
-				// Rotate private key and request a new certificate when the current certificate is expired.
-				if err := m.requestAndWriteCertificate(); err != nil {
-					resCh <- err
-				}
-				resCh <- nil
-			}()
-
-			select {
-			case err := <-resCh:
-				if err != nil {
-					return err
-				}
-			case <-m.ctx.Done():
-				if err := m.ctx.Err(); err != nil {
-					return err
-				}
+			if err := m.requestAndWriteCertificate(); err != nil {
+				return err
 			}
 		}
 	}
@@ -155,10 +140,15 @@ func (m *CertificateManager) fetchBYOSecrets() (*byo, error) {
 		return nil, err
 	}
 
+	// At this point the typha-ca ConfigMap exists, indicating BYO is intended.
+	// If subsequent resources are missing, log a warning so partial BYO
+	// misconfigurations are visible rather than silently falling through to
+	// operator-signed CSR.
 	secretName := nodeCertSecretName + nonClusterHostSuffix
 	nodeSecret, err := m.k8sClientSet.CoreV1().Secrets(tigeraOperatorNamespace).Get(m.ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			logrus.Warnf("BYO typha-ca ConfigMap exists but secret %q not found; falling back to operator-signed certificate", secretName)
 			return nil, nil
 		}
 		return nil, err
@@ -168,6 +158,7 @@ func (m *CertificateManager) fetchBYOSecrets() (*byo, error) {
 	typhaSecret, err := m.k8sClientSet.CoreV1().Secrets(tigeraOperatorNamespace).Get(m.ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			logrus.Warnf("BYO typha-ca ConfigMap and node secret exist but secret %q not found; falling back to operator-signed certificate", secretName)
 			return nil, nil
 		}
 		return nil, err
@@ -187,31 +178,35 @@ func (m *CertificateManager) fetchBYOSecrets() (*byo, error) {
 	}, nil
 }
 
-func (m *CertificateManager) isCertificateValid(renewalThreshold time.Duration) (bool, error) {
-	// Validate both the certificate and CA bundle
-	certs := []string{m.cfg.CertPath, m.cfg.CACertPath}
-	for _, cert := range certs {
-		certData, err := os.ReadFile(cert)
+// shouldRenewCertificate checks whether the certificate or CA bundle needs renewal.
+// It returns true if any certificate is missing, not yet valid, expired, or within
+// the renewal threshold window.
+func (m *CertificateManager) shouldRenewCertificate(renewalThreshold time.Duration) (bool, error) {
+	certPaths := []string{m.cfg.CertPath, m.cfg.CACertPath}
+	for _, certPath := range certPaths {
+		certData, err := os.ReadFile(certPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return false, nil
+				return true, nil
 			}
-			return false, err
+			return true, err
 		}
 
-		cert, err := parseCertificate(certData)
+		certs, err := parseCertificates(certData)
 		if err != nil {
-			return false, err
+			return true, err
 		}
 
 		now := time.Now()
-		if now.Before(cert.NotBefore) {
-			return false, errors.New("certificate is not valid yet")
-		} else if now.After(cert.NotAfter.Add(-renewalThreshold)) {
-			return false, errors.New("certificate has reached its renewal threshold or has expired")
+		for _, cert := range certs {
+			if now.Before(cert.NotBefore) {
+				return true, fmt.Errorf("certificate %s (CN=%s) is not valid yet (notBefore=%s)", certPath, cert.Subject.CommonName, cert.NotBefore)
+			} else if now.After(cert.NotAfter.Add(-renewalThreshold)) {
+				return true, fmt.Errorf("certificate %s (CN=%s) has reached its renewal threshold or has expired (notAfter=%s)", certPath, cert.Subject.CommonName, cert.NotAfter)
+			}
 		}
 	}
-	return true, nil
+	return false, nil
 }
 
 func (m *CertificateManager) requestAndWriteCertificate() error {
@@ -299,7 +294,7 @@ func (m *CertificateManager) updateNodeEnvironmentFile(key, value string) error 
 	}
 
 	output := strings.Join(lines, "\n") + "\n"
-	return os.WriteFile(m.nodeEnvironmentFilePath, []byte(output), 0644)
+	return os.WriteFile(m.nodeEnvironmentFilePath, []byte(output), 0o644)
 }
 
 func (m *CertificateManager) writeBYOCertificate(byo *byo) error {
@@ -308,13 +303,25 @@ func (m *CertificateManager) writeBYOCertificate(byo *byo) error {
 	}
 
 	// write certificate files to disk
-	if err := os.WriteFile(m.cfg.KeyPath, byo.nodeSecret.Data[corev1.TLSPrivateKeyKey], 0600); err != nil {
+	keyData, ok := byo.nodeSecret.Data[corev1.TLSPrivateKeyKey]
+	if !ok {
+		return errors.New("TLS private key not found in node secret")
+	}
+	if err := os.WriteFile(m.cfg.KeyPath, keyData, 0o600); err != nil {
 		return err
 	}
-	if err := os.WriteFile(m.cfg.CertPath, byo.nodeSecret.Data[corev1.TLSCertKey], 0644); err != nil {
+	certData, ok := byo.nodeSecret.Data[corev1.TLSCertKey]
+	if !ok {
+		return errors.New("TLS certificate not found in node secret")
+	}
+	if err := os.WriteFile(m.cfg.CertPath, certData, 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(m.cfg.CACertPath, []byte(byo.typhaCA.Data["caBundle"]), 0644); err != nil {
+	caBundle, ok := byo.typhaCA.Data[caBundleKey]
+	if !ok {
+		return fmt.Errorf("CA bundle key %q not found in ConfigMap", caBundleKey)
+	}
+	if err := os.WriteFile(m.cfg.CACertPath, []byte(caBundle), 0o644); err != nil {
 		return err
 	}
 
@@ -332,16 +339,45 @@ func (m *CertificateManager) writeBYOCertificate(byo *byo) error {
 	return nil
 }
 
-func parseCertificate(certPEM []byte) (*x509.Certificate, error) {
-	block, _ := pem.Decode(certPEM)
-	if block == nil || block.Type != "CERTIFICATE" {
-		return nil, errors.New("failed to decode certificate")
+// parseCertificates parses all PEM-encoded certificates in the given data.
+// This handles CA bundles that may contain multiple certificates in a chain.
+func parseCertificates(certPEM []byte) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+	rest := certPEM
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		certs = append(certs, cert)
 	}
+	if len(certs) == 0 {
+		return nil, errors.New("failed to decode any certificate from PEM data")
+	}
+	return certs, nil
+}
 
-	return x509.ParseCertificate(block.Bytes)
+// parseCertificate parses the first PEM-encoded certificate from the given data.
+func parseCertificate(certPEM []byte) (*x509.Certificate, error) {
+	certs, err := parseCertificates(certPEM)
+	if err != nil {
+		return nil, err
+	}
+	return certs[0], nil
 }
 
 func parseCommonNameAndURISAN(secret *corev1.Secret) (string, string, error) {
+	if secret == nil {
+		return "", "", errors.New("secret is nil")
+	}
 	certData, ok := secret.Data[corev1.TLSCertKey]
 	if !ok {
 		return "", "", errors.New("failed to get TLS certificate from Typha certificate secret")

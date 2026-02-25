@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package http
 
@@ -93,6 +93,15 @@ var _ = Describe("Linseed out plugin http tests", func() {
 			err := client.Do(server.URL, "flows", &ndjsonBuffer)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error response from server"))
+		})
+
+		It("should return error when token provider fails", func() {
+			mockTokenProvider.On("Token").Return("", fmt.Errorf("token provider error"))
+
+			client.tokenProvider = mockTokenProvider
+			err := client.Do("https://1.2.3.4:5678", "flows", &ndjsonBuffer)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("token provider error"))
 		})
 
 		It("should refresh token when http response is 401", func() {

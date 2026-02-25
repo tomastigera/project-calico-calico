@@ -1,9 +1,10 @@
-// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package http
 
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
@@ -31,6 +32,7 @@ type TokenProvider interface {
 }
 
 type Token struct {
+	mu        sync.RWMutex
 	clientset kubernetes.Interface
 
 	serviceAccountName string
@@ -61,21 +63,39 @@ func NewToken(cfg *config.Config) (*Token, error) {
 // Token returns the non-cluster host ServiceAccount token for forwarding logs to a cluster.
 // Tokens will be renewed every tokenExpiration interval.
 func (c *Token) Token() (string, error) {
-	if time.Until(c.expiration) < tokenRenewal {
-		logrus.Infof("token expired for serviceaccount %q", c.serviceAccountName)
+	c.mu.RLock()
+	exp := c.expiration
+	tok := c.token
+	c.mu.RUnlock()
+
+	if time.Until(exp) < tokenRenewal {
+		logrus.Infof("token for serviceaccount %q is due for renewal (expires in %s)", c.serviceAccountName, time.Until(exp).Round(time.Second))
 		return c.Refresh()
 	}
 
-	return c.token, nil
+	return tok, nil
 }
 
 func (c *Token) Refresh() (string, error) {
+	// Use a full lock for the entire refresh operation to prevent multiple
+	// concurrent goroutines from issuing redundant token requests.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check: another goroutine may have already refreshed the token
+	// while we were waiting for the lock.
+	if time.Until(c.expiration) >= tokenRenewal {
+		return c.token, nil
+	}
+
 	token, expiration, err := getServiceAccountToken(c.clientset.CoreV1(), resource.CalicoNamespaceName, c.serviceAccountName)
 	if err != nil {
 		return "", err
 	}
+
 	c.expiration = expiration
 	c.token = token
+
 	logrus.Infof("successfully refreshed token for serviceaccount %q", c.serviceAccountName)
 	return token, nil
 }

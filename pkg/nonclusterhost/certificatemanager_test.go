@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package nonclusterhost
 
@@ -80,8 +80,8 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 		Expect(byo).To(BeNil())
 	})
 
-	Context("certificate validation", func() {
-		It("should validate an existing certificate", func() {
+	Context("certificate renewal check", func() {
+		It("should not require renewal for a fresh certificate", func() {
 			// write valid certificate files
 			ca, err := cryptoutils.NewCA("nch-certman-test-ca")
 			Expect(err).NotTo(HaveOccurred())
@@ -109,31 +109,31 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			// The certificate created by cryptoutils is valid for 10 years,
-			// so it should be valid even with a 90-day renewal threshold
+			// so it should not need renewal with a 90-day threshold
 			renewalThreshold := 90 * 24 * time.Hour
-			valid, err := certMan.isCertificateValid(renewalThreshold)
+			renew, err := certMan.shouldRenewCertificate(renewalThreshold)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(valid).To(BeTrue())
+			Expect(renew).To(BeFalse())
 
-			// A very long renewal threshold should invalidate the certificate
+			// A very long renewal threshold should trigger renewal
 			renewalThreshold = 11 * 365 * 24 * time.Hour
-			valid, err = certMan.isCertificateValid(renewalThreshold)
+			renew, err = certMan.shouldRenewCertificate(renewalThreshold)
 			Expect(err).To(HaveOccurred())
-			Expect(valid).To(BeFalse())
+			Expect(renew).To(BeTrue())
 		})
 
-		It("should return false but no error for missing certificate files", func() {
+		It("should require renewal when certificate files are missing", func() {
 			certMan, err := NewCertificateManager(context.TODO(), caFilePath, pkFilePath, certFilePath, envFilePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(certMan).NotTo(BeNil())
 
 			renewalThreshold := 9 * 24 * time.Hour
-			valid, err := certMan.isCertificateValid(renewalThreshold)
+			renew, err := certMan.shouldRenewCertificate(renewalThreshold)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(valid).To(BeFalse())
+			Expect(renew).To(BeTrue())
 		})
 
-		It("should return false and error for invalid certificate files", func() {
+		It("should require renewal when certificate files are invalid", func() {
 			certFile, err := os.OpenFile(certFilePath, os.O_CREATE|os.O_WRONLY, 0o644)
 			defer func() { Expect(certFile.Close()).NotTo(HaveOccurred()) }()
 			Expect(err).NotTo(HaveOccurred())
@@ -145,9 +145,49 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(certMan).NotTo(BeNil())
 
 			renewalThreshold := 9 * 24 * time.Hour
-			valid, err := certMan.isCertificateValid(renewalThreshold)
+			renew, err := certMan.shouldRenewCertificate(renewalThreshold)
 			Expect(err).To(HaveOccurred())
-			Expect(valid).To(BeFalse())
+			Expect(renew).To(BeTrue())
+		})
+
+		It("should validate all certificates in a CA bundle chain", func() {
+			// Create two CAs and concatenate their certs into a single CA bundle
+			ca1, err := cryptoutils.NewCA("ca-one")
+			Expect(err).NotTo(HaveOccurred())
+			ca2, err := cryptoutils.NewCA("ca-two")
+			Expect(err).NotTo(HaveOccurred())
+
+			tlsCert, err := ca1.CreateServerCert("some-nch", []string{"some-nch"})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Write the node cert
+			certFile, err := os.OpenFile(certFilePath, os.O_CREATE|os.O_WRONLY, 0o644)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tlsCert.WriteCertificates(certFile)).NotTo(HaveOccurred())
+			Expect(certFile.Close()).NotTo(HaveOccurred())
+
+			// Write a CA bundle with both CA certs concatenated
+			caFile, err := os.OpenFile(caFilePath, os.O_CREATE|os.O_WRONLY, 0o644)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ca1.WriteCertificates(caFile)).NotTo(HaveOccurred())
+			Expect(ca2.WriteCertificates(caFile)).NotTo(HaveOccurred())
+			Expect(caFile.Close()).NotTo(HaveOccurred())
+
+			certMan, err := NewCertificateManager(context.TODO(), caFilePath, pkFilePath, certFilePath, envFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(certMan).NotTo(BeNil())
+
+			// With a reasonable threshold, both certs should be fine
+			renewalThreshold := 90 * 24 * time.Hour
+			renew, err := certMan.shouldRenewCertificate(renewalThreshold)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(renew).To(BeFalse())
+
+			// With a threshold longer than the cert lifetime, renewal should be triggered
+			renewalThreshold = 11 * 365 * 24 * time.Hour
+			renew, err = certMan.shouldRenewCertificate(renewalThreshold)
+			Expect(err).To(HaveOccurred())
+			Expect(renew).To(BeTrue())
 		})
 	})
 
@@ -249,6 +289,21 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			byo, err = certMan.fetchBYOSecrets()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(byo).To(BeNil())
+		})
+
+		It("should detect non-BYO when typha cert secret is absent", func() {
+			// Delete only the typha-certs-noncluster-host secret (CA + node secret still exist)
+			err := fakeClientSet.CoreV1().Secrets("tigera-operator").Delete(context.TODO(), "typha-certs-noncluster-host", metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			certMan, err := NewCertificateManager(context.TODO(), caFilePath, pkFilePath, certFilePath, envFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(certMan).NotTo(BeNil())
+			certMan.k8sClientSet = fakeClientSet
+
+			byo, err := certMan.fetchBYOSecrets()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(byo).To(BeNil())
 		})

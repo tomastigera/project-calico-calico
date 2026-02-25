@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package nonclusterhost
 
@@ -175,10 +175,15 @@ func (c *ConfigGenerator) createToken(ctx context.Context) (string, error) {
 	}
 
 	block, _ := pem.Decode(c.caKey)
+	if block == nil {
+		return "", errors.New("failed to decode CA private key PEM")
+	}
 	var pkey any
-	if pkey, err = x509.ParsePKCS1PrivateKey(block.Bytes); err != nil {
-		if pkey, err = x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
-			return "", err
+	var pkcs1Err error
+	if pkey, pkcs1Err = x509.ParsePKCS1PrivateKey(block.Bytes); pkcs1Err != nil {
+		var pkcs8Err error
+		if pkey, pkcs8Err = x509.ParsePKCS8PrivateKey(block.Bytes); pkcs8Err != nil {
+			return "", fmt.Errorf("failed to parse CA private key as PKCS1 (%v) or PKCS8 (%v)", pkcs1Err, pkcs8Err)
 		}
 	}
 
@@ -195,6 +200,9 @@ func (c *ConfigGenerator) createToken(ctx context.Context) (string, error) {
 			Audience:  jwt.ClaimStrings{TigeraManagerAudience},
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
+			// FIXME(jiawei): We intentionally left the ExpiresAt field unset so the JWT token remains long-lived now.
+			// We need to revisit this decision and defined an appropriate expiration policy once we have clearer
+			// requirements from our customers.
 		},
 		ServiceAccountName: sa.Name,
 		Namespace:          sa.Namespace,
