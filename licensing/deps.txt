@@ -25,11 +25,9 @@ github.com/mailru/easyjson v0.9.0
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee
 github.com/projectcalico/calico
-github.com/projectcalico/calico/lib/std v0.0.0-20251108162545-e9546d52eb7a
 github.com/sirupsen/logrus v1.9.3
 github.com/spf13/cobra v1.10.1
 github.com/spf13/pflag v1.0.10
-github.com/tigera/api v0.0.0-20251017180206-9d7c2da4f711
 github.com/x448/float16 v0.8.4
 go.yaml.in/yaml/v2 v2.4.3
 go.yaml.in/yaml/v3 v3.0.4
