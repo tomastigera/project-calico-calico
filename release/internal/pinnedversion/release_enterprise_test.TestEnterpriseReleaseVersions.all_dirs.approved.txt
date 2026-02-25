@@ -155,7 +155,7 @@
     ui-apis:
       version: v3.22.0-1.0
     upstream-fluentd:
-      version: 1.19.1
+      version: 1.19.2
     voltron:
       version: v3.22.0-1.0
     waf-http-filter:

@@ -31,13 +31,13 @@ RUN gem install async -v 2.24.0 && \
        gem install fluentd -v ${FLUENTD_VERSION} && \
        gem install json -v 2.13.2 && \
        gem install oj -v 3.16.11 && \
-       gem install rexml -v 3.4.2
+       gem install rexml -v 3.4.4
 
 # Calico Enterprise dependencies
-RUN gem install elasticsearch-api -v 8.19.2 && \
+RUN gem install elasticsearch-api -v 8.19.3 && \
        gem install elasticsearch-transport -v 7.17.11 && \
        gem install elasticsearch-xpack -v 7.17.11 && \
-       gem install elasticsearch -v 8.19.2 && \
+       gem install elasticsearch -v 8.19.3 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && \
        gem install fluent-plugin-elasticsearch -v 6.0.0 && \
        gem install fluent-plugin-prometheus -v 2.2.1 && \
