@@ -18,10 +18,10 @@ RUN powershell -Command "Invoke-WebRequest -Uri https://github.com/oneclick/ruby
 RUN type "C:\ProgramData\gemrc" && `
     C:\ruby34\bin\ruby -r yaml -e "path = 'C:/ProgramData/gemrc'; yaml = YAML.safe_load(File.read(path)); yaml['install'] = '--no-document'; yaml['update'] = '--no-document'; File.write(path, YAML.dump(yaml))" && `
     type "C:\ProgramData\gemrc" && `
-    gem install fluentd -v 1.19.1 && `
+    gem install fluentd -v 1.19.2 && `
     gem install json -v 2.13.2 && `
     gem install oj -v 3.16.11 && `
-    gem install rexml -v 3.4.2 && `
+    gem install rexml -v 3.4.4 && `
     gem install win32-event -v 0.6.3 && `
     gem install win32-ipc -v 0.7.0 && `
     gem install win32-service -v 2.3.2 && `
@@ -38,10 +38,10 @@ RUN powershell -Command "Remove-Item -Force C:\ruby34\lib\ruby\gems\3.4.0\cache\
 RUN mklink /D c:\ruby c:\ruby34
 
 # - Install Calico Enterprise dependencies
-RUN gem install elasticsearch-api -v 8.19.2 && `
+RUN gem install elasticsearch-api -v 8.19.3 && `
     gem install elasticsearch-transport -v 7.17.11 && `
     gem install elasticsearch-xpack -v 7.17.11 && `
-    gem install elasticsearch -v 8.19.2 && `
+    gem install elasticsearch -v 8.19.3 && `
     gem install fluent-plugin-cloudwatch-logs -v 0.15.0 && `
     gem install fluent-plugin-elasticsearch -v 6.0.0 && `
     gem install fluent-plugin-prometheus -v 2.2.1 && `

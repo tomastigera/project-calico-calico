@@ -31,7 +31,7 @@
     linseed:
       version: v3.22.0-1.0
     upstream-fluentd:
-      version: 1.19.1
+      version: 1.19.2
   helmRelease: "0"
   calico:
     minor_version: v3.31
