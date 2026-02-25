@@ -389,13 +389,13 @@ func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "validate",
 		Usage: "Post-hashrelease validation (smoke tests)",
-		Flags: []cli.Flag{
+		Flags: append(append([]cli.Flag{
 			&cli.StringFlag{
 				Name:  "hashrelease-metadata-file",
 				Usage: "Path to hashrelease metadata file for setting URL environment variables",
 				Value: filepath.Join(cfg.RepoRootDir, "release", "_output", "hashrelease", "hashrelease.yaml"),
 			},
-		},
+		}, slackFlags...), ciFlag, ciBaseURLFlag, ciJobIDFlag),
 		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-hashrelease-validation.log")
 
@@ -423,6 +423,15 @@ func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 			if err != nil {
 				err = fmt.Errorf("%s: %s", err, strings.TrimSpace(errb.String()))
 			}
+
+			// Update the Slack announcement with smoke test results.
+			metadataFilePath := c.String("hashrelease-metadata-file")
+			if c.Bool(notifyFlag.Name) {
+				if slackErr := tasks.AnnounceTestedHashrelease(slackConfig(c), metadataFilePath, err == nil, ciJobURL(c)); slackErr != nil {
+					logrus.WithError(slackErr).Warn("Failed to update Slack message with smoke test results")
+				}
+			}
+
 			return err
 		},
 	}
