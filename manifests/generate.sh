@@ -89,7 +89,6 @@ ${HELM} -n tigera-operator template \
   ../charts/tigera-operator >>tigera-operator.yaml
 
 ##########################################################################
-
 # Build other Tigera operator manifests.
 #
 # To add a new manifest to this directory, define
@@ -111,7 +110,6 @@ for FILE in $VALUES_FILES; do
     --set tigeraOperator.registry=$OPERATOR_REGISTRY \
     --set calicoctl.image=$REGISTRY/calicoctl \
     --set calicoctl.tag=$CALICO_VERSION \
-    --include-crds \
     --no-hooks \
     -f ../charts/values/$FILE >$FILE
 done
@@ -119,17 +117,37 @@ done
 ##########################################################################
 # Build manifest which includes both Calico and Operator CRDs.
 ##########################################################################
-echo "# Tigera Operator and Calico Enterprise CRDs" >operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/*.yaml; do
+echo "# crd.projectcalico.org/v1 and operator.tigera.io/v1 APIs" >v1_crd_projectcalico_org.yaml
+(for file in ../charts/crd.projectcalico.org.v1/templates/*.yaml; do
   echo "---"
-  echo "# Source: tigera-operator/crds/$(basename $file)"
+  echo "# Source: crd.projectcalico.org.v1/templates/$(basename $file)"
   cat $file
-done) >>operator-crds.yaml
-(for file in ../charts/tigera-operator/crds/calico/*.yaml; do
+done) >>v1_crd_projectcalico_org.yaml
+(for file in ../charts/crd.projectcalico.org.v1/templates/calico/*.yaml; do
   echo "---"
-  echo "# Source: tigera-operator/crds/calico/$(basename $file)"
+  echo "# Source: crd.projectcalico.org.v1/templates/$(basename $file)"
   cat $file
-done) >>operator-crds.yaml
+done) >>v1_crd_projectcalico_org.yaml
+
+# Maintain legacy operator-crds.yaml for a while.
+cp v1_crd_projectcalico_org.yaml operator-crds.yaml
+
+echo "# projectcalico.org/v3 and operator.tigera.io/v1 APIs" >v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/calico/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/calico/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
+(for file in ../charts/projectcalico.org.v3/templates/admission/*.yaml; do
+  echo "---"
+  echo "# Source: projectcalico.org.v3/templates/admission/$(basename $file)"
+  cat $file
+done) >>v3_projectcalico_org.yaml
 
 ##########################################################################
 # Build CRDs files used in docs.
@@ -203,9 +221,9 @@ ${HELM} -n tigera-operator template \
 
 # Generating the upgrade manifest for OCP.
 # It excludes the CRs (01-*) and the specific BPF files to maintain compatibility with iptables.
-VALUES_FILES=$(ls ocp | grep -v -e '^01-' -e 'cluster-network-operator.yaml' -e '02-configmap-calico-resources.yaml')
+OCP_VALUES_FILES=$(ls ocp | grep -v -e '^01-' -e 'cluster-network-operator.yaml' -e '02-configmap-calico-resources.yaml' -e 'mutatingadmissionpolicy')
 rm -f tigera-operator-ocp-upgrade.yaml
-for FILE in $VALUES_FILES; do
+for FILE in $OCP_VALUES_FILES; do
   cat "ocp/$FILE" >>tigera-operator-ocp-upgrade.yaml
   echo -e "---" >>tigera-operator-ocp-upgrade.yaml # Add divisor
 done

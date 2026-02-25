@@ -279,14 +279,14 @@ func main() {
 		{
 			Path:         cfg.PrometheusPath,
 			Dest:         cfg.PrometheusEndpoint,
-			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.PrometheusPath)),
+			PathRegexp:   fmt.Appendf(nil, "^%v/?", cfg.PrometheusPath),
 			PathReplace:  []byte("/"),
 			CABundlePath: cfg.PrometheusCABundlePath,
 		},
 		{
 			Path:         cfg.QueryserverPath,
 			Dest:         cfg.QueryserverEndpoint,
-			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.QueryserverPath)),
+			PathRegexp:   fmt.Appendf(nil, "^%v/?", cfg.QueryserverPath),
 			PathReplace:  []byte("/"),
 			CABundlePath: cfg.QueryserverCABundlePath,
 		},
@@ -311,7 +311,7 @@ func main() {
 		targetList = append(targetList, bootstrap.Target{
 			Dest:             cfg.EnterpriseDashboardEndpoint,
 			Path:             fmt.Sprintf("%s/", cfg.EnterpriseDashboardBasePath),
-			PathRegexp:       []byte(fmt.Sprintf("^%s/?", cfg.EnterpriseDashboardBasePath)),
+			PathRegexp:       fmt.Appendf(nil, "^%s/?", cfg.EnterpriseDashboardBasePath),
 			PathReplace:      []byte("/api/"),
 			AllowInsecureTLS: true,
 		})

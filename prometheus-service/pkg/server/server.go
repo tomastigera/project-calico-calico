@@ -85,16 +85,13 @@ func Start(config *Config) {
 		TLSConfig: tlsConfig,
 	}
 
-	wg.Add(1)
-
-	go func() {
+	wg.Go(func() {
 		log.Infof("Starting server on %v", config.ListenAddr)
 		err := server.ListenAndServeTLS(config.TLSCert, config.TLSKey)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server.")
 		}
-		wg.Done()
-	}()
+	})
 }
 
 func getReverseProxy(target *url.URL) *httputil.ReverseProxy {

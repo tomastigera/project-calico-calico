@@ -73,8 +73,6 @@
       version: v3.22.0-1.0
     firewall-integration:
       version: v3.22.0-1.0
-    flannel-migration-controller:
-      version: v3.22.0-1.0
     flexvol:
       version: v3.22.0-1.0
       image: pod2daemon-flexvol
@@ -157,10 +155,12 @@
     ui-apis:
       version: v3.22.0-1.0
     upstream-fluentd:
-      version: 1.19.1
+      version: 1.19.2
     voltron:
       version: v3.22.0-1.0
     waf-http-filter:
+      version: v3.22.0-1.0
+    webhooks:
       version: v3.22.0-1.0
     webhooks-processor:
       version: v3.22.0-1.0

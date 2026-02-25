@@ -65,7 +65,7 @@ func (v *versionedK8sServiceEndpoints) GetCalicoV3() resources.Resource {
 	return nil
 }
 
-func (v *versionedK8sServiceEndpoints) GetCalicoV1() interface{} {
+func (v *versionedK8sServiceEndpoints) GetCalicoV1() any {
 	return nil
 }
 

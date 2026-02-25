@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -268,7 +268,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ policy sync API 
 						})
 
 						doChurn := func(wlIndexes ...int) {
-							for i := 0; i < 100; i++ {
+							for i := range 100 {
 								wlIdx := wlIndexes[i%len(wlIndexes)]
 								By(fmt.Sprintf("Churn %d; targeting workload %d", i, wlIdx))
 
@@ -893,7 +893,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 						})
 
 						doChurn := func(wlIndexes ...int) {
-							for i := 0; i < 20; i++ {
+							for i := range 20 {
 								felixIdx := wlIndexes[i%len(wlIndexes)]
 								iStr := strconv.Itoa(i)
 								By(fmt.Sprintf("Churn %d; targetting workload %d", i, felixIdx))
@@ -1106,8 +1106,8 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 	return updates
 }
 
-func toInterfaceSlice[T any](s []T) []interface{} {
-	r := make([]interface{}, len(s))
+func toInterfaceSlice[T any](s []T) []any {
+	r := make([]any, len(s))
 	for i, v := range s {
 		r[i] = v
 	}

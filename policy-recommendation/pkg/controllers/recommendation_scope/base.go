@@ -105,7 +105,7 @@ func (r *reconcilerBase) defaultFactory(scope *v3.PolicyRecommendationScope) (co
 // newRecommendationResourceCache creates a new recommendation resource cache.
 func (r *reconcilerBase) newRecommendationResourceCache() rcache.ResourceCache {
 	// Define the list of items handled by the policy recommendation cache.
-	listFunc := func() (map[string]interface{}, error) {
+	listFunc := func() (map[string]any, error) {
 		r.clog.Debug("Listing recommendations")
 
 		snps, err := r.clientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(r.ctx, metav1.ListOptions{
@@ -116,7 +116,7 @@ func (r *reconcilerBase) newRecommendationResourceCache() rcache.ResourceCache {
 			return nil, err
 		}
 
-		snpMap := make(map[string]interface{})
+		snpMap := make(map[string]any)
 		for _, snp := range snps.Items {
 			r.clog.WithField("name", snp.Name).Debug("Cache recommendation")
 			snpMap[snp.Namespace] = snp
@@ -128,7 +128,7 @@ func (r *reconcilerBase) newRecommendationResourceCache() rcache.ResourceCache {
 	// Create a cache to store recommendations in.
 	cacheArgs := rcache.ResourceCacheArgs{
 		ListFunc:    listFunc,
-		ObjectType:  reflect.TypeOf(v3.StagedNetworkPolicy{}),
+		ObjectType:  reflect.TypeFor[v3.StagedNetworkPolicy](),
 		LogTypeDesc: kindRecommendations,
 		ReconcilerConfig: rcache.ReconcilerConfig{
 			DisableUpdateOnChange: true,

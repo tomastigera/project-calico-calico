@@ -181,3 +181,6 @@ components:
   istio-proxyv2:
     image: istio-proxyv2
     version: test-build
+  webhooks:
+    image: webhooks
+    version: test-build

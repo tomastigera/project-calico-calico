@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -38,7 +38,7 @@ var _ = Describe("Static", func() {
 	var conf Config
 	JustBeforeEach(func() {
 		// Cast back to the expected type so we can access a finer-grained API for testing.
-		rr = NewRenderer(conf).(*DefaultRuleRenderer)
+		rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 	})
 
 	checkManglePostrouting := func(ipVersion uint8, ipvs bool) {
@@ -1520,7 +1520,6 @@ var _ = Describe("Static", func() {
 		})
 		for _, ipVersion := range []uint8{4, 6} {
 			// Capture current value of ipVersion.
-			ipVersion := ipVersion
 			ipSetThisHost := fmt.Sprintf("cali%d0this-host", ipVersion)
 
 			portRanges1 := []*proto.PortRange{
@@ -2313,7 +2312,7 @@ var _ = Describe("Static", func() {
 
 				It("should not generate Istio DSCP rules when Istio is disabled", func() {
 					conf.IstioAmbientModeEnabled = false
-					rr = NewRenderer(conf).(*DefaultRuleRenderer)
+					rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 
 					chain := rr.StaticManglePostroutingChain(ipVersion)
 					Expect(chain).NotTo(BeNil())
@@ -2702,7 +2701,7 @@ var _ = Describe("DropRules", func() {
 
 	JustBeforeEach(func() {
 		// Cast back to the expected type so we can access a finer-grained API for testing.
-		rr = NewRenderer(conf).(*DefaultRuleRenderer)
+		rr = NewRenderer(conf, false).(*DefaultRuleRenderer)
 	})
 
 	for _, trueOrFalse := range []bool{true, false} {

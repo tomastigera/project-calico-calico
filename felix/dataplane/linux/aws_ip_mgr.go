@@ -177,7 +177,7 @@ func NewAWSIPManager(
 	return sm
 }
 
-func (a *awsIPManager) OnUpdate(msg interface{}) {
+func (a *awsIPManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *proto.IPAMPoolUpdate:
 		a.onPoolUpdate(msg.Id, msg.Pool)

@@ -63,7 +63,7 @@ func run(clusterCount int, startAt int) error {
 		}
 	}
 
-	for i := 0; i < clusterCount; i++ {
+	for i := range clusterCount {
 		err = configureFakeCluster(ctx, startAt+i, managementClient, managedClient, tenantNamespace, secretsNamespace)
 		if err != nil {
 			return err
@@ -132,8 +132,8 @@ func configureFakeCluster(
 // ManagementClusterConnection represents a link between a managed cluster and a management cluster. At most one instance of this resource is supported. It must be named “tigera-secure”.
 type ManagementClusterConnection struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ManagementClusterConnectionSpec `json:"spec,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              ManagementClusterConnectionSpec `json:"spec"`
 }
 
 // ManagementClusterConnectionSpec defines the desired state of ManagementClusterConnection.

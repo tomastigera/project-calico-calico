@@ -40,7 +40,7 @@ func ExtractFromNonClusterHostSpec(unstructuredObj *unstructured.Unstructured, f
 		return "", errors.New("failed to get spec from object")
 	}
 
-	spec, ok := specObj.(map[string]interface{})
+	spec, ok := specObj.(map[string]any)
 	if !ok {
 		return "", errors.New("failed to cast spec object")
 	}

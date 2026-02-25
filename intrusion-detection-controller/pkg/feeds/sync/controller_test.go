@@ -27,21 +27,21 @@ import (
 
 type testCase struct {
 	name    string
-	makeUUT func(d interface{}) reflect.Value
+	makeUUT func(d any) reflect.Value
 	set     reflect.Value
 }
 
 var cases = []testCase{
 	{
 		name: "IPSet",
-		makeUUT: func(d interface{}) reflect.Value {
+		makeUUT: func(d any) reflect.Value {
 			return reflect.ValueOf(NewIPSetController(d.(storage.IPSet)))
 		},
 		set: reflect.ValueOf(storage.IPSetSpec{"1.2.3.4"}),
 	},
 	{
 		name: "DomainNameSet",
-		makeUUT: func(d interface{}) reflect.Value {
+		makeUUT: func(d any) reflect.Value {
 			return reflect.ValueOf(NewDomainNameSetController(d.(storage.DomainNameSet)))
 		},
 		set: reflect.ValueOf(storage.DomainNameSetSpec{"evilstuff.bad"}),

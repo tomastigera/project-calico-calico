@@ -44,14 +44,14 @@ type dispatcher struct {
 
 	// wepKeyToIface maps WEP key to interface, this is used in combination with wepKeyToDPIs to restart
 	// affected snort processes if interface changes.
-	wepKeyToIface map[interface{}]string
+	wepKeyToIface map[any]string
 
 	// wepKeyToDPIs maps WEP key to set of DPI object as each WEP can map to multiple DPI selectors, it is used in
 	// combination with wepKeyToIface to restart affected snort processes if interface changes.
-	wepKeyToDPIs map[interface{}]set.Set[DPI]
+	wepKeyToDPIs map[any]set.Set[DPI]
 
 	// dpiKeyToDPI maps DPI key to DPI object that has processor and event generator.
-	dpiKeyToDPI map[interface{}]DPI
+	dpiKeyToDPI map[any]DPI
 
 	// dirtyItems is updated when dispatcher receives updates and reset after those updates are processed.
 	dirtyItems []dirtyItem
@@ -100,8 +100,8 @@ const (
 )
 
 type dirtyItem struct {
-	wepKey      interface{}
-	dpiKey      interface{}
+	wepKey      any
+	dpiKey      any
 	ifaceName   string
 	requestType requestType
 }
@@ -114,9 +114,9 @@ func NewDispatcher(cfg *config.Config,
 	alertFileMaintainer file.FileMaintainer,
 ) Dispatcher {
 	dispatch := &dispatcher{
-		wepKeyToIface:       make(map[interface{}]string),
-		dpiKeyToDPI:         make(map[interface{}]DPI),
-		wepKeyToDPIs:        make(map[interface{}]set.Set[DPI]),
+		wepKeyToIface:       make(map[any]string),
+		dpiKeyToDPI:         make(map[any]DPI),
+		wepKeyToDPIs:        make(map[any]set.Set[DPI]),
 		snortProcessor:      snortProcessor,
 		eventGenerator:      eventGenerator,
 		cfg:                 cfg,
@@ -202,7 +202,7 @@ func (h *dispatcher) Close() {
 
 // onMatchStarted is called when there is a new WEP with label that matches the selector in DPI.
 // It adds the WEP and DPI key to dirtyItems, to later start snort on the WEP interface.
-func (h *dispatcher) onMatchStarted(dpiKey, wepKey interface{}) {
+func (h *dispatcher) onMatchStarted(dpiKey, wepKey any) {
 	log.WithField("DPI", dpiKey).Debugf("Snort match available for WEP %v", wepKey)
 	h.dirtyItems = append(h.dirtyItems, dirtyItem{
 		wepKey:      wepKey,
@@ -213,7 +213,7 @@ func (h *dispatcher) onMatchStarted(dpiKey, wepKey interface{}) {
 
 // onMatchStopped is called when previous WEP with label that matches the selector in DPI is no longer valid.
 // It adds the WEP and DPI key to dirtyItems, to later stop snort on the WEP interface.
-func (h *dispatcher) onMatchStopped(dpiKey, wepKey interface{}) {
+func (h *dispatcher) onMatchStopped(dpiKey, wepKey any) {
 	log.WithField("DPI", dpiKey).Debugf("Stopping previous match for WEP %v", wepKey)
 	h.dirtyItems = append(h.dirtyItems, dirtyItem{
 		wepKey:      wepKey,

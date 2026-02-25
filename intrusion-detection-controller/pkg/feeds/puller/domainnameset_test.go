@@ -3,7 +3,6 @@
 package puller
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -58,8 +57,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	edn := sync.NewMockDomainNameSetsController()
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
@@ -105,8 +103,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	edn := sync.NewMockDomainNameSetsController()
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	f := testGTFDomainNameSet.DeepCopy()
 	f.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}
@@ -136,8 +133,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 func TestGetStartupDelayDomainNameSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	edn := sync.NewMockDomainNameSetsController()
 	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{
@@ -172,8 +168,7 @@ func TestCanonicalizeDNSName(t *testing.T) {
 func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	feed := testGTFDomainNameSet.DeepCopy()
 	feed.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}

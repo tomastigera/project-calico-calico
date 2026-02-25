@@ -8,7 +8,7 @@ import (
 )
 
 // writeJSON writes the supplied data as JSON into the HTTP response.
-func writeJSON(response http.ResponseWriter, data interface{}, prettyPrint bool) {
+func writeJSON(response http.ResponseWriter, data any, prettyPrint bool) {
 	// Write the response as a JSON encoded blob
 	var b []byte
 	var err error

@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 from random import randint
 
+import pytest
+
 from tests.k8st.test_base import NetcatServerTCP, NetcatClientTCP, Pod, TestBase
 from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, \
         node_info, retry_until_success, stop_for_debug, update_ds_env
@@ -34,6 +36,7 @@ def patch_ippool(name, vxlanMode=None, ipipMode=None):
     _log.info("Updated vxlanMode of %s from %s to %s, ipipMode from %s to %s",
               name, old_vxlanMode, vxlanMode, old_ipipMode, ipipMode)
 
+@pytest.mark.non_vanilla
 class _TestEgressIP(TestBase):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
@@ -728,7 +731,7 @@ EOF
             # Create auto HEPs
             patchStr = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Enabled\"}}}}}"
             patchStr_disable = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Disabled\"}}}}}"
-            kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr)).strip()
+            kubectl("patch --type=merge kubecontrollersconfiguration default --patch '%s'" % (patchStr)).strip()
 
             calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
@@ -813,7 +816,7 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-control-plane-heps"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-all-heps"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-all-heps"))
-            self.add_cleanup(lambda: kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
+            self.add_cleanup(lambda: kubectl("patch --type=merge kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
             retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
             self.validate_egress_ip(client, server, gw.ip)
 
@@ -1495,89 +1498,99 @@ spec:
         self.add_cleanup(lambda: kubectl("delete service %s -n %s" % (name, ns)))
 
         svc_ip = run("kubectl get service " + name + " -n %s -o json | jq -r '.spec.clusterIP'" % ns).strip()
-        node_port = run("kubectl get service " + name + " -n %s -o json 2> /dev/null | jq -r '.spec.ports[] | \"\(.nodePort)\"'" % ns).strip()
+        jq_expr = r'.spec.ports[] | "\(.nodePort)"'
+        node_port = run(f"kubectl get service {name} -n {ns} -o json 2> /dev/null | jq -r '{jq_expr}'").strip()
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
-_TestEgressIP.vanilla = False
-_TestEgressIP.egress_ip = True
 
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlay(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         """This method runs once for each class before any tests are run"""
         _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         """This method runs once for each class _after_ all tests are run"""
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPNoOverlay.egress_ip_no_overlay = True
 
+
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIP(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithIPIP.egress_ip_ipip = True
 
+
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLAN(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=False)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithVXLAN.egress_ip_vxlan = True
 
+
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_no_overlay
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPNoOverlayAndWireguard.egress_ip_no_overlay = True
 
+
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_ipip
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithIPIPAndWireguard.egress_ip_ipip = True
 
+
+@pytest.mark.egress_ip
+@pytest.mark.egress_ip_vxlan
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
     @classmethod
-    def setupClass(klass):
+    def setUpClass(klass):
         _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=True)
 
     @classmethod
-    def teardownClass(klass):
+    def tearDownClass(klass):
         calicoctl("delete ippool egress-ippool-1")
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-TestEgressIPWithVXLANAndWireguard.egress_ip_vxlan = True

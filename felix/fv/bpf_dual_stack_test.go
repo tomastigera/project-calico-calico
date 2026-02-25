@@ -17,12 +17,13 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"regexp"
 	"strconv"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -175,7 +176,7 @@ func describeBPFDualStackTests(ctlbEnabled, ipv6Dataplane bool) bool {
 		})
 
 		JustAfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
+			if CurrentSpecReport().Failed() {
 				var (
 					currBpfsvcs   []nat.MapMem
 					currBpfeps    []nat.BackendMapMem
@@ -589,9 +590,7 @@ func ensureRightIFStateFlags(felix *infrastructure.Felix, ready uint32, hostIfTy
 		"eth0": hostIfType | ready,
 	}
 
-	for k, v := range additionalInterfaces {
-		expectedIfacesToFlags[k] = v
-	}
+	maps.Copy(expectedIfacesToFlags, additionalInterfaces)
 
 	for _, w := range felix.Workloads {
 		if w.Runs() {

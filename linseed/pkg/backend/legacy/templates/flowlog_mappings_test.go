@@ -25,7 +25,7 @@ func TestCompareFlowLogsStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, flowlogMap["properties"].(map[string]interface{}), excludeFlowLogsField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, flowlogMap["properties"].(map[string]any), excludeFlowLogsField))
 	})
 	t.Run("Check for FlowLogs api and template not matches", func(t *testing.T) {
 		flowlogMap := testutils.MustUnmarshalToMap(t, FlowLogMappings)
@@ -38,6 +38,6 @@ func TestCompareFlowLogsStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, flowlogMap["properties"].(map[string]interface{}), excludeFlowLogsField))
+		require.False(t, utils.CheckFieldsInJSON(t, m, flowlogMap["properties"].(map[string]any), excludeFlowLogsField))
 	})
 }

@@ -115,7 +115,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 		var logs []v1.FlowLog
 		startTime := time.Now().UTC()
 		endTime := startTime.Add(5 * time.Second)
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.FlowLog{
 				StartTime: startTime.Unix(),
 				EndTime:   endTime.Unix(),
@@ -126,7 +126,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.AuditEELogs, api.AuditKubeLogs:
 		var logs []v1.AuditLog
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for range numLogs {
 			logs = append(logs, v1.AuditLog{Event: audit.Event{
 				AuditID:                  "any-ee-id",
 				RequestReceivedTimestamp: metav1.NewMicroTime(startTime),
@@ -142,7 +142,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.BGPLogs:
 		var logs []v1.BGPLog
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for range numLogs {
 			logs = append(logs, v1.BGPLog{LogTime: startTime.Format(v1.BGPLogTimeFormat)})
 		}
 		response, err = catalogue.BGPBackend.Create(ctx, clusterInfo, logs)
@@ -150,7 +150,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 		var logs []v1.DNSLog
 		startTime := time.Now().UTC()
 		endTime := startTime.Add(5 * time.Second)
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.DNSLog{
 				StartTime: startTime,
 				EndTime:   endTime,
@@ -160,7 +160,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.Benchmarks:
 		var logs []v1.Benchmarks
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for range numLogs {
 			logs = append(logs, v1.Benchmarks{
 				Version:           "v1",
 				KubernetesVersion: "v1.0",
@@ -185,7 +185,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.ReportData:
 		var logs []v1.ReportData
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for range numLogs {
 			logs = append(logs, v1.ReportData{ReportData: &apiv3.ReportData{
 				ReportName:     "test-report",
 				ReportTypeName: "my-report-type",
@@ -198,7 +198,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.Snapshots:
 		var logs []v1.Snapshot
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.Snapshot{
 				ResourceList: list.TimestampedResourceList{
 					ResourceList: &apiv3.NetworkPolicyList{
@@ -223,7 +223,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.Events:
 		var logs []v1.Event
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for range numLogs {
 			logs = append(logs, v1.Event{
 				Time:        v1.NewEventTimestamp(startTime.Unix()),
 				Description: "A rather uneventful evening",
@@ -237,7 +237,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.L7Logs:
 		var logs []v1.L7Log
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.L7Log{
 				StartTime: startTime.Unix(),
 				EndTime:   startTime.Unix() + int64(i),
@@ -249,7 +249,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.WAFLogs:
 		var logs []v1.WAFLog
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.WAFLog{
 				Timestamp: startTime.Add(time.Duration(i) * time.Second),
 				Host:      fmt.Sprintf("waf-%d", i),
@@ -260,7 +260,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.RuntimeReports:
 		var logs []v1.Report
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.Report{
 				StartTime: startTime,
 				EndTime:   startTime.Add(5 * time.Second),
@@ -272,7 +272,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.IPSet:
 		var logs []v1.IPSetThreatFeed
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.IPSetThreatFeed{
 				ID: fmt.Sprintf("feed-a-%d", i),
 				Data: &v1.IPSetThreatFeedData{
@@ -286,7 +286,7 @@ func generateData(t *testing.T, catalogue migrator.BackendCatalogue, numLogs int
 	case api.DomainNameSet:
 		var logs []v1.DomainNameSetThreatFeed
 		startTime := time.Now().UTC()
-		for i := 0; i < numLogs; i++ {
+		for i := range numLogs {
 			logs = append(logs, v1.DomainNameSetThreatFeed{
 				ID: fmt.Sprintf("feed-a-%d", i),
 				Data: &v1.DomainNameSetThreatFeedData{

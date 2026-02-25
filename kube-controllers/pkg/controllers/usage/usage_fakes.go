@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	usagev1 "github.com/tigera/api/pkg/apis/usage.tigera.io/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,6 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
 
-	usagev1 "github.com/projectcalico/calico/libcalico-go/lib/apis/usage.tigera.io/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -169,7 +169,7 @@ func (f fakeCalicoClient) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface 
 	panic("implement me")
 }
 
-func (f fakeCalicoClient) IPAMConfig() clientv3.IPAMConfigInterface {
+func (f fakeCalicoClient) IPAMConfiguration() clientv3.IPAMConfigurationInterface {
 	panic("implement me")
 }
 

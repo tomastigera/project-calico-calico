@@ -40,7 +40,7 @@ func TestCompareReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]interface{}), excludeReportField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]any), excludeReportField))
 	})
 
 	t.Run("Check for Report api and template not matches", func(t *testing.T) {
@@ -55,6 +55,6 @@ func TestCompareReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]interface{}), excludeReportField))
+		require.False(t, utils.CheckFieldsInJSON(t, m, reportMap["properties"].(map[string]any), excludeReportField))
 	})
 }

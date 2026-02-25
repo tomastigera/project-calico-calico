@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
@@ -34,11 +34,11 @@ var _ = Describe("client", func() {
 				body, err := io.ReadAll(r.Body)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(calicojson.MustUnmarshalToStandObject(body)).Should(Equal(map[string]interface{}{
+				Expect(calicojson.MustUnmarshalToStandObject(body)).Should(Equal(map[string]any{
 					"currentURL":   currentURL,
 					"providerName": "basic",
 					"providerType": "basic",
-					"params": map[string]interface{}{
+					"params": map[string]any{
 						"username": username,
 						"password": password,
 					},

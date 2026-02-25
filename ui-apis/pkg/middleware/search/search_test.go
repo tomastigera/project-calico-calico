@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -214,8 +214,8 @@ var _ = Describe("SearchElasticHits", func() {
 		}))
 
 		// fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
-		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet := &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3()).Maybe()
 		fakeClientSet = mockClientSet
 
 		mockDoer = new(thirdpartymock.MockDoer)

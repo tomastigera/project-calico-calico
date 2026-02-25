@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
@@ -150,7 +150,7 @@ func (i l3rrNodeInfo) Equal(b l3rrNodeInfo) bool {
 		l := len(i.Addresses)
 		for ia, a := range i.Addresses {
 			found := false
-			for j := 0; j < l; j++ {
+			for j := range l {
 				if a == b.Addresses[(ia+j)%l] {
 					found = true
 					break
@@ -181,9 +181,9 @@ func (i l3rrNodeInfo) AddressesAsCIDRs() []ip.CIDR {
 		addrs[a] = struct{}{}
 	}
 
-	// Clean up empty (uninitialized) addresses
+	// Clean up empty (uninitialized) or nil addresses
 	for a := range addrs {
-		if a == emptyV4Addr || a == emptyV6Addr {
+		if a == nil || a == emptyV4Addr || a == emptyV6Addr {
 			delete(addrs, a)
 		}
 	}
@@ -375,7 +375,7 @@ func (c *L3RouteResolver) OnBlockUpdate(update api.Update) (_ bool) {
 func (c *L3RouteResolver) OnResourceUpdate(update api.Update) (_ bool) {
 	// We only care about nodes, not other resources.
 	resourceKey := update.Key.(model.ResourceKey)
-	if resourceKey.Kind != apiv3.KindNode {
+	if resourceKey.Kind != internalapi.KindNode {
 		return
 	}
 
@@ -391,7 +391,7 @@ func (c *L3RouteResolver) OnResourceUpdate(update api.Update) (_ bool) {
 	// Update our tracking data structures.
 	var nodeInfo *l3rrNodeInfo
 	if update.Value != nil {
-		node := update.Value.(*apiv3.Node)
+		node := update.Value.(*internalapi.Node)
 		if node.Spec.BGP != nil && (node.Spec.BGP.IPv4Address != "" || node.Spec.BGP.IPv6Address != "") {
 			bgp := node.Spec.BGP
 			nodeInfo = &l3rrNodeInfo{}
@@ -414,13 +414,13 @@ func (c *L3RouteResolver) OnResourceUpdate(update api.Update) (_ bool) {
 				nodeInfo.V6CIDR = ip.CIDRFromCalicoNet(*caliNodeCIDRV6).(ip.V6CIDR)
 			}
 		} else {
-			ipv4, caliNodeCIDR := cresources.FindNodeAddress(node, apiv3.InternalIP, 4)
+			ipv4, caliNodeCIDR := cresources.FindNodeAddress(node, internalapi.InternalIP, 4)
 			if ipv4 == nil {
-				ipv4, caliNodeCIDR = cresources.FindNodeAddress(node, apiv3.ExternalIP, 4)
+				ipv4, caliNodeCIDR = cresources.FindNodeAddress(node, internalapi.ExternalIP, 4)
 			}
-			ipv6, caliNodeCIDRV6 := cresources.FindNodeAddress(node, apiv3.InternalIP, 6)
+			ipv6, caliNodeCIDRV6 := cresources.FindNodeAddress(node, internalapi.InternalIP, 6)
 			if ipv6 == nil {
-				ipv6, caliNodeCIDRV6 = cresources.FindNodeAddress(node, apiv3.ExternalIP, 6)
+				ipv6, caliNodeCIDRV6 = cresources.FindNodeAddress(node, internalapi.ExternalIP, 6)
 			}
 			hasIPv4 := (ipv4 != nil && caliNodeCIDR != nil)
 			hasIPv6 := (ipv6 != nil && caliNodeCIDRV6 != nil)
@@ -478,7 +478,7 @@ func (c *L3RouteResolver) OnRemoteClusterResourceUpdate(update api.Update) (_ bo
 	switch update.Key.(model.RemoteClusterResourceKey).Kind {
 	case v3.KindIPPool:
 		c.OnPoolUpdate(update)
-	case apiv3.KindIPAMBlock:
+	case internalapi.KindIPAMBlock:
 		c.OnBlockUpdate(update)
 	default:
 		logrus.WithField("key", update.Key.String()).Panic("Unexpected kind for remote cluster update")
@@ -634,7 +634,7 @@ func (c *L3RouteResolver) markAllNodeRoutesDirty(nodeName string) {
 }
 
 func (c *L3RouteResolver) visitAllRoutes(trie *ip.CIDRTrie, v func(route nodenameRoute)) {
-	trie.Visit(func(cidr ip.CIDR, data interface{}) bool {
+	trie.Visit(func(cidr ip.CIDR, data any) bool {
 		c.maybeReportLive()
 
 		// Construct a nodenameRoute to pass to the visiting function.
@@ -728,10 +728,10 @@ func (c *L3RouteResolver) poolTypeForPool(pool *model.IPPool) proto.IPPoolType {
 	if pool == nil {
 		return proto.IPPoolType_NONE
 	}
-	if pool.VXLANMode != encap.Undefined {
+	if pool.VXLANMode != encap.Never {
 		return proto.IPPoolType_VXLAN
 	}
-	if pool.IPIPMode != encap.Undefined {
+	if pool.IPIPMode != encap.Never {
 		return proto.IPPoolType_IPIP
 	}
 	return proto.IPPoolType_NO_ENCAP
@@ -1151,7 +1151,7 @@ func (r *RouteTrie) UpdatePool(cidr ip.CIDR, cluster string, poolType proto.IPPo
 func (r *RouteTrie) markChildrenDirty(cidr ip.CIDR) {
 	// TODO: avoid full scan to mark children dirty
 	trie := r.trieForCIDR(cidr)
-	trie.Visit(func(c ip.CIDR, data interface{}) bool {
+	trie.Visit(func(c ip.CIDR, data any) bool {
 		r.OnAlive()
 		if cidr.Contains(c.Addr()) {
 			r.MarkCIDRDirty(c)

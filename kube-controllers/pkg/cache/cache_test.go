@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gocache "github.com/patrickmn/go-cache"
 	"k8s.io/client-go/util/workqueue"
@@ -30,8 +30,8 @@ type resource struct {
 	name string
 }
 
-func listFunc() (map[string]interface{}, error) {
-	m := make(map[string]interface{})
+func listFunc() (map[string]any, error) {
+	m := make(map[string]any)
 	for i := 1; i <= 10; i++ {
 		resourceName := fmt.Sprintf("ns%d", i)
 		obj := resource{
@@ -47,7 +47,7 @@ var _ = Describe("Cache", func() {
 
 	rcargs := ResourceCacheArgs{
 		ListFunc:   listFunc,
-		ObjectType: reflect.TypeOf(resource{}),
+		ObjectType: reflect.TypeFor[resource](),
 	}
 
 	Context("Get operation", func() {

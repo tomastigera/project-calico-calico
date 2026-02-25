@@ -17,6 +17,7 @@ package labelindex
 import (
 	"iter"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -94,12 +95,7 @@ func (d *endpointData) RemoveMatchingIPSetID(id string) {
 }
 
 func (d *endpointData) HasParent(parent *npParentData) bool {
-	for _, p := range d.parents {
-		if p == parent {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(d.parents, parent)
 }
 
 func (d *endpointData) LookupNamedPorts(name string, proto ipsetmember.Protocol) []uint16 {
@@ -714,7 +710,7 @@ func (idx *SelectorAndNamedPortIndex) onMemberRemoved(ipSetID string, member ips
 }
 
 func (idx *SelectorAndNamedPortIndex) scanEndpointAgainstIPSets(
-	epID interface{},
+	epID any,
 	epData *endpointData,
 	oldIPSetContributions map[string][]ipsetmember.IPSetMember,
 ) {
@@ -837,7 +833,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateParentLabels(parentID string, rawLab
 }
 
 func (idx *SelectorAndNamedPortIndex) UpdateParent(parentData *npParentData, applyUpdate, revertUpdate func()) {
-	parentData.IterEndpointIDs(func(id interface{}) error {
+	parentData.IterEndpointIDs(func(id any) error {
 		epData, _ := idx.endpointKVIdx.Get(id)
 		// This endpoint matches this parent, calculate its old contribution.  (The revert function
 		// is a no-op on the first loop but keeping it here, rather than at the bottom of the loop
@@ -866,7 +862,7 @@ func (idx *SelectorAndNamedPortIndex) DeleteParentLabels(parentID string) {
 // CalculateEndpointContribution calculates the given endpoint's contribution to the given IP set.
 // If the IP set represents a named port then the returned members will have a named port component.
 // Returns nil if the endpoint doesn't contribute to the IP set.
-func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id interface{}, d *endpointData, ipSetData *ipSetData) (contrib []ipsetmember.IPSetMember) {
+func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id any, d *endpointData, ipSetData *ipSetData) (contrib []ipsetmember.IPSetMember) {
 	if ipSetData.namedPortProtocol != ipsetmember.ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
 		// matching named ports by IP address or domain.
@@ -923,7 +919,7 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id interface
 
 // RecalcCachedContributions uses the cached set of matching IP set IDs in the endpoint
 // struct to quickly recalculate the endpoint's contribution to all IP sets.
-func (idx *SelectorAndNamedPortIndex) RecalcCachedContributions(epID interface{}, epData *endpointData) map[string][]ipsetmember.IPSetMember {
+func (idx *SelectorAndNamedPortIndex) RecalcCachedContributions(epID any, epData *endpointData) map[string][]ipsetmember.IPSetMember {
 	if epData.cachedMatchingIPSetIDs.Len() == 0 {
 		return nil
 	}

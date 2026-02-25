@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,20 +26,14 @@ const (
 	PolicyRecommendationScopeCRDName      = "policyrecommendationscopes.crd.projectcalico.org"
 )
 
-func NewPolicyRecommendationScopeClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewPolicyRecommendationScopeClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            PolicyRecommendationScopeCRDName,
 		resource:        PolicyRecommendationScopeResourceName,
-		description:     "Tigera Policy Recommendation Scopes",
-		k8sResourceType: reflect.TypeOf(apiv3.PolicyRecommendationScope{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindPolicyRecommendationScope,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.PolicyRecommendationScopeList{}),
-		resourceKind: apiv3.KindPolicyRecommendationScope,
-		namespaced:   false,
+		k8sResourceType: reflect.TypeFor[apiv3.PolicyRecommendationScope](),
+		k8sListType:     reflect.TypeFor[apiv3.PolicyRecommendationScopeList](),
+		namespaced:      false,
+		kind:            apiv3.KindPolicyRecommendationScope,
+		apiGroup:        group,
 	}
 }

@@ -21,7 +21,7 @@ type EventsData struct {
 	SourceNamespace string  `json:"source_namespace,omitempty"`
 	SourcePort      *int64  `json:"source_port,omitempty"`
 
-	Record interface{} `json:"record,omitempty"`
+	Record any `json:"record,omitempty"`
 }
 
 type EventResult struct {

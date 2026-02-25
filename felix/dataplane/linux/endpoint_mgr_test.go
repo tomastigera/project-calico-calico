@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
@@ -209,8 +209,8 @@ func wlChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper ru
 }
 
 func tierToPolicyName(tierName string) string {
-	if strings.HasPrefix(tierName, "tier") {
-		return "pol" + strings.TrimPrefix(tierName, "tier")
+	if after, ok := strings.CutPrefix(tierName, "tier"); ok {
+		return "pol" + after
 	}
 	return "a"
 }
@@ -895,11 +895,11 @@ func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Tar
 }
 
 type statusReportRecorder struct {
-	currentState map[interface{}]string
-	extraInfo    map[interface{}]interface{}
+	currentState map[any]string
+	extraInfo    map[any]any
 }
 
-func (r *statusReportRecorder) endpointStatusUpdateCallback(ipVersion uint8, id interface{}, status string, extraInfo interface{}) {
+func (r *statusReportRecorder) endpointStatusUpdateCallback(ipVersion uint8, id any, status string, extraInfo any) {
 	log.WithFields(log.Fields{
 		"ipVersion": ipVersion,
 		"id":        id,
@@ -992,7 +992,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 		})
 
 		JustBeforeEach(func() {
-			renderer := rules.NewRenderer(rrConfigNormal)
+			renderer := rules.NewRenderer(rrConfigNormal, false)
 			rawTable = newMockTable("raw")
 			mangleTable = newMockTable("mangle")
 			filterTable = newMockTable("filter")
@@ -1002,7 +1002,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 			}
 			mockProcSys = &testProcSys{state: map[string]string{}, pathsThatExist: map[string]bool{}}
 
-			statusReportRec = &statusReportRecorder{currentState: map[interface{}]string{}, extraInfo: map[interface{}]interface{}{}}
+			statusReportRec = &statusReportRecorder{currentState: map[any]string{}, extraInfo: map[any]any{}}
 			nlDataplane = mocknetlink.New()
 			nlHandle, err := nlDataplane.NewMockNetlink()
 			Expect(err).NotTo(HaveOccurred())
@@ -1267,7 +1267,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 
 				It("should report id1 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id1"}: "up",
 					}))
 				})
@@ -1291,7 +1291,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0_tierA"))
 				It("should report id1 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id1"}: "up",
 					}))
 				})
@@ -1310,7 +1310,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0_tierA"))
 					It("should report id1 up, but id2 now in error", func() {
-						Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						Expect(statusReportRec.currentState).To(Equal(map[any]string{
 							types.HostEndpointID{EndpointId: "id1"}: "up",
 							types.HostEndpointID{EndpointId: "id2"}: "error",
 						}))
@@ -1326,7 +1326,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						JustBeforeEach(removeHostEp("id1"))
 						It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0_tierB"))
 						It("should report id2 up only", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.HostEndpointID{EndpointId: "id2"}: "up",
 							}))
 						})
@@ -1356,7 +1356,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0_tierB"))
 					It("should report id0 up, but id1 now in error", func() {
-						Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						Expect(statusReportRec.currentState).To(Equal(map[any]string{
 							types.HostEndpointID{EndpointId: "id0"}: "up",
 							types.HostEndpointID{EndpointId: "id1"}: "error",
 						}))
@@ -1372,7 +1372,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						JustBeforeEach(removeHostEp("id1"))
 						It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0_tierB"))
 						It("should report id0 up only", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.HostEndpointID{EndpointId: "id0"}: "up",
 							}))
 						})
@@ -1625,7 +1625,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id1 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id1"}: "up",
 					}))
 				})
@@ -1645,7 +1645,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 
 					It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 					It("should report id1 up", func() {
-						Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						Expect(statusReportRec.currentState).To(Equal(map[any]string{
 							types.HostEndpointID{EndpointId: "id1"}: "up",
 						}))
 					})
@@ -1657,7 +1657,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						}))
 						It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0", "eth1"))
 						It("should report id1 and id22 up", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.HostEndpointID{EndpointId: "id1"}:  "up",
 								types.HostEndpointID{EndpointId: "id22"}: "up",
 							}))
@@ -1675,7 +1675,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						// because of alphabetical ordering.  "id1" is then
 						// unused, and so reported as in error.
 						It("should report id1 error and id0 up", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.HostEndpointID{EndpointId: "id1"}: "error",
 								types.HostEndpointID{EndpointId: "id0"}: "up",
 							}))
@@ -1689,7 +1689,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						}))
 						It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0", "eth1"))
 						It("should report id1 and id22 up", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.HostEndpointID{EndpointId: "id1"}:  "up",
 								types.HostEndpointID{EndpointId: "id22"}: "up",
 							}))
@@ -1705,7 +1705,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 				It("should report endpoint in error", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "error",
 					}))
 				})
@@ -1718,7 +1718,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id4 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id4"}: "up",
 					}))
 				})
@@ -1731,7 +1731,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id5 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id5"}: "up",
 					}))
 				})
@@ -1745,7 +1745,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id3 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "up",
 					}))
 				})
@@ -1759,7 +1759,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id3 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "up",
 					}))
 				})
@@ -1773,7 +1773,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 				It("should report id3 error", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "error",
 					}))
 				})
@@ -1787,7 +1787,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 				It("should report id3 error", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "error",
 					}))
 				})
@@ -1800,7 +1800,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 				It("should report id4 error", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id4"}: "error",
 					}))
 				})
@@ -1813,7 +1813,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				}))
 				It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 				It("should report id5 error", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id5"}: "error",
 					}))
 				})
@@ -1827,7 +1827,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 			}))
 			It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 			It("should report id3 error", func() {
-				Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+				Expect(statusReportRec.currentState).To(Equal(map[any]string{
 					types.HostEndpointID{EndpointId: "id3"}: "error",
 				}))
 			})
@@ -1846,7 +1846,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 				})
 				It("should have expected chains", expectChainsFor(ipVersion, flowlogs, "eth0"))
 				It("should report id3 up", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.HostEndpointID{EndpointId: "id3"}: "up",
 					}))
 				})
@@ -2237,7 +2237,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 					}
 				})
 				It("should report endpoint down", func() {
-					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+					Expect(statusReportRec.currentState).To(Equal(map[any]string{
 						types.ProtoToWorkloadEndpointID(&wlEPID1): "down",
 					}))
 				})
@@ -2256,7 +2256,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 						applyUpdates(epMgr)
 					})
 					It("should report the interface as down", func() {
-						Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						Expect(statusReportRec.currentState).To(Equal(map[any]string{
 							types.ProtoToWorkloadEndpointID(&wlEPID1): "down",
 						}))
 					})
@@ -2277,7 +2277,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 
 					It("should have expected chains", expectWlChainsFor(ipVersion, flowlogs, "cali12345-ab"))
 					It("should report endpoint up", func() {
-						Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						Expect(statusReportRec.currentState).To(Equal(map[any]string{
 							types.ProtoToWorkloadEndpointID(&wlEPID1): "up",
 						}))
 					})
@@ -2465,7 +2465,7 @@ func endpointManagerTests(ipVersion uint8, flowlogs bool) func() {
 							routeTable.checkRoutes("cali12345-ab", nil)
 						})
 						It("should report endpoint up", func() {
-							Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+							Expect(statusReportRec.currentState).To(Equal(map[any]string{
 								types.ProtoToWorkloadEndpointID(&wlEPID1): "up",
 							}))
 						})

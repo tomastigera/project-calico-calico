@@ -1,3 +1,6 @@
+# The tests in this directory use the projectcalico.org/v3 API group for CRDs.
+CALICO_API_GROUP ?= projectcalico.org/v3
+
 # If ../metadata.mk exists, we're running this logic from within the calico repository.
 # If it does not, then we're in the api repo and we should use the local metadata.mk.
 ifneq ("$(wildcard ../metadata.mk)", "")
@@ -12,6 +15,7 @@ LOCAL_CHECKS     = lint-cache-dir check-copyright
 BINDIR ?= bin
 BUILD_DIR ?= build
 TOP_SRC_DIRS = pkg
+KIND_CONFIG = $(KIND_DIR)/kind-single.config
 
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
@@ -54,6 +58,18 @@ build: gen-files examples
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .PHONY: gen-files
 gen-files .generate_files: lint-cache-dir clean-generated
+	# Generate CRDs without descriptions
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) controller-gen crd:allowDangerousTypes=true,crdVersions=v1,deprecatedV1beta1CompatibilityPreserveUnknownFields=false,maxDescLen=0 paths=./pkg/apis/... output:crd:dir=config/crd/'
+	# Remove the first yaml separator line.
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'find ./config/crd -name "*.yaml" | xargs sed -i 1d'
+	# Run prettier to fix indentation
+	docker run --rm --user $(id -u):$(id -g) -v $(CURDIR)/config/crd/:/work/config/crd/ tmknom/prettier --write --parser=yaml /work
+	# Patch in manual tweaks to the generated CRDs.
+	# - Add nullable to IPAM block allocations field to allow null values in the allocations array.
+	# - Remove the profiles CRD. Profiles are backed by Namespaces in Kubernetes and the CRD is not needed.
+	patch -p2 < patches/0001-Add-nullable-to-IPAM-block-allocations-field.patch
+	rm -f config/crd/projectcalico.org_profiles.yaml
+
 	# Generate defaults
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) defaulter-gen \
@@ -62,6 +78,7 @@ gen-files .generate_files: lint-cache-dir clean-generated
 		--extra-peer-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
 		--output-file zz_generated.defaults.go \
 		"$(PACKAGE_NAME)/pkg/apis/projectcalico/v3"'
+
 	# Generate deep copies
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) deepcopy-gen \
@@ -70,6 +87,13 @@ gen-files .generate_files: lint-cache-dir clean-generated
 		--bounding-dirs $(PACKAGE_NAME) \
 		--output-file zz_generated.deepcopy.go \
 		"$(PACKAGE_NAME)/pkg/apis/projectcalico/v3"'
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+	   sh -c '$(GIT_CONFIG_SSH) deepcopy-gen \
+		--v 1 --logtostderr \
+		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
+		--bounding-dirs $(PACKAGE_NAME) \
+		--output-file zz_generated.deepcopy.go \
+		"$(PACKAGE_NAME)/pkg/apis/usage.tigera.io/v1"'
 
 	# generate all pkg/client contents
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -135,9 +159,13 @@ WHAT?=.
 GINKGO_FOCUS?=.*
 
 .PHONY:ut
-ut:
-	$(DOCKER_RUN) --privileged $(CALICO_BUILD) \
-		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r -focus="$(GINKGO_FOCUS)" $(WHAT)'
+ut: kind-cluster-create
+	$(DOCKER_RUN) \
+		--privileged \
+		-e KUBECONFIG=/kubeconfig.yaml \
+		-v $(KIND_KUBECONFIG):/kubeconfig.yaml \
+		$(CALICO_BUILD) \
+		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --focus="$(GINKGO_FOCUS)" $(WHAT)'
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
@@ -154,4 +182,4 @@ check-generated-files: .generate_files
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files build ut static-checks
+ci: clean check-generated-files static-checks build ut

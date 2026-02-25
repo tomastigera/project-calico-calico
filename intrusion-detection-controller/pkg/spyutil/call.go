@@ -10,7 +10,7 @@ type Call struct {
 	Method      string
 	GNS         *v3.GlobalNetworkSet
 	Name        string
-	Value       interface{}
+	Value       any
 	Version     *int64
 	SeqNo       *int64
 	PrimaryTerm *int64

@@ -3,7 +3,7 @@ package earlynetworking_test
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/node/pkg/earlynetworking"

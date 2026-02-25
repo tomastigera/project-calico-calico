@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
@@ -466,7 +466,7 @@ var _ = Describe("DNS log type tests", func() {
 
 	Describe("v1.DNSLog Tests - IDNA", func() {
 		var l *v1.DNSLog
-		var jl map[string]interface{}
+		var jl map[string]any
 
 		BeforeEach(func() {
 			t := time.Date(2019, 0o7, 0o2, 0, 0, 0, 0, time.UTC)
@@ -554,9 +554,9 @@ var _ = Describe("DNS log type tests", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			findRR := func(rrsets []interface{}, name, class, _type string) map[string]interface{} {
+			findRR := func(rrsets []any, name, class, _type string) map[string]any {
 				for _, s := range rrsets {
-					sobj := s.(map[string]interface{})
+					sobj := s.(map[string]any)
 					if sobj["name"] == name && sobj["class"] == class && sobj["type"] == _type {
 						return sobj
 					}
@@ -569,7 +569,7 @@ var _ = Describe("DNS log type tests", func() {
 			})
 
 			It("converts rrset.name to unicode", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs0 := findRR(rrs, "www.mælström.com", "IN", "CNAME")
 				Expect(rrs0).ToNot(BeNil())
 				rrs1 := findRR(rrs, "mølmer-sørensen.gate", "IN", "A")
@@ -577,47 +577,47 @@ var _ = Describe("DNS log type tests", func() {
 			})
 
 			It("converts rrset rdata cname to unicode", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs0 := findRR(rrs, "www.mælström.com", "IN", "CNAME")
-				Expect(rrs0["rdata"]).To(Equal([]interface{}{"mølmer-sørensen.gate"}))
+				Expect(rrs0["rdata"]).To(Equal([]any{"mølmer-sørensen.gate"}))
 			})
 
 			It("converts rrset rdata soa to unicode", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs2 := findRR(rrs, "mølmer-sørensen.gate", "IN", "SOA")
-				Expect(rrs2["rdata"]).To(Equal([]interface{}{"mølmer-sørensen.gate mølmer-sørensen.gate 0 0 0 0 0"}))
+				Expect(rrs2["rdata"]).To(Equal([]any{"mølmer-sørensen.gate mølmer-sørensen.gate 0 0 0 0 0"}))
 			})
 
 			It("converts rrset rdata srv to unicode", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs3 := findRR(rrs, "_sip._tcp.mølmer-sørensen.gate", "IN", "SRV")
-				Expect(rrs3["rdata"]).To(Equal([]interface{}{"0 0 0 sip.mølmer-sørensen.gate"}))
+				Expect(rrs3["rdata"]).To(Equal([]any{"0 0 0 sip.mølmer-sørensen.gate"}))
 			})
 
 			It("converts rrset rdata mx to unicode", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs3 := findRR(rrs, "www.الْحَمْرَاء.es", "IN", "MX")
-				Expect(rrs3["rdata"]).To(Equal([]interface{}{"0 mail.الْحَمْرَاء.es"}))
+				Expect(rrs3["rdata"]).To(Equal([]any{"0 mail.الْحَمْرَاء.es"}))
 			})
 
 			It("leaves malformed ACE labels as is", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs4 := findRR(rrs, "xn--mlmer-srensen-bnbg*.gate", "IN", "A")
 				Expect(rrs4).ToNot(BeNil())
 			})
 
 			It("leaves ACE labels in TXT records as is", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs5 := findRR(rrs, "txt.txt.txt", "IN", "TXT")
 				Expect(rrs5).ToNot(BeNil())
-				Expect(rrs5["rdata"]).To(Equal([]interface{}{"xn--mlmer-srensen-bnbg.gate"}))
+				Expect(rrs5["rdata"]).To(Equal([]any{"xn--mlmer-srensen-bnbg.gate"}))
 			})
 
 			It("leaves ACE labels in unhandled records as base64 encoded", func() {
-				rrs := jl["rrsets"].([]interface{})
+				rrs := jl["rrsets"].([]any)
 				rrs6 := findRR(rrs, "wks.wks.wks", "IN", "WKS")
 				Expect(rrs6).ToNot(BeNil())
-				Expect(rrs6["rdata"]).To(Equal([]interface{}{"eG4tLW1sbWVyLXNyZW5zZW4tYm5iZy5nYXRl"}))
+				Expect(rrs6["rdata"]).To(Equal([]any{"eG4tLW1sbWVyLXNyZW5zZW4tYm5iZy5nYXRl"}))
 			})
 		})
 	})

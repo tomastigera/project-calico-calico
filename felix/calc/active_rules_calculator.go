@@ -16,6 +16,7 @@ package calc
 
 import (
 	"reflect"
+	"slices"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -295,8 +296,8 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 	return
 }
 
-// AddExtraComputedSelector adds an extra non-policy selector to the label index and gives OnComputedSelectorActive
-// and OnComputedSelectorInactive callbacks when that selector matches/stops matching local endpoints.  Allows for
+// AddExtraComputedSelector adds an extra non-policy selector to the label index and gives OnComputedSelectorMatch
+// and OnComputedSelectorMatchStopped callbacks when that selector matches/stops matching local endpoints.  Allows for
 // sharing the expensive selector index.
 func (arc *ActiveRulesCalculator) AddExtraComputedSelector(cs string) {
 	sel, err := selector.Parse(cs)
@@ -314,12 +315,7 @@ func policyForceProgrammed(policy *model.Policy) bool {
 	if policy == nil {
 		return false
 	}
-	for _, v := range policy.PerformanceHints {
-		if v == v3.PerfHintAssumeNeededOnEveryNode {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(policy.PerformanceHints, v3.PerfHintAssumeNeededOnEveryNode)
 }
 
 func (arc *ActiveRulesCalculator) updateStats() {
@@ -330,7 +326,7 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	// Get the set of all endpoints matching ALP Policy
 	endpoints := set.New[model.WorkloadEndpointKey]()
 	for polID := range arc.allALPPolicies.All() {
-		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
+		arc.policyIDToEndpointKeys.Iter(polID, func(epKey any) {
 			endpoints.Add(epKey.(model.WorkloadEndpointKey))
 		})
 	}
@@ -385,7 +381,7 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 	}
 }
 
-func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
+func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId any) {
 	if cs, ok := selID.(computedSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			if labelId, ok := labelId.(model.EndpointKey); ok {
@@ -417,7 +413,7 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 	}
 }
 
-func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
+func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId any) {
 	if cs, ok := selID.(computedSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			if labelId, ok := labelId.(model.EndpointKey); ok {

@@ -16,6 +16,7 @@ package updateprocessors
 
 import (
 	"errors"
+	"maps"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -66,9 +67,7 @@ func ConvertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 
 	// Add in the Kind and Name label for policy recommendation purposes
 	labelsWithCalicoNamespace := make(map[string]string, len(v3res.GetLabels()))
-	for k, v := range v3res.GetLabels() {
-		labelsWithCalicoNamespace[k] = v
-	}
+	maps.Copy(labelsWithCalicoNamespace, v3res.GetLabels())
 	if !netsetlabels.ValidateNetworkSetLabels(v3res.Name, labelsWithCalicoNamespace) {
 		// Add Kind and Name labels to network set for policy rule mappings.
 		netsetlabels.AddKindandNameLabels(v3res.Name, labelsWithCalicoNamespace)

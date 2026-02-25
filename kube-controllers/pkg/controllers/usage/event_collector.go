@@ -89,7 +89,7 @@ type event[T metav1.Object] struct {
 	new T
 }
 
-func (e *eventHandler[T]) OnAdd(obj interface{}, isInInitialList bool) {
+func (e *eventHandler[T]) OnAdd(obj any, isInInitialList bool) {
 	if log.GetLevel() == log.DebugLevel {
 		objBytes, err := json.Marshal(obj)
 		log.Debugf("Create event received. json_err=%s obj=%s", err, string(objBytes))
@@ -98,7 +98,7 @@ func (e *eventHandler[T]) OnAdd(obj interface{}, isInInitialList bool) {
 		new: obj.(T),
 	})
 }
-func (e *eventHandler[T]) OnUpdate(oldObj, newObj interface{}) {
+func (e *eventHandler[T]) OnUpdate(oldObj, newObj any) {
 	if log.GetLevel() == log.DebugLevel {
 		oldObjBytes, oldObjErr := json.Marshal(oldObj)
 		newObjBytes, newObjErr := json.Marshal(newObj)
@@ -109,7 +109,7 @@ func (e *eventHandler[T]) OnUpdate(oldObj, newObj interface{}) {
 		new: newObj.(T),
 	})
 }
-func (e *eventHandler[T]) OnDelete(obj interface{}) {
+func (e *eventHandler[T]) OnDelete(obj any) {
 	if log.GetLevel() == log.DebugLevel {
 		objBytes, err := json.Marshal(obj)
 		log.Debugf("Delete event received. json_err=%s obj=%s", err, string(objBytes))

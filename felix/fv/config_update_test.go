@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -208,6 +208,61 @@ var _ = infrastructure.DatastoreDescribe("Config update tests, after starting fe
 				cfgChangeTime = time.Now()
 				err = proxy.switchToMode(kubeProxyModeIptables)
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should exit after a delay", shouldExitAfterADelay)
+		})
+	})
+})
+
+var _ = infrastructure.DatastoreDescribe("Config update tests, nftables kube-proxy compat", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+	var (
+		tc       infrastructure.TopologyContainers
+		felixPID int
+		infra    infrastructure.DatastoreInfra
+	)
+
+	BeforeEach(func() {
+		infra = getInfra()
+
+		// Autodetection config tests require felix to be running in auto nftables mode.
+		opts := infrastructure.DefaultTopologyOptions()
+		opts.ExtraEnvVars = map[string]string{"FELIX_NFTABLESMODE": "Auto"}
+
+		tc, _ = infrastructure.StartSingleNodeTopology(opts, infra)
+		_ = infra
+		felixPID = tc.Felixes[0].GetSinglePID("calico-felix")
+	})
+
+	Context("after switching kube-proxy mode to nftables that should trigger a restart", func() {
+		shouldExitAfterADelay := func() {
+			// Felix checks every 15s, so wait with enough buffer.
+			Eventually(tc.Felixes[0].GetFelixPIDs, "30s", "100ms").ShouldNot(ContainElement(felixPID))
+
+			// Update felix pid after restart.
+			felixPID = tc.Felixes[0].GetSinglePID("calico-felix")
+		}
+
+		BeforeEach(func() {
+			if NFTMode() {
+				Skip("Skipping auto-detection tests when felix is already explicitly in nftables mode")
+			}
+
+			// Create nftables rules in the "kube-proxy" table, which should trigger felix restart.
+			tc.Felixes[0].Exec("nft", "add", "table", "ip", "kube-proxy")
+			tc.Felixes[0].Exec("nft", "add", "chain", "ip", "kube-proxy", "KUBE-TEST", "{ type filter hook forward priority 0 ; }")
+		})
+
+		It("should exit after a delay", shouldExitAfterADelay)
+
+		Context("after removing nftables rules that should trigger a restart", func() {
+			BeforeEach(func() {
+				// Wait felix in sync again.
+				shouldExitAfterADelay()
+				waitForFelixInSync(tc.Felixes[0])
+
+				// Remove the nftables rules in the "kube-proxy" table, which should trigger felix restart.
+				tc.Felixes[0].Exec("nft", "delete", "table", "ip", "kube-proxy")
 			})
 
 			It("should exit after a delay", shouldExitAfterADelay)

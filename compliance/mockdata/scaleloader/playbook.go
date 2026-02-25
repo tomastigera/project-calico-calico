@@ -126,7 +126,7 @@ func readPlays(log *logrus.Entry, scaleName string, playPath string) (init []Ste
 	steps = []Step{}
 	init = []Step{}
 
-	for idx := 0; idx < 100; idx++ {
+	for idx := range 100 {
 		stepPrefix := fmt.Sprintf("%02d-", idx)
 		for _, f := range files {
 			if strings.HasPrefix(f.Name(), stepPrefix) {

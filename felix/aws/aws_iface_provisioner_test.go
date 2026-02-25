@@ -5,6 +5,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	nethttp "net/http"
 	"os"
@@ -502,7 +503,7 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T)
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				for x := 0; x < 1000; x++ {
+				for range 1000 {
 					sip.OnDatastoreUpdate(DatastoreState{
 						LocalAWSAddrsByDst: nil,
 						PoolIDsBySubnetID:  nil,
@@ -1630,7 +1631,7 @@ func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	}
 	var addrs []ip.Addr
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		addr := ip.V4Addr{100, 64, 1, byte(64 + i)}
 		addrs = append(addrs, addr)
 		ds.LocalAWSAddrsByDst[addr] = AddrInfo{
@@ -2139,9 +2140,7 @@ func (f *fakeHealth) getRegistrations() map[string]registration {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	cp := make(map[string]registration)
-	for k, v := range f.registrations {
-		cp[k] = v
-	}
+	maps.Copy(cp, f.registrations)
 	return cp
 }
 
@@ -2149,9 +2148,7 @@ func (f *fakeHealth) getLastReports() map[string]health.HealthReport {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	cp := make(map[string]health.HealthReport)
-	for k, v := range f.lastReport {
-		cp[k] = v
-	}
+	maps.Copy(cp, f.lastReport)
 	return cp
 }
 

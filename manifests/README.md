@@ -42,4 +42,4 @@ commit your changes. **The following manifests are not auto generated:**
 - rancher/*
 - threatdef/*
 - tigera-prometheus-operator.yaml
-- operator-crds.yaml
+- ocp-tigera-operator-no-resource-loading.yaml

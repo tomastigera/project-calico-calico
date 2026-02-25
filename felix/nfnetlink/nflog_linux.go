@@ -395,7 +395,7 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp uint64, err erro
 	if err != nil {
 		return
 	}
-	for idx := 0; idx < n; idx++ {
+	for idx := range n {
 		attr := attrs[idx]
 		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
 		switch attrType {
@@ -427,7 +427,7 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		return nflogPacket, err
 	}
 
-	for idx := 0; idx < n; idx++ {
+	for idx := range n {
 		attr := attrs[idx]
 		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
 		native := binary.BigEndian

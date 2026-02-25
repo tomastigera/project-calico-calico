@@ -15,14 +15,15 @@
 package rules
 
 import (
+	"crypto/sha3"
 	"encoding/base64"
 	"fmt"
+	"hash"
 	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/hashutils"
@@ -442,7 +443,7 @@ func (r *DefaultRuleRenderer) PolicyGroupToIptablesChains(group *PolicyGroup) []
 		chainToJumpTo := PolicyChainName(
 			polChainPrefix,
 			pol,
-			r.NFTables,
+			r.nft,
 		)
 		rules = append(rules, generictables.Rule{
 			Match:  match,
@@ -498,7 +499,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			// Add ingress packet rate limit rules if applicable
 			if qosControls.IngressPacketRate != 0 {
 				logrus.WithFields(logrus.Fields{"IngressPacketRate": qosControls.IngressPacketRate, "IngressPacketBurst": qosControls.IngressPacketBurst, "mark": markLimitPacketRate}).Debug("Rendering ingress packet rate limit rules")
-				if r.NFTables {
+				if r.nft {
 					rules = append(rules,
 						generictables.Rule{
 							Match:   r.NewMatch(),
@@ -536,7 +537,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			// Add egress packet rate limit rules if applicable
 			if qosControls.EgressPacketRate != 0 {
 				logrus.WithFields(logrus.Fields{"EgressPacketRate": qosControls.EgressPacketRate, "EgressPacketBurst": qosControls.EgressPacketBurst, "mark": markLimitPacketRate}).Debug("Rendering egress packet rate limit rules")
-				if r.NFTables {
+				if r.nft {
 					rules = append(rules,
 						generictables.Rule{
 							Match:   r.NewMatch(),
@@ -744,7 +745,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 						chainsToJumpTo = append(chainsToJumpTo, PolicyChainName(
 							policyPrefix,
 							p,
-							r.NFTables,
+							r.nft,
 						))
 					}
 				} else {
@@ -847,7 +848,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	if chainType == chainTypeNormal {
 		// Then, jump to each profile in turn.
 		for _, profileID := range profileIds {
-			profChainName := ProfileChainName(profilePrefix, &types.ProfileID{Name: profileID}, r.NFTables)
+			profChainName := ProfileChainName(profilePrefix, &types.ProfileID{Name: profileID}, r.nft)
 			rules = append(rules,
 				generictables.Rule{Match: r.NewMatch(), Action: r.Jump(profChainName)},
 				// If policy marked packet as accepted, it returns, setting the
@@ -959,7 +960,7 @@ func (g *PolicyGroup) UniqueID() string {
 		return g.cachedUID
 	}
 
-	hash := sha3.New224()
+	hash := hash.Hash(sha3.New224())
 	write := func(s string) {
 		_, err := hash.Write([]byte(s))
 		if err != nil {

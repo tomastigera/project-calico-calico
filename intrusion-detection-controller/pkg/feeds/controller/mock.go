@@ -12,7 +12,7 @@ type mockSetsData struct {
 	ipSet storage.IPSet
 }
 
-func (d *mockSetsData) Put(ctx context.Context, name string, value interface{}) error {
+func (d *mockSetsData) Put(ctx context.Context, name string, value any) error {
 	return d.ipSet.PutIPSet(ctx, name, value.(storage.IPSetSpec))
 }
 

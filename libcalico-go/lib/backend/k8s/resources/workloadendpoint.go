@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -142,7 +142,7 @@ func (c *WorkloadEndpointClient) patchInAnnotations(
 
 func (c *WorkloadEndpointClient) calcCNIAnnotations(kvp *model.KVPair) map[string]string {
 	annotations := make(map[string]string)
-	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
+	wep := kvp.Value.(*internalapi.WorkloadEndpoint)
 	ips := wep.Spec.IPNetworks
 	if len(ips) == 0 {
 		return annotations
@@ -168,7 +168,7 @@ func (c *WorkloadEndpointClient) calcCNIAnnotations(kvp *model.KVPair) map[strin
 
 func (c *WorkloadEndpointClient) calcEgressGatewayAnnotations(kvp *model.KVPair) map[string]string {
 	annotations := make(map[string]string)
-	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
+	wep := kvp.Value.(*internalapi.WorkloadEndpoint)
 
 	var gatewayIP string
 	var started, finished *metav1.Time
@@ -259,8 +259,8 @@ func (c *WorkloadEndpointClient) patchPodAnnotations(
 }
 
 func calculateAnnotationPatch(revision string, uid *types.UID, annotations map[string]string) ([]byte, error) {
-	patch := map[string]interface{}{}
-	metadata := map[string]interface{}{}
+	patch := map[string]any{}
+	metadata := map[string]any{}
 	patch["metadata"] = metadata
 	if len(annotations) > 0 {
 		metadata["annotations"] = annotations
@@ -315,7 +315,7 @@ func (c *WorkloadEndpointClient) Get(ctx context.Context, key model.Key, revisio
 
 	// Find the WorkloadEndpoint that has a name matching the name in the given key
 	for _, kvp := range kvps {
-		wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
+		wep := kvp.Value.(*internalapi.WorkloadEndpoint)
 		if wep.Name == key.(model.ResourceKey).Name {
 			return kvp, nil
 		}
@@ -434,7 +434,7 @@ func (c *WorkloadEndpointClient) listUsingName(
 		}
 		// Find the WorkloadEndpoint that has a name matching the name in the given key
 		for _, kvp := range kvps {
-			wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
+			wep := kvp.Value.(*internalapi.WorkloadEndpoint)
 			if wep.Name == wepName {
 				tmpKVPs = []*model.KVPair{kvp}
 				break
@@ -511,7 +511,7 @@ func (c *WorkloadEndpointClient) convertAndFilterPodFn(wepID names.WorkloadEndpo
 				return nil, err
 			}
 			for _, wep := range weps {
-				if wep.Value.(*libapiv3.WorkloadEndpoint).Name != wepName {
+				if wep.Value.(*internalapi.WorkloadEndpoint).Name != wepName {
 					continue
 				}
 				return []*model.KVPair{wep}, nil

@@ -67,7 +67,7 @@ type logWithExtras struct {
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
-func (b *l7LogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.L7Log) interface{} {
+func (b *l7LogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.L7Log) any {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -224,7 +224,7 @@ func (b *l7LogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L7
 	}, nil
 }
 
-func (b *l7LogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.L7LogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *l7LogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.L7LogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests

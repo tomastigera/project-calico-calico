@@ -17,10 +17,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
@@ -92,7 +93,7 @@ var (
 
 var _ = ginkgo.JustBeforeEach(func() {
 	log.Info(">>> JustBeforeEach <<<")
-	testName = ginkgo.CurrentGinkgoTestDescription().FullTestText
+	testName = ginkgo.CurrentSpecReport().FullText()
 })
 
 var _ = ginkgo.AfterEach(func() {
@@ -106,7 +107,7 @@ var _ = ginkgo.AfterEach(func() {
 
 	// Store the result of each test in a Prometheus metric.
 	result := float64(1)
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		result = 0
 	}
 	gaugeVecTestResult.WithLabelValues(testName, codeLevel).Set(result)
@@ -136,7 +137,6 @@ var _ = ginkgo.AfterSuite(func() {
 })
 
 func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
-
 	config, err := clientcmd.NewNonInteractiveClientConfig(*api.NewConfig(),
 		"",
 		&clientcmd.ConfigOverrides{
@@ -164,6 +164,7 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 				KubeConfig: apiconfig.KubeConfig{
 					K8sAPIEndpoint:           k8sServerEndpoint,
 					K8sInsecureSkipTLSVerify: true,
+					CalicoAPIGroup:           os.Getenv("CALICO_API_GROUP"),
 				},
 			},
 		})
@@ -201,14 +202,13 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 }
 
 func create1000Pods(clientset *kubernetes.Clientset, nsPrefix string) error {
-
 	d = NewDeployment(clientset, 49, true)
 	nsName := nsPrefix + "test"
 
 	// Create 1000 pods.
 	createNamespace(clientset, nsName, nil)
 	log.Info("Creating pods:")
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		createPod(clientset, d, nsName, podSpec{})
 	}
 	log.Info("Done")

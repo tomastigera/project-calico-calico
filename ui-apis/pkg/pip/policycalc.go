@@ -64,9 +64,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	// calculations.
 	ec := policycalc.NewEndpointCache()
 	wgEps := sync.WaitGroup{}
-	wgEps.Add(1)
-	go func() {
-		defer wgEps.Done()
+	wgEps.Go(func() {
 		if s.cfg.AugmentFlowLogDataWithAuditLogData {
 			log.Debug("Augmenting flow log data with audit log data")
 			s.syncFromArchive(ctx, params, ec)
@@ -75,7 +73,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 			log.Debug("Augmenting flow log data with current datastore configuration")
 			_ = s.syncFromDatastore(ctx, params.ClusterName, requiredEndpointTypes, ec)
 		}
-	}()
+	})
 
 	// Load the initial set of policy. If this errors we cannot continue.
 	if err := s.syncFromDatastore(ctx, params.ClusterName, requiredPolicyTypes, xc); err != nil {

@@ -82,7 +82,7 @@ func newMasqManager(
 	}
 }
 
-func (d *masqManager) OnUpdate(msg interface{}) {
+func (d *masqManager) OnUpdate(msg any) {
 	var cidrKey string
 	var newPool *proto.IPAMPool
 	var cluster string

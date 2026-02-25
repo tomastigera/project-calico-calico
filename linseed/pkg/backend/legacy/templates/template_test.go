@@ -66,12 +66,12 @@ func TestBootstrapDNSTemplate(t *testing.T) {
 			expectedTemplate := &Template{
 				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_dns.%s.*", print(tenant, cluster))},
 				Mappings:      testutils.MustUnmarshalToMap(t, DNSLogMappings),
-				Settings:      map[string]interface{}{},
+				Settings:      map[string]any{},
 			}
 
 			// DNS has additional settings that we need to take into account
 			expectedTemplate.Settings = testutils.MustUnmarshalToMap(t, DNSLogSettings)
-			expectedTemplate.Settings["lifecycle"] = map[string]interface{}{
+			expectedTemplate.Settings["lifecycle"] = map[string]any{
 				"name":           "tigera_secure_ee_dns_policy",
 				"rollover_alias": fmt.Sprintf("tigera_secure_ee_dns.%s.", print(tenant, cluster)),
 			}
@@ -451,7 +451,7 @@ func TestBootstrapIPSetTemplate(t *testing.T) {
 			expectedTemplate := &Template{
 				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_threatfeeds_ipset.%s.*", print(tenant, cluster))},
 				Mappings:      testutils.MustUnmarshalToMap(t, IPSetMappings),
-				Settings:      map[string]interface{}{},
+				Settings:      map[string]any{},
 			}
 
 			expectedTemplate.Settings["number_of_shards"] = 1
@@ -479,7 +479,7 @@ func TestBootstrapDomainSetTemplate(t *testing.T) {
 			expectedTemplate := &Template{
 				IndexPatterns: []string{fmt.Sprintf("tigera_secure_ee_threatfeeds_domainnameset.%s.*", print(tenant, cluster))},
 				Mappings:      testutils.MustUnmarshalToMap(t, DomainSetMappings),
-				Settings:      map[string]interface{}{},
+				Settings:      map[string]any{},
 			}
 
 			expectedTemplate.Settings["number_of_shards"] = 1

@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -527,7 +526,7 @@ var _ = Describe("FlowLog middleware", func() {
 			// These table entry tests are run against setting both source and destination labels
 			labelTestCases := []TableEntry{
 				Entry("parses and returns a single label",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"doc_count": 1, "key": "labelname=labelvalue"},
 					},
 					FlowResponseLabels{
@@ -535,7 +534,7 @@ var _ = Describe("FlowLog middleware", func() {
 					},
 				),
 				Entry("parses and returns a multiple different labels",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"doc_count": 1, "key": "labelname1=labelvalue1"},
 						{"doc_count": 1, "key": "labelname2=labelvalue2"},
 						{"doc_count": 1, "key": "labelname3=labelvalue3"},
@@ -547,7 +546,7 @@ var _ = Describe("FlowLog middleware", func() {
 					},
 				),
 				Entry("parses and returns labels with multiple values",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"doc_count": 1, "key": "labelname=labelvalue1"},
 						{"doc_count": 1, "key": "labelname=labelvalue2"},
 						{"doc_count": 1, "key": "labelname=labelvalue3"},
@@ -558,7 +557,7 @@ var _ = Describe("FlowLog middleware", func() {
 				),
 			}
 
-			DescribeTable("parses the source labels", func(buckets []map[string]interface{}, expectedSrcLabels FlowResponseLabels) {
+			DescribeTable("parses the source labels", func(buckets []map[string]any, expectedSrcLabels FlowResponseLabels) {
 				setResponse(linseedLabelResponse(buckets, "src"))
 
 				flowLogHandler.ServeHTTP(respRecorder, req)
@@ -575,9 +574,9 @@ var _ = Describe("FlowLog middleware", func() {
 					DstLabels: FlowResponseLabels{},
 					SrcLabels: expectedSrcLabels,
 				}))
-			}, labelTestCases...)
+			}, labelTestCases)
 
-			DescribeTable("parses the destination labels", func(buckets []map[string]interface{}, expectedDstLabels FlowResponseLabels) {
+			DescribeTable("parses the destination labels", func(buckets []map[string]any, expectedDstLabels FlowResponseLabels) {
 				setResponse(linseedLabelResponse(buckets, "dst"))
 
 				flowLogHandler.ServeHTTP(respRecorder, req)
@@ -594,13 +593,13 @@ var _ = Describe("FlowLog middleware", func() {
 					SrcLabels: FlowResponseLabels{},
 					DstLabels: expectedDstLabels,
 				}))
-			}, labelTestCases...)
+			}, labelTestCases)
 		})
 
 		Context("for policies", func() {
 			DescribeTable("parsing policy hits when completely authorized",
 				func(
-					srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
+					srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]any,
 					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
 				) {
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
@@ -628,10 +627,10 @@ var _ = Describe("FlowLog middleware", func() {
 				},
 
 				Entry("single policy hit allowed at src and dst",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					}, nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier2|namespace2/tier2.policy2|allow|0", "doc_count": 1},
 					}, nil,
 					&PolicyReport{
@@ -647,11 +646,11 @@ var _ = Describe("FlowLog middleware", func() {
 				),
 
 				Entry("single policy hit allowed at src and denied at dst",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					}, nil,
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier2|namespace2/tier2.policy2|deny", "doc_count": 1},
 					},
 					&PolicyReport{
@@ -668,7 +667,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("single policy hit denied at src and denied on dst",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier1|namespace1/tier1.policy1|deny", "doc_count": 1},
 					},
 					nil, nil,
@@ -681,16 +680,16 @@ var _ = Describe("FlowLog middleware", func() {
 				),
 
 				Entry("single policy hit allowed and denied at src and dst",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier4|namespace4/tier4.policy4|deny|-1", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier3|namespace3/tier3.policy3|allow|0", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier2|namespace2/tier2.policy2|deny|-1", "doc_count": 1},
 					},
 					&PolicyReport{
@@ -715,28 +714,28 @@ var _ = Describe("FlowLog middleware", func() {
 				// destination, but this is just to test that the allow / deny logic handles multiple policies for
 				// src and dst.
 				Entry("multiple policy hits for allowed and denied at src and dst",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier11|namespace11/tier11.policy11|pass|0", "doc_count": 1},
 						{"key": "1|tier12|namespace12/tier12.staged:policy12|deny|-1", "doc_count": 1},
 						{"key": "2|tier12|namespace12/tier12.policy13|pass", "doc_count": 1},
 						{"key": "3|tier13|namespace13/tier13.policy14|pass|3", "doc_count": 1},
 						{"key": "4|tier14|namespace14/tier14.policy15|allow", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier21|namespace21/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace22/tier22.staged:policy22|deny", "doc_count": 1},
 						{"key": "2|tier22|namespace22/tier22.policy23|pass|0", "doc_count": 1},
 						{"key": "3|tier23|namespace23/tier23.policy24|pass", "doc_count": 1},
 						{"key": "4|tier24|namespace24/tier24.policy25|deny|0", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier31|namespace31/tier31.policy31|pass|0", "doc_count": 1},
 						{"key": "1|tier32|namespace32/tier32.staged:policy32|deny|0", "doc_count": 1},
 						{"key": "2|tier32|namespace32/tier32.policy33|pass", "doc_count": 1},
 						{"key": "3|tier33|namespace33/tier33.policy34|pass|0", "doc_count": 1},
 						{"key": "4|tier34|namespace34/tier34.policy35|allow", "doc_count": 1},
 					},
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier41|namespace41/tier41.policy41|pass|-", "doc_count": 1},
 						{"key": "1|tier42|namespace42/tier42.staged:policy42|deny", "doc_count": 1},
 						{"key": "2|tier42|namespace42/tier42.policy43|pass", "doc_count": 1},
@@ -779,7 +778,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("Parses Kubernetes policy",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "4|default|knp:namespace/policy|deny", "doc_count": 1},
 					},
 					nil, nil,
@@ -793,7 +792,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("Parses Kubernetes policy (legacy format)",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "4|default|namespace/knp.default.policy|deny", "doc_count": 1},
 					},
 					nil, nil,
@@ -807,7 +806,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("Parses Profile policy",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|__PROFILE__|pro:kns.namespace|deny", "doc_count": 1},
 					},
 					nil, nil,
@@ -821,7 +820,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("Parses Profile policy (legacy format)",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|__PROFILE__|__PROFILE__.kns.namespace|deny", "doc_count": 1},
 					},
 					nil, nil,
@@ -835,7 +834,7 @@ var _ = Describe("FlowLog middleware", func() {
 			)
 
 			DescribeTable("obfuscating policies",
-				func(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
+				func(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]any,
 					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
 					authResources []*authzv1.ResourceAttributes,
 				) {
@@ -867,10 +866,10 @@ var _ = Describe("FlowLog middleware", func() {
 				},
 
 				Entry("single obfuscated policy hit allowed at src and dst",
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier1|namespace/policy|allow|0", "doc_count": 1},
 					}, nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier2|namespace/policy2|allow|0", "doc_count": 1},
 					}, nil,
 					&PolicyReport{
@@ -894,13 +893,13 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("multiple obfuscated passes before non obfuscated deny at src and dst",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
 						{"key": "1|tier12|namespace1/tier12.policy12|pass|1", "doc_count": 1},
 						{"key": "2|tier13|namespace1/tier13.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace2/tier22.policy22|pass|1", "doc_count": 1},
 						{"key": "2|tier23|namespace2/tier23.policy23|deny|2", "doc_count": 1},
@@ -928,13 +927,13 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("multiple obfuscated passes before obfuscated deny",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
 						{"key": "1|tier12|namespace1/tier12.policy12|pass|1", "doc_count": 1},
 						{"key": "2|tier13|namespace1/tier13.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace2/tier22.policy22|pass|1", "doc_count": 1},
 						{"key": "2|tier23|namespace2/tier23.policy23|deny|2", "doc_count": 1},
@@ -957,7 +956,7 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("multiple obfuscated passes before non obfuscated staged deny before obfuscated deny",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
 						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
 						{"key": "2|tier13|namespace1/tier13.staged:policy13|deny|0", "doc_count": 1},
@@ -965,7 +964,7 @@ var _ = Describe("FlowLog middleware", func() {
 						{"key": "4|tier14|namespace1/tier14.policy15|deny", "doc_count": 1},
 					},
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
 						{"key": "2|tier23|namespace2/tier23.staged:policy23|deny|0", "doc_count": 1},
@@ -998,13 +997,13 @@ var _ = Describe("FlowLog middleware", func() {
 
 				Entry("omit obfuscated staged deny combine obfuscated pass and deny",
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier11|namespace1/tier11.staged:policy11|deny|0", "doc_count": 1},
 						{"key": "1|tier11|namespace1/tier11.policy12|pass", "doc_count": 1},
 						{"key": "2|tier12|namespace1/tier12.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
-					[]map[string]interface{}{
+					[]map[string]any{
 						{"key": "0|tier21|namespace2/tier21.staged:policy21|deny|0", "doc_count": 1},
 						{"key": "1|tier21|namespace2/tier21.policy22|pass|1", "doc_count": 1},
 						{"key": "2|tier22|namespace2/tier22.policy23|deny", "doc_count": 1},
@@ -1062,14 +1061,14 @@ func mustParseTime(timeStr, format string) time.Time {
 }
 
 func createLabelJson(key, operator string, values []string) string {
-	return string(calicojson.MustMarshal(map[string]interface{}{
+	return string(calicojson.MustMarshal(map[string]any{
 		"key": key, "operator": operator, "values": values,
 	}))
 }
 
 // policiesToV1 is a helper to turn a policy string in ES format into
 // a v1.Policy that Linseed would return.
-func policiesToV1(policies []map[string]interface{}) []v1.Policy {
+func policiesToV1(policies []map[string]any) []v1.Policy {
 	res := []v1.Policy{}
 	for _, policy := range policies {
 		key := policy["key"].(string)
@@ -1095,7 +1094,7 @@ func policiesToV1(policies []map[string]interface{}) []v1.Policy {
 	return res
 }
 
-func linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{}) v1.List[v1.L3Flow] {
+func linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]any) v1.List[v1.L3Flow] {
 	return v1.List[v1.L3Flow]{
 		AfterKey: nil,
 		Items: []v1.L3Flow{
@@ -1153,7 +1152,7 @@ func linseedPolicyResponse(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits 
 	}
 }
 
-func linseedLabelResponse(labels []map[string]interface{}, srcDst string) v1.List[v1.L3Flow] {
+func linseedLabelResponse(labels []map[string]any, srcDst string) v1.List[v1.L3Flow] {
 	newLabels := []v1.FlowLabels{}
 
 	for _, l := range labels {

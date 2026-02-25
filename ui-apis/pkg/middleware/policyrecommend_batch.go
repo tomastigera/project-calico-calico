@@ -156,31 +156,31 @@ func extractParamsFromRequest(req *http.Request) (*BatchStagedActionParams, erro
 func patchSNP(ctx context.Context, cs lmak8s.ClientSet, snp v3.StagedNetworkPolicy, stagedAction string, errs chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	var patch map[string]interface{}
+	var patch map[string]any
 	if v3.StagedAction(stagedAction) == v3.StagedActionSet {
 		// Once a policy is activated, the PolicyRecommendationScope forfeits ownership by setting
 		// the ownerReferences field to nil
 		// Patch the spec.stagedAction label to "Set"
-		patch = map[string]interface{}{
-			"metadata": map[string]interface{}{
+		patch = map[string]any{
+			"metadata": map[string]any{
 				"ownerReferences": nil,
-				"labels": map[string]interface{}{
+				"labels": map[string]any{
 					"projectcalico.org/spec.stagedAction": stagedAction,
 				},
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"stagedAction": stagedAction,
 			},
 		}
 	} else if v3.StagedAction(stagedAction) == v3.StagedActionLearn || v3.StagedAction(stagedAction) == v3.StagedActionIgnore {
 		// Patch the spec.stagedAction, when the staged action is "Learn" or "Ignore"
-		patch = map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		patch = map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					"projectcalico.org/spec.stagedAction": stagedAction,
 				},
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"stagedAction": stagedAction,
 			},
 		}

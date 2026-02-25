@@ -13,6 +13,9 @@ blocks:
       # Only run on branches that begin with 'release-calient-v'
       when: "branch !~ '^release-calient-v'"
     task:
+      env_vars:
+        - name: CONFIRM
+          value: "true"
       secrets:
         - name: marvin-github-ssh-private-key
         - name: marvin-aws-config

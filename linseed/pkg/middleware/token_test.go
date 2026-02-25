@@ -44,10 +44,10 @@ func TestTokenMiddleware(t *testing.T) {
 		Headers map[string]string
 
 		// Return values for calls to Authenticate made by the handler.
-		AuthnMocks []interface{}
+		AuthnMocks []any
 
 		// Return values for calls to Authorize made by the handler.
-		AuthzMocks []interface{}
+		AuthzMocks []any
 
 		// Attributes are attributes to use for RBAC.
 		Attributes []testAttributes
@@ -99,7 +99,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Resp:          `{"Status":404,"Msg":"no matching authz options for POST /api/v1/flows"}`,
 			Status:        404,
 			Headers:       map[string]string{"Authorization": fmt.Sprintf("Bearer %s", K8SToken(t))},
-			AuthnMocks:    []interface{}{&userInfo, 200, nil},
+			AuthnMocks:    []any{&userInfo, 200, nil},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 		},
@@ -108,7 +108,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Resp:          `{"Status":500,"Msg":"Token is not authentic"}`,
 			Status:        500,
 			Headers:       map[string]string{"Authorization": "Bearer foobar"},
-			AuthnMocks:    []interface{}{nil, 500, fmt.Errorf("Token is not authentic")},
+			AuthnMocks:    []any{nil, 500, fmt.Errorf("Token is not authentic")},
 			ClusterHeader: "cluster-id",
 			TenantHeader:  "tenant-id",
 		},
@@ -117,7 +117,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Resp:                 `{"Status":401,"Msg":"Bad tenant identifier"}`,
 			Status:               401,
 			Headers:              map[string]string{"Authorization": "Bearer foobar"},
-			AuthnMocks:           []interface{}{nil, 401, fmt.Errorf("Bad tenant identifier")},
+			AuthnMocks:           []any{nil, 401, fmt.Errorf("Bad tenant identifier")},
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "",
 			ExpectedTenantHeader: "tenant-id",
@@ -127,7 +127,7 @@ func TestTokenMiddleware(t *testing.T) {
 			Resp:                 `{"Status":401,"Msg":"Bad tenant identifier"}`,
 			Status:               401,
 			Headers:              map[string]string{"Authorization": "Bearer foobar"},
-			AuthnMocks:           []interface{}{nil, 401, fmt.Errorf("Bad tenant identifier")},
+			AuthnMocks:           []any{nil, 401, fmt.Errorf("Bad tenant identifier")},
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "another-tenant-id",
 			ExpectedTenantHeader: "tenant-id",
@@ -139,8 +139,8 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "",
 			ExpectedTenantHeader: "",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
-			AuthzMocks:           []interface{}{true, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
+			AuthzMocks:           []any{true, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -157,8 +157,8 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
-			AuthzMocks:           []interface{}{true, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
+			AuthzMocks:           []any{true, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -175,8 +175,8 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
-			AuthzMocks:           []interface{}{false, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
+			AuthzMocks:           []any{false, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -193,8 +193,8 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
-			AuthzMocks:           []interface{}{false, fmt.Errorf("Error performing authz")},
+			AuthnMocks:           []any{&userInfo, 200, nil},
+			AuthzMocks:           []any{false, fmt.Errorf("Error performing authz")},
 			Attributes: []testAttributes{
 				{
 					Verb:  "POST",
@@ -210,7 +210,7 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb:    "POST",
@@ -226,7 +226,7 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",
@@ -242,7 +242,7 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "cluster-id",
 			TenantHeader:         "SpongeBob",
 			ExpectedTenantHeader: "SpongeBob",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",
@@ -258,7 +258,7 @@ func TestTokenMiddleware(t *testing.T) {
 			ClusterHeader:        "SquarePants",
 			TenantHeader:         "tenant-id",
 			ExpectedTenantHeader: "tenant-id",
-			AuthnMocks:           []interface{}{&userInfo, 200, nil},
+			AuthnMocks:           []any{&userInfo, 200, nil},
 			Attributes: []testAttributes{
 				{
 					Verb: "POST",

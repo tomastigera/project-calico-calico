@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -146,7 +146,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 	Describe("with locally conflicting IPs", func() {
 		BeforeEach(func() {
 			// Start two local workloads with the same IP >:)
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				w[0][i] = workload.Run(tc.Felixes[0], fmt.Sprintf("w%d", i), "default", "10.65.0.2", "8088", "tcp")
 				w[0][i].ConfigureInInfra(infra)
 
@@ -195,7 +195,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ routing table tests", []api
 	Describe("with local/remote conflicting IPs", func() {
 		BeforeEach(func() {
 			// One local, one remote workload with same IP >:)
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				w[i][0] = workload.Run(tc.Felixes[i], fmt.Sprintf("w%d", i), "default", "10.65.0.2", "8088", "tcp")
 				w[i][0].ConfigureInInfra(infra)
 			}

@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	features "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewSecurityEventWebhookStorage creates a new libcalico-based storage.Interface implementation for SecurityEventWebhooks
@@ -47,17 +48,17 @@ func NewSecurityEventWebhookStorage(opts Options) (registry.DryRunnableStorage, 
 		return c.SecurityEventWebhook().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return false
+		return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(v3.SecurityEventWebhook{}),
-		aapiListType:      reflect.TypeOf(v3.SecurityEventWebhookList{}),
-		libCalicoType:     reflect.TypeOf(v3.SecurityEventWebhook{}),
-		libCalicoListType: reflect.TypeOf(v3.SecurityEventWebhookList{}),
+		aapiType:          reflect.TypeFor[v3.SecurityEventWebhook](),
+		aapiListType:      reflect.TypeFor[v3.SecurityEventWebhookList](),
+		libCalicoType:     reflect.TypeFor[v3.SecurityEventWebhook](),
+		libCalicoListType: reflect.TypeFor[v3.SecurityEventWebhookList](),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,

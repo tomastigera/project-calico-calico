@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,6 +48,9 @@ const (
 	Configuration Category = "Configuration"
 	Operator      Category = "Operator"
 	Networking    Category = "Networking"
+
+	// Visibility is used for tests that verify visibility features like dashboards and logging.
+	Visibility Category = "Visibility"
 )
 
 func WithCategory(cat Category) any {
@@ -59,17 +62,20 @@ func WithCategory(cat Category) any {
 //
 // If you are unsure which feature to use, please ask!
 var features = map[string]bool{
-	"NetworkPolicy":   true,
-	"Tiered-Policy":   true,
-	"IPPool":          true,
-	"AutoHEPs":        true,
-	"Host-Protection": true,
-	"HostPorts":       true,
-	"OwnerReferences": true,
-	"MTU":             true,
-	"Maglev":          true,
-	"BGPPeer":         true,
-	"IPIP":            true,
+	"NetworkPolicy":       true,
+	"Tiered-Policy":       true,
+	"IPPool":              true,
+	"AutoHEPs":            true,
+	"Host-Protection":     true,
+	"HostPorts":           true,
+	"OwnerReferences":     true,
+	"MTU":                 true,
+	"Maglev":              true,
+	"BGPPeer":             true,
+	"IPIP":                true,
+	"Tiered-RBAC":         true,
+	"Dashboards":          true,
+	"AuthorizationReview": true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.
@@ -98,7 +104,7 @@ func WithAzure() any {
 	return framework.WithLabel("RunsOnAzure")
 }
 
-// WithAzure marks tests that must run on AWS.
+// WithAWS marks tests that must run on AWS.
 func WithAWS() any {
 	return framework.WithLabel("RunsOnAWS")
 }

@@ -2,7 +2,7 @@
 package intdataplane
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/config"
@@ -44,7 +44,7 @@ var _ = Describe("NodeLocalDNSCache", func() {
 			VXLANPort:                4789,
 			VXLANVNI:                 4096,
 		}
-		ruleRenderer = rules.NewRenderer(rrConfigNormal)
+		ruleRenderer = rules.NewRenderer(rrConfigNormal, false)
 
 		rawTable = newMockTable("raw")
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,11 +31,13 @@ import (
 	_ "k8s.io/kubernetes/test/e2e/network"
 
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/apis"
+	_ "github.com/projectcalico/calico/e2e/pkg/tests/authorizationreviews"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/bgp"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/hostendpoints"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/networking"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/operator"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/policy"
+	_ "github.com/projectcalico/calico/e2e/pkg/tests/visibility"
 )
 
 func init() {

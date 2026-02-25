@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
@@ -17,7 +17,7 @@ func nodeTestQueryData() []testQueryData {
 			[]resourcemgr.ResourceObject{node1, node2, node3, node4},
 			client.QueryNodesReq{
 				Node: model.ResourceKey{
-					Kind: v3.KindNode,
+					Kind: internalapi.KindNode,
 					Name: "foobarbaz",
 				},
 			},

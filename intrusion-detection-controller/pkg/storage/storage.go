@@ -11,7 +11,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -280,15 +280,15 @@ func (e *Service) DeleteDomainNameSet(ctx context.Context, m Meta) error {
 type SetQuerier interface {
 	// QueryIPSet queries the flow log by IPs specified in the feed's IPSet.
 	// It returns a queryIterator, the latest IPSet hash, and error if any happens during the querying
-	QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.FlowLog], newSetHash string, err error)
+	QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) (queryIterator Iterator[lsv1.FlowLog], newSetHash string, err error)
 	// QueryDomainNameSet queries the DNS log by domain names specified in the feed's DomainNameSet.
 	// It returns a queryIterator, the latest DomainNameSet hash, and error if any happens during the querying
-	QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.DNSLog], newSetHash string, err error)
+	QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiv3.GlobalThreatFeed) (queryIterator Iterator[lsv1.DNSLog], newSetHash string, err error)
 	// GetDomainNameSet queries and outputs all the domain names specified in the feed's DomainNameSet.
 	GetDomainNameSet(ctx context.Context, name string) (DomainNameSetSpec, error)
 }
 
-func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.FlowLog], string, error) {
+func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) (Iterator[lsv1.FlowLog], string, error) {
 	ipset, err := e.GetIPSet(ctx, feed.Name)
 	if err != nil {
 		return nil, "", err
@@ -344,7 +344,7 @@ func flowParams(tr lmav1.TimeRange, matchType lsv1.MatchType, t []string) lsv1.F
 	return matchSource
 }
 
-func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.DNSLog], string, error) {
+func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNameSetSpec, feed *apiv3.GlobalThreatFeed) (Iterator[lsv1.DNSLog], string, error) {
 	newDomainNameSetHash := util.ComputeSha256Hash(domainNameSet)
 	fromTimestamp := time.Now()
 	currentDomainNameSetHash := feed.Annotations[DomainNameSetHashKey]

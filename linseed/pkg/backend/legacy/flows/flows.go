@@ -192,7 +192,8 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 		{Name: "dest_domains"},
 		{Name: "source_ip"},
 		{Name: "dest_ip"},
-		{Name: policiesField, Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField)},
+
+		{Name: allPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField)},
 		{Name: enforcedPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, enforcedPoliciesSubField)},
 		{Name: pendingPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField)},
 		{Name: transitPoliciesSubField, Field: fmt.Sprintf("%s.%s", policiesField, transitPoliciesSubField)},
@@ -415,10 +416,29 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
 
 	// Add in policies.
-	flow.Policies = getPoliciesFromAggregation(log, policiesField, bucket.AggregatedTerms)
 	flow.EnforcedPolicies = getPoliciesFromAggregation(log, enforcedPoliciesSubField, bucket.AggregatedTerms)
 	flow.PendingPolicies = getPoliciesFromAggregation(log, pendingPoliciesSubField, bucket.AggregatedTerms)
 	flow.TransitPolicies = getPoliciesFromAggregation(log, transitPoliciesSubField, bucket.AggregatedTerms)
+
+	// Determine all policies, preferring all_policies when present.
+	allPolicies := getPoliciesFromAggregation(log, allPoliciesSubField, bucket.AggregatedTerms)
+	if len(allPolicies) > 0 {
+		flow.Policies = allPolicies
+	} else {
+		// Fallback: combine enforced, and the staged policies from pending for backward compatibility.
+		if len(flow.EnforcedPolicies) > 0 || len(flow.PendingPolicies) > 0 {
+			allPolicies = append(allPolicies, flow.EnforcedPolicies...)
+			for _, p := range flow.PendingPolicies {
+				if p.IsStaged {
+					allPolicies = append(allPolicies, p)
+				}
+			}
+			flow.Policies = allPolicies
+		} else {
+			// No policies of any kind.
+			flow.Policies = nil
+		}
+	}
 
 	// Add in the destination domains.
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
@@ -444,7 +464,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 
 	if len(opts.Actions) > 0 {
 		// Filter-in any flows with one of the given actions.
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.Actions {
 			values = append(values, a)
 		}
@@ -453,7 +473,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 
 	if len(opts.SourceTypes) > 0 {
 		// Filter-in any flows with one of the given actions.
-		values := []interface{}{}
+		values := []any{}
 		for _, t := range opts.SourceTypes {
 			values = append(values, t)
 		}
@@ -462,7 +482,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 
 	if len(opts.DestinationTypes) > 0 {
 		// Filter-in any flows with one of the given actions.
-		values := []interface{}{}
+		values := []any{}
 		for _, t := range opts.DestinationTypes {
 			values = append(values, t)
 		}
@@ -472,7 +492,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 	if len(opts.NamespaceMatches) > 0 {
 		for _, match := range opts.NamespaceMatches {
 			// Get the list of values as an interface{}, as needed for a terms query.
-			values := []interface{}{}
+			values := []any{}
 			for _, t := range match.Namespaces {
 				values = append(values, t)
 			}
@@ -506,7 +526,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 	if len(opts.NameAggrMatches) > 0 {
 		for _, match := range opts.NameAggrMatches {
 			// Get the list of values as an interface{}, as needed for a terms query.
-			values := []interface{}{}
+			values := []any{}
 			for _, t := range match.Names {
 				values = append(values, t)
 			}
@@ -607,7 +627,7 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 //	}
 func buildLabelSelectorFilter(labelSelectors []v1.LabelSelector, path string) *elastic.NestedQuery {
 	termsKey := fmt.Sprintf("%s.labels", path)
-	var labelValues []interface{}
+	var labelValues []any
 	var selectorQueries []elastic.Query
 	for _, selector := range labelSelectors {
 		keyAndOperator := fmt.Sprintf("%s%s", selector.Key, selector.Operator)

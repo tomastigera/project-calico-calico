@@ -45,7 +45,7 @@ clean:
 		report/*.xml \
 		release-notes-* \
 		.calico_typha.created-*
-	find . -name "*.coverprofile" -type f -delete
+	find . -name "coverprofile.out" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
 	find . -name "*.pyc" -type f -delete
@@ -150,7 +150,7 @@ ut combined.coverprofile: $(SRC_FILES)
 version: image
 	docker run --rm $(TYPHA_IMAGE):latest-$(ARCH) calico-typha --version
 
-ci: version image ut static-checks
+ci: version static-checks image ut
 ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 	@$(MAKE) k8sfv-test
 endif

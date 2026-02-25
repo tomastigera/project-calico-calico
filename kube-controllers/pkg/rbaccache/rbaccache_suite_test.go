@@ -5,13 +5,13 @@ package rbaccache
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestConfig(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("./report/rbaccache.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "RBACCache Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "./report/rbaccache.xml"
+	ginkgo.RunSpecs(t, "RBACCache Suite", suiteConfig, reporterConfig)
 }

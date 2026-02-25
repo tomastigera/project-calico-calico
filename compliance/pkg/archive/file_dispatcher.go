@@ -16,7 +16,7 @@ import (
 // LogDispatcher is the external interface for dispatchers. For now there is only the file dispatcher.
 type LogDispatcher interface {
 	Initialize() error
-	Dispatch(logSlice interface{}) error
+	Dispatch(logSlice any) error
 }
 
 // fileDispatcher is a LogDispatcher that writes logs to a local,
@@ -57,7 +57,7 @@ func (d *fileDispatcher) Initialize() error {
 
 // Dispatch serializes and writes the given data. It must be a valid type of data (currently only
 // ReportData is allowed).
-func (d *fileDispatcher) Dispatch(data interface{}) error {
+func (d *fileDispatcher) Dispatch(data any) error {
 	writeLog := func(b []byte) error {
 		b = append(b, '\n')
 		// It is an error to call Dispatch before Initialize, so it's safe to

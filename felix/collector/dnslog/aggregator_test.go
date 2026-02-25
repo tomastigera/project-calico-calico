@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
@@ -238,7 +238,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("should only buffer 5 logs", func() {
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				uniqueClientIP := net.ParseIP(fmt.Sprintf("10.9.8.%v", i))
 				err := l.FeedUpdate(Update{ClientIP: uniqueClientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,

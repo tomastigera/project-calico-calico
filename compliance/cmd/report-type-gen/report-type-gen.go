@@ -132,7 +132,7 @@ func maybeCompressJSON(template *api.ReportTemplate) {
 	template.Template = strings.ReplaceAll(template.Template, "\t", "")
 
 	// The JSON should be convertable, if it isn't then print a warning and return the original JSON.
-	v := new(interface{})
+	v := new(any)
 	err := json.Unmarshal([]byte(template.Template), v)
 	if err != nil {
 		clog.WithError(err).Warn("Failed to unmarshal json, refusing to compress")

@@ -23,7 +23,7 @@ import (
 // against the cached data.  It takes one of the Query*Req structures as the query request
 // and returns the corresponding Query*Resp structure, or an error.
 type QueryInterface interface {
-	RunQuery(ctx context.Context, req interface{}) (interface{}, error)
+	RunQuery(ctx context.Context, req any) (any, error)
 }
 
 type QueryClusterReq struct {

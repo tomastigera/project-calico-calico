@@ -13,7 +13,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	features "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewStagedGlobalNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for StagedGlobalNetworkPolicies
@@ -46,18 +45,17 @@ func NewStagedGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStor
 		return c.StagedGlobalNetworkPolicies().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		res := obj.(*v3.StagedGlobalNetworkPolicy)
-		return !opts.LicenseMonitor.GetFeatureStatus(features.EgressAccessControl) && rulesHaveDNSDomain(res.Spec.Egress)
+		return false
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(v3.StagedGlobalNetworkPolicy{}),
-		aapiListType:      reflect.TypeOf(v3.StagedGlobalNetworkPolicyList{}),
-		libCalicoType:     reflect.TypeOf(v3.StagedGlobalNetworkPolicy{}),
-		libCalicoListType: reflect.TypeOf(v3.StagedGlobalNetworkPolicyList{}),
+		aapiType:          reflect.TypeFor[v3.StagedGlobalNetworkPolicy](),
+		aapiListType:      reflect.TypeFor[v3.StagedGlobalNetworkPolicyList](),
+		libCalicoType:     reflect.TypeFor[v3.StagedGlobalNetworkPolicy](),
+		libCalicoListType: reflect.TypeFor[v3.StagedGlobalNetworkPolicyList](),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,

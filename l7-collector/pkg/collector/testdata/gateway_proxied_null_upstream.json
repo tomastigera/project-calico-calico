@@ -1,0 +1,21 @@
+{
+  "downstream_remote_address": "192.168.138.208:34368",
+  "connection_id": 0,
+  "type": "HTTP/1.1",
+  "duration": 0,
+  "downstream_local_address": "192.168.35.210:80",
+  "user_agent": "curl/7.68.0",
+  "response_code": 503,
+  "start_time": "2020-11-24T22:24:29.237Z",
+  "request_id": "e23c0019-36b7-4142-8e86-39d15b00e965",
+  "upstream_host": null,
+  "bytes_received": 0,
+  "request_path": "/unavailable",
+  "hostname": "",
+  "downstream_direct_remote_address": "192.168.138.208:34368",
+  "x_forwarded_for": "10.1.1.1, 10.2.2.2",
+  "reporter": "gateway-proxied",
+  "bytes_sent": 0,
+  "request_method": "GET",
+  "route_name": "httproute/test-ns/unavailable-route/rule/0/match/0/unavailable_example_com"
+}

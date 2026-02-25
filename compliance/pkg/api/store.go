@@ -352,7 +352,7 @@ func (c *complianceStore) RetrieveArchivedReportSummaries(ctx context.Context, q
 		if q.MaxItems != nil && *q.MaxItems != 0 {
 			actualPageSize = int(math.Min(float64(params.GetMaxPageSize()), float64(*q.MaxItems)))
 		}
-		params.SetAfterKey(map[string]interface{}{
+		params.SetAfterKey(map[string]any{
 			"startFrom": q.Page * actualPageSize,
 		})
 	}

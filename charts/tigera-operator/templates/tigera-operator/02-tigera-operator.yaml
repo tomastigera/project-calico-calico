@@ -87,6 +87,9 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "tigera-operator"
+          {{- with .Values.tigeraOperator.env }}
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
           envFrom:
             - configMapRef:
                 name: kubernetes-services-endpoint

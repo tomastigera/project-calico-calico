@@ -35,6 +35,8 @@ const (
 
 var EnterpriseHelmCharts = []string{
 	TigeraOperatorChart,
+	ProjectCalicoV1CRDsChart,
+	ProjectCalicoV3CRDsChart,
 	"tigera-prometheus-operator",
 	"multi-tenant-crds",
 }
@@ -76,6 +78,7 @@ var (
 		"prometheus-service",
 		"queryserver",
 		"voltron",
+		"webhooks",
 		"webhooks-processor",
 		"third_party/alertmanager",
 		"third_party/dex",

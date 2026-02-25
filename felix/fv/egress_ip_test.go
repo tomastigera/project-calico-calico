@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -34,7 +34,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libcalicoapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -213,7 +213,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
 		fwmarkRE := regexp.MustCompile(`from ([0-9.]+) fwmark [^ ]+ lookup ([0-9]+)`)
-		for _, line := range strings.Split(rules, "\n") {
+		for line := range strings.SplitSeq(rules, "\n") {
 			match := fwmarkRE.FindStringSubmatch(line)
 			if len(match) < 3 {
 				continue
@@ -246,7 +246,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
 		lladdrRE := regexp.MustCompile(`([0-9.]+) lladdr ([0-9a-f:]+)`)
-		for _, line := range strings.Split(neigh, "\n") {
+		for line := range strings.SplitSeq(neigh, "\n") {
 			match := lladdrRE.FindStringSubmatch(line)
 			if len(match) < 3 {
 				continue
@@ -263,7 +263,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
 		fdbRE := regexp.MustCompile(`([0-9a-f:]+) dst ([0-9.]+)`)
-		for _, line := range strings.Split(fdb, "\n") {
+		for line := range strings.SplitSeq(fdb, "\n") {
 			match := fdbRE.FindStringSubmatch(line)
 			if len(match) < 3 {
 				continue
@@ -334,11 +334,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		} else if len(ips) == 1 {
 			return "default via " + ips[0] + " dev egress.calico onlink"
 		} else {
-			r := "default onlink \n"
+			var r strings.Builder
+			r.WriteString("default onlink \n")
 			for _, ip := range ips {
-				r += "\tnexthop via " + ip + " dev egress.calico weight 1 onlink \n"
+				r.WriteString("\tnexthop via " + ip + " dev egress.calico weight 1 onlink \n")
 			}
-			return strings.TrimSpace(r)
+			return strings.TrimSpace(r.String())
 		}
 	}
 
@@ -386,11 +387,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			})
 
 			for _, sameNode := range []bool{true, false} {
-				sameNode := sameNode
 				for _, ov := range []Overlay{OV_NONE, OV_VXLAN, OV_IPIP} {
-					ov := ov
 					for _, proto := range []string{"tcp", "udp"} {
-						proto := proto
 						description := "with " + ov.String() + ", client and gateway on "
 						if sameNode {
 							description += "same node"
@@ -459,11 +457,48 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								cc.CheckConnectivity()
 
 								dscp32 := numorstring.DSCPFromInt(32) // 0x20
-								egwClient.WorkloadEndpoint.Spec.QoSControls = &libcalicoapi.QoSControls{
+								egwClient.WorkloadEndpoint.Spec.QoSControls = &internalapi.QoSControls{
 									DSCP: &dscp32,
 								}
 								egwClient.UpdateInInfra(infra)
 
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
+								cc.CheckConnectivity()
+							})
+
+							It("should use Host IP when ippool natOutgoing is true", func() {
+								// Check that originally traffic is SNATed to the gateway pod's IP
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
+								cc.CheckConnectivity()
+
+								// Enable natOutgoing on the egress IP pool.
+								ippool, err := client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+								ippool.Spec.NATOutgoing = true
+								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+
+								// The traffic should be SNATed to the IP of the node hosting the gateway pod.
+								gwNodeIP := tc.Felixes[0].IP
+								if !sameNode {
+									gwNodeIP = tc.Felixes[1].IP
+								}
+
+								// Check connectivity which should be SNATed to the Host IP.
+								cc.ResetExpectations()
+								cc.ExpectSNAT(egwClient, gwNodeIP, extWorkload, 4321)
+								cc.CheckConnectivity()
+
+								// Revert natOutgoing back to false.
+								ippool, err = client.IPPools().Get(context.Background(), "egress-pool", options.GetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+								ippool.Spec.NATOutgoing = false
+								_, err = client.IPPools().Update(context.Background(), ippool, options.SetOptions{})
+								Expect(err).NotTo(HaveOccurred())
+
+								// Traffic should now be SNATed to the gateway pod's IP again.
 								cc.ResetExpectations()
 								cc.ExpectSNAT(egwClient, gw.IP, extWorkload, 4321)
 								cc.CheckConnectivity()
@@ -485,7 +520,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			)
 
 			JustBeforeEach(func() {
-				for i := 0; i < 4; i++ {
+				for i := range 4 {
 					extHost := infrastructure.RunExtClient(infra, "external-server")
 					extWorkload := &workload.Workload{
 						C:        extHost,
@@ -566,7 +601,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 				_, err := client.EgressGatewayPolicy().Delete(ctx, "egw-policy1", options.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
-				for i := 0; i < 4; i++ {
+				for i := range 4 {
 					extWorkloads[i].Stop()
 					extHosts[i].Stop()
 				}
@@ -592,7 +627,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						if l == "red" {
 							j = 2
 						}
-						for i := 0; i < 2; i++ {
+						for i := range 2 {
 							gwName := fmt.Sprintf("gw%v-%v", l, i)
 							gwAddr := fmt.Sprintf("10.10.11.%v", i+j)
 							gwRoute := fmt.Sprintf("10.10.11.%v/32", i+j)
@@ -607,12 +642,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							} else {
 								redGWs = append(redGWs, gw)
 							}
-							for i := 0; i < 4; i++ {
+							for i := range 4 {
 								extWorkloads[i].C.Exec("ip", "route", "add", gwRoute, "via", gw.C.IP)
 							}
 						}
 					}
-					for i := 0; i < 4; i++ {
+					for i := range 4 {
 						extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", tc.Felixes[0].IP)
 					}
 					if BPFMode() {
@@ -620,7 +655,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					}
 				})
 				AfterEach(func() {
-					for i := 0; i < 2; i++ {
+					for i := range 2 {
 						redGWs[i].Stop()
 						blueGWs[i].Stop()
 					}
@@ -679,11 +714,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			})
 
 			for _, sameNode := range []bool{true, false} {
-				sameNode := sameNode
 				for _, ov := range []Overlay{OV_NONE, OV_VXLAN, OV_IPIP} {
-					ov := ov
 					for _, proto := range []string{"tcp", "udp"} {
-						proto := proto
 						description := "with " + ov.String() + ", client and gateway on "
 						if sameNode {
 							description += "same node"
@@ -744,8 +776,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								createEgwIngPol(gw)
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 									"Expected rules to appear on the correct felix instances")
-								for i := 0; i < 4; i++ {
-									for j := 0; j < 2; j++ {
+								for i := range 4 {
+									for j := range 2 {
 										gwRoute := fmt.Sprintf("10.10.1%v.1/32", j)
 										extWorkloads[i].C.Exec("ip", "route", "add", gwRoute, "via", gws[j].C.IP)
 									}
@@ -754,7 +786,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							AfterEach(func() {
-								for i := 0; i < 2; i++ {
+								for i := range 2 {
 									gws[i].Stop()
 								}
 								gws = nil
@@ -859,7 +891,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				if err != nil {
 					return
 				}
-				for _, route := range strings.Split(routes, "\n") {
+				for route := range strings.SplitSeq(routes, "\n") {
 					if matched := gwRouteRe.MatchString(route); matched {
 						return
 					}

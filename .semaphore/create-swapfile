@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# This script must be run with sudo since it creates and enables a swap file.
+
+set -e
+
+SIZE=${1:-2G}
+
+echo "Creating ${SIZE} swap file at /swapfile..."
+fallocate -l "${SIZE}" /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+
+echo "Swap file created and enabled:"
+swapon --show
+free -h

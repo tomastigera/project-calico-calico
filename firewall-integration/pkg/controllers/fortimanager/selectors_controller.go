@@ -109,7 +109,7 @@ func NewSelectorsController(
 		ObjectType:    &v1.Pod{},
 		ResyncPeriod:  0,
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
+			AddFunc: func(obj any) {
 				log.Debugf("Got ADD event for Pod: %#v", obj)
 				pod := obj.(*v1.Pod)
 
@@ -130,7 +130,7 @@ func NewSelectorsController(
 				log.Debugf("Dispatching pod updates : %+v", updates)
 				syncerUpdateChan <- updates
 			},
-			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+			UpdateFunc: func(oldObj any, newObj any) {
 				log.Debugf("Got UPDATE event for Pod")
 				log.Debugf("Old Pod: %#v", oldObj)
 				log.Debugf("Updated Pod: %#v", newObj)
@@ -153,7 +153,7 @@ func NewSelectorsController(
 				log.Debugf("Dispatching pod updates : %+v", updates)
 				syncerUpdateChan <- updates
 			},
-			DeleteFunc: func(obj interface{}) {
+			DeleteFunc: func(obj any) {
 				log.Debugf("Got DELETE event for Pod: %#v", obj)
 				pod := obj.(*v1.Pod)
 
@@ -260,7 +260,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 		ObjectType:    &v3.GlobalNetworkPolicy{},
 		ResyncPeriod:  0,
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
+			AddFunc: func(obj any) {
 				// Handle GNP add events
 				log.Debugf("Got Add Event for GNP: %+v", obj)
 				gnp := obj.(*v3.GlobalNetworkPolicy)
@@ -293,7 +293,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 				syncerUpdateChan <- updates
 
 			},
-			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+			UpdateFunc: func(oldObj any, newObj any) {
 				// Handle GNP add events
 				log.Debugf("Got UPDATE event for new GNP: %+v", newObj)
 				log.Debugf("Got UPDATE event for old GNP: %+v", oldObj)
@@ -336,7 +336,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 				syncerUpdateChan <- updates
 
 			},
-			DeleteFunc: func(obj interface{}) {
+			DeleteFunc: func(obj any) {
 				log.Debugf("Got DELETE event for GNP: %#v", obj)
 
 				gnp := obj.(*v3.GlobalNetworkPolicy)
@@ -902,8 +902,8 @@ func getResourceCacheAddressGrps(fcs map[string]fortilib.FortiFWClientApi) map[s
 	for dev, fc := range fcs {
 
 		// List FortiGate address groups
-		listFuncAddrGrp := func() (map[string]interface{}, error) {
-			groups := make(map[string]interface{})
+		listFuncAddrGrp := func() (map[string]any, error) {
+			groups := make(map[string]any)
 
 			addrGroups, err := fc.ListAllFirewallAddressGroups()
 			if err != nil {
@@ -924,7 +924,7 @@ func getResourceCacheAddressGrps(fcs map[string]fortilib.FortiFWClientApi) map[s
 		// Setup a cache for FortiGate Firewall Addresses.
 		cacheArgsAddrGrp := rcache.ResourceCacheArgs{
 			ListFunc:    listFuncAddrGrp,
-			ObjectType:  reflect.TypeOf(AddressGroup{}),
+			ObjectType:  reflect.TypeFor[AddressGroup](),
 			LogTypeDesc: fmt.Sprintf("Fortidevice AddressGroup for dev :%s", dev),
 		}
 		fcacheAddrGrp := rcache.NewResourceCache(cacheArgsAddrGrp)
@@ -938,8 +938,8 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 	devToRcacheAddr := make(map[string]rcache.ResourceCache)
 	for dev, fc := range fcs {
 		// List FortiGate firewall addresses
-		listFuncAddr := func() (map[string]interface{}, error) {
-			addresses := make(map[string]interface{})
+		listFuncAddr := func() (map[string]any, error) {
+			addresses := make(map[string]any)
 
 			fwAddresses, err := fc.ListAllFirewallAddresses()
 			if err != nil {
@@ -966,7 +966,7 @@ func getResourceCacheAddress(fcs map[string]fortilib.FortiFWClientApi) map[strin
 		// Setup a cache for FortiGate Firewall Addresses.
 		cacheArgsAddr := rcache.ResourceCacheArgs{
 			ListFunc:    listFuncAddr,
-			ObjectType:  reflect.TypeOf(fortilib.RespFortiGateFWAddressData{}),
+			ObjectType:  reflect.TypeFor[fortilib.RespFortiGateFWAddressData](),
 			LogTypeDesc: fmt.Sprintf("Fortidevice Address for dev :%s", dev),
 		}
 		fcacheAddr := rcache.NewResourceCache(cacheArgsAddr)

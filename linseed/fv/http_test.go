@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"net/http"
 	"os"
@@ -32,9 +33,7 @@ func (h *httpReqSpec) AddHeaders(headers map[string]string) {
 	if h.headers == nil {
 		h.headers = make(map[string]string)
 	}
-	for k, v := range headers {
-		h.headers[k] = v
-	}
+	maps.Copy(h.headers, headers)
 }
 
 func (h *httpReqSpec) SetBody(body string) {

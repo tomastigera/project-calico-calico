@@ -87,7 +87,7 @@ func (r *replayer) initialize(ctx context.Context) error {
 		clog.WithField("length", len(objs)).Debug("Extracted list into array")
 
 		// Iterate over objects and store into map.
-		for i := 0; i < len(objs); i++ {
+		for i := range objs {
 			res, ok := objs[i].(resources.Resource)
 			if !ok {
 				clog.WithField("obj", objs[i]).Warn("Failed to type assert resource")

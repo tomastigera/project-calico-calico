@@ -73,7 +73,7 @@ type QueryRequestFilterCriterion struct {
 	Pattern string `json:"pattern,omitempty"`
 
 	// Value Expected document Field value for the equals criterion
-	Value QueryRequestFilterCriterionValue `json:"value,omitempty"`
+	Value QueryRequestFilterCriterionValue `json:"value"`
 
 	// Values Expected document values for the in criterion
 	Values []string `json:"values,omitempty"`

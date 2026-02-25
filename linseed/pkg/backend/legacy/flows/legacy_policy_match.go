@@ -21,7 +21,20 @@ func allPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 		return nil, err
 	}
 
-	return elastic.NewWildcardQuery("policies.all_policies", matchString), nil
+	b := elastic.NewBoolQuery()
+
+	// To support querying across both legacy data (all_policies) and new data
+	// (enforced/pending_policies), we search in all relevant fields.
+	b.Should(elastic.NewWildcardQuery("policies.all_policies", matchString))
+
+	if m.Staged != nil && *m.Staged {
+		b.Should(elastic.NewWildcardQuery("policies.pending_policies", matchString))
+	} else {
+		b.Should(elastic.NewWildcardQuery("policies.enforced_policies", matchString))
+	}
+	b.MinimumNumberShouldMatch(1)
+
+	return b, nil
 }
 
 func enforcedPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
@@ -63,7 +76,7 @@ func CompileLegacyStringMatch(m v1.PolicyMatch) (string, error) {
 	if m.Namespace != nil {
 		namespace = *m.Namespace
 	}
-	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged)
+	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged != nil && *m.Staged)
 	if err != nil {
 		return "", err
 	}

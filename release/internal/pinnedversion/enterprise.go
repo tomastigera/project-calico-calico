@@ -55,7 +55,7 @@ var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	eckElasticsearchComponentName:         {Version: "8.19.10"},
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
 	eckKibanaComponentName:                {Version: "8.19.10"},
-	upstreamFluentdComponentName:          {Version: "1.19.1"},
+	upstreamFluentdComponentName:          {Version: "1.19.2"},
 }
 
 var (
@@ -151,9 +151,7 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 		components[name] = component
 	}
 	if includeOperator {
-		for name, component := range p.operatorComponents() {
-			components[name] = component
-		}
+		maps.Copy(components, p.operatorComponents())
 	}
 	return components
 }

@@ -5,9 +5,8 @@ package k8sutils
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
@@ -17,7 +16,8 @@ func init() {
 }
 
 func TestK8sUtilsGinkgo(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/k8sutils_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "UT: felix/k8sutils", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../report/k8sutils_suite.xml"
+	ginkgo.RunSpecs(t, "UT: felix/k8sutils", suiteConfig, reporterConfig)
 }

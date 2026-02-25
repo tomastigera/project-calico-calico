@@ -14,8 +14,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -114,9 +113,9 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 	)
 })
 
-func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
+func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() any {
 	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
-	return func() interface{} {
+	return func() any {
 		By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
 		qurl, httpMethod := calculateQueryUrl(addr, tqd.query)
 		qbody := calculateQueryBody(tqd.query)
@@ -177,7 +176,7 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 	}
 }
 
-func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTPMethod) {
+func calculateQueryUrl(addr string, query any) (string, authhandler.HTTPMethod) {
 	var parms []string
 	u := "http://" + addr + "/"
 	httpMethod := authhandler.MethodGET
@@ -232,7 +231,7 @@ func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTP
 	return u + "?" + strings.Join(parms, "&"), httpMethod
 }
 
-func calculateQueryBody(query interface{}) io.Reader {
+func calculateQueryBody(query any) io.Reader {
 	switch qt := query.(type) {
 	case client.QueryEndpointsReq:
 		var policy []string
@@ -348,7 +347,7 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 		Expect(err).NotTo(HaveOccurred())
 		var numWeps, numHeps int
 		for _, i := range output.Items {
-			if i.Kind == libapi.KindWorkloadEndpoint {
+			if i.Kind == internalapi.KindWorkloadEndpoint {
 				numWeps++
 			} else {
 				numHeps++

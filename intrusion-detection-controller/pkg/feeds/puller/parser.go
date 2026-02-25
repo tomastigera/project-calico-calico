@@ -44,7 +44,7 @@ func jsonParser(path string) parser {
 			return fmt.Errorf("could not read data: %s", err)
 		}
 
-		var i interface{}
+		var i any
 		err = json.Unmarshal(input, &i)
 		if err != nil {
 			return fmt.Errorf("could not parse JSON: %s", err)
@@ -55,7 +55,7 @@ func jsonParser(path string) parser {
 			return fmt.Errorf("could not read jsonpath: %s", err)
 		}
 
-		lines, ok := i2.([]interface{})
+		lines, ok := i2.([]any)
 		if !ok {
 			log.WithField("output", i2).Warn("[Global Threat Feeds] path does not produce an array of strings")
 			return fmt.Errorf("[Global Threat Feeds] path does not produce an array of strings")

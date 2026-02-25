@@ -25,7 +25,6 @@ import (
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
-	calicoauthenticationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	calicoauthorizationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 	calicobfdconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bfdconfiguration"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
@@ -556,7 +555,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: ipReservationRESTOptions,
+			RESTOptions:    ipReservationRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -897,7 +897,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: caliconodestatusRESTOptions,
+			RESTOptions:    caliconodestatusRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -919,7 +920,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: ipamconfigRESTOptions,
+			RESTOptions:    ipamconfigRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -941,7 +943,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: securityeventRESTOptions,
+			RESTOptions:    securityeventRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -963,7 +966,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: blockAffinityRESTOptions,
+			RESTOptions:    blockAffinityRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -985,7 +989,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: externalnetworkRESTOptions,
+			RESTOptions:    externalnetworkRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -1007,7 +1012,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: egressGatewayPolicyRESTOptions,
+			RESTOptions:    egressGatewayPolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -1141,7 +1147,6 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["managedclusters/status"] = managedClusterStatusStorage
 
 	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
-	storage["authenticationreviews"] = calicoauthenticationreview.NewREST()
 	storage["authorizationreviews"] = calicoauthorizationreview.NewREST(calculator)
 
 	packetCaptureStorage, packetCaptureStatusStorage, err := calicopacketcapture.NewREST(scheme, *packetCaptureOpts)

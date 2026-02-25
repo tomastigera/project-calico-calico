@@ -3,7 +3,7 @@ package maputil
 import (
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -13,30 +13,30 @@ var _ = Describe("maputil", func() {
 			srcValue := "src_value"
 			cpValue := "cp_value"
 
-			src := map[string]interface{}{
-				"a": map[string]interface{}{"b": srcValue},
+			src := map[string]any{
+				"a": map[string]any{"b": srcValue},
 				"c": srcValue,
-				"d": map[string]interface{}{"e": map[string]interface{}{"f": srcValue}},
+				"d": map[string]any{"e": map[string]any{"f": srcValue}},
 			}
-			Expect(src["a"].(map[string]interface{})["b"]).Should(Equal(srcValue))
+			Expect(src["a"].(map[string]any)["b"]).Should(Equal(srcValue))
 			Expect(src["c"]).Should(Equal(srcValue))
-			Expect(src["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(srcValue))
+			Expect(src["d"].(map[string]any)["e"].(map[string]any)["f"]).Should(Equal(srcValue))
 
 			cp, err := Copy(src)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(src).Should(BeEquivalentTo(cp))
 
-			cp["a"].(map[string]interface{})["b"] = cpValue
+			cp["a"].(map[string]any)["b"] = cpValue
 			cp["c"] = cpValue
-			cp["d"].(map[string]interface{})["e"].(map[string]interface{})["f"] = cpValue
+			cp["d"].(map[string]any)["e"].(map[string]any)["f"] = cpValue
 			Expect(src).ShouldNot(BeEquivalentTo(cp))
 
-			Expect(src["a"].(map[string]interface{})["b"]).Should(Equal(srcValue))
+			Expect(src["a"].(map[string]any)["b"]).Should(Equal(srcValue))
 			Expect(src["c"]).Should(Equal(srcValue))
-			Expect(src["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(srcValue))
-			Expect(cp["a"].(map[string]interface{})["b"]).Should(Equal(cpValue))
+			Expect(src["d"].(map[string]any)["e"].(map[string]any)["f"]).Should(Equal(srcValue))
+			Expect(cp["a"].(map[string]any)["b"]).Should(Equal(cpValue))
 			Expect(cp["c"]).Should(Equal(cpValue))
-			Expect(cp["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(cpValue))
+			Expect(cp["d"].(map[string]any)["e"].(map[string]any)["f"]).Should(Equal(cpValue))
 		})
 	})
 

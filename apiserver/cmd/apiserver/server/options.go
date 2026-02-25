@@ -17,7 +17,6 @@ limitations under the License.
 package server
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net"
 	"os"
@@ -143,7 +142,10 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	}
 
 	serverConfig.SecureServing.CipherSuites = tlsCipherSuites
-	serverConfig.SecureServing.MinTLSVersion = tls.VersionTLS12
+	serverConfig.SecureServing.MinTLSVersion, err = calicotls.ParseTLSVersion(os.Getenv("TLS_MIN_VERSION"))
+	if err != nil {
+		return nil, err
+	}
 
 	if o.PrintSwagger {
 		o.DisableAuth = true

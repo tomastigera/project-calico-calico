@@ -1,0 +1,19 @@
+{
+  "downstream_remote_address": "192.168.138.208:34368",
+  "type": "HTTP/1.1",
+  "duration": 0,
+  "downstream_local_address": "192.168.35.210:80",
+  "user_agent": "curl/7.68.0",
+  "response_code": 404,
+  "start_time": "2020-11-24T22:24:29.237Z",
+  "request_id": "e23c0019-36b7-4142-8e86-39d15b00e965",
+  "upstream_host": null,
+  "bytes_received": 0,
+  "request_path": "/nonexistent",
+  "domain": "unknown.example.com",
+  "downstream_direct_remote_address": "192.168.138.208:34368",
+  "reporter": "gateway-edge",
+  "bytes_sent": 0,
+  "request_method": "GET",
+  "route_name": null
+}

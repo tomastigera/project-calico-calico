@@ -26,7 +26,7 @@ func TestCompareDNSStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, dnsMap["properties"].(map[string]interface{}), excludeDNSField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, dnsMap["properties"].(map[string]any), excludeDNSField))
 	})
 	t.Run("Check for DNS api and template not matches", func(t *testing.T) {
 		dnsMap := testutils.MustUnmarshalToMap(t, DNSLogMappings)
@@ -41,6 +41,6 @@ func TestCompareDNSStructAndTemplate(t *testing.T) {
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
 
-		require.False(t, utils.CheckFieldsInJSON(t, m, dnsMap["properties"].(map[string]interface{}), excludeDNSField))
+		require.False(t, utils.CheckFieldsInJSON(t, m, dnsMap["properties"].(map[string]any), excludeDNSField))
 	})
 }

@@ -45,7 +45,7 @@ func (_m *MockClientInterface) ClusterInformation() clientv3.ClusterInformationI
 	return nil
 }
 
-func (_m *MockClientInterface) IPAMConfig() clientv3.IPAMConfigInterface {
+func (_m *MockClientInterface) IPAMConfiguration() clientv3.IPAMConfigurationInterface {
 	return nil
 }
 

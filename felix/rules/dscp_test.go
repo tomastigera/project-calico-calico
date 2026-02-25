@@ -15,7 +15,7 @@
 package rules_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -49,7 +49,7 @@ var _ = Describe("DSCP", func() {
 
 	var renderer RuleRenderer
 	BeforeEach(func() {
-		renderer = NewRenderer(rrConfigNormal)
+		renderer = NewRenderer(rrConfigNormal, false)
 	})
 
 	It("should render empty chain for no policies", func() {

@@ -10,7 +10,7 @@ import (
 // 2001::1111:1,192.168.0.1. The value should not contain two IPv4, like 192.168.0.1,10.10.10.10,
 // but if that happens (for whatever reason), we should always use the first IPv4 address.
 func ParseEgressPodIPs(ips string) net.IP {
-	for _, ip := range strings.Split(ips, ",") {
+	for ip := range strings.SplitSeq(ips, ",") {
 		addr := net.ParseIP(ip)
 		if addr != nil && addr.To4() != nil {
 			return addr

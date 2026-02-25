@@ -16,7 +16,7 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -170,7 +170,7 @@ type cachedQuery struct {
 
 // RunQuery is a callback from the SyncerQuerySerializer to run a query.  It is guaranteed
 // not to be called at the same time as OnUpdates and OnStatusUpdated.
-func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{}, error) {
+func (c *cachedQuery) RunQuery(cxt context.Context, req any) (any, error) {
 	switch qreq := req.(type) {
 	case QueryClusterReq:
 		return c.runQuerySummary(cxt, qreq)
@@ -401,7 +401,7 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 	}
 
 	switch rt := res.(type) {
-	case *libapi.WorkloadEndpoint:
+	case *internalapi.WorkloadEndpoint:
 		e.Workload = rt.Spec.Workload
 		e.Orchestrator = rt.Spec.Orchestrator
 		e.Pod = rt.Spec.Pod
@@ -595,7 +595,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 
 	if fieldSelector != nil {
 		updatedPolicy := new(Policy)
-		policyFields := reflect.TypeOf(policy)
+		policyFields := reflect.TypeFor[Policy]()
 		policyValues := reflect.ValueOf(policy)
 
 		updatedPolicyFields := reflect.ValueOf(updatedPolicy).Elem()
@@ -606,12 +606,12 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 
 			if fieldSelector[strings.ToLower(policyFieldName)] {
 				updatePolicyField := updatedPolicyFields.FieldByName(policyFields.Field(i).Name)
-				switch reflect.TypeOf(fieldValue) {
-				case reflect.TypeOf(reflect.Int):
+				switch reflect.TypeFor[reflect.Value]() {
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.SetInt(fieldValue.Int())
-				case reflect.TypeOf(reflect.String):
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.Set(fieldValue)
-				case reflect.TypeOf(reflect.Slice):
+				case reflect.TypeFor[reflect.Kind]():
 					updatePolicyField.SetBytes(fieldValue.Bytes())
 				default:
 					updatePolicyField.Set(fieldValue)
@@ -760,7 +760,7 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 
 	r := n.GetResource()
 	if r != nil {
-		if nr, ok := r.(*libapi.Node); ok {
+		if nr, ok := r.(*internalapi.Node); ok {
 			node.Addresses = getNodeIPAddresses(nr)
 			if nr.Spec.BGP != nil {
 				if len(nr.Spec.BGP.IPv4Address) > 0 {
@@ -776,7 +776,7 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 }
 
 // getNodeIPAddresses returns the ip addresses defined in nr as a list of strings,  Empty list if nr.Addresses contains no addresses
-func getNodeIPAddresses(nr *libapi.Node) []string {
+func getNodeIPAddresses(nr *internalapi.Node) []string {
 	var addressStrings []string
 	if len(nr.Spec.Addresses) > 0 {
 		for _, nodeAddress := range nr.Spec.Addresses {
@@ -1082,12 +1082,9 @@ func getPageFromToIdx(p *Page, numItems int) (int, int, error) {
 
 	// Calculate the from and to indexes from our page number and per page.
 	fromIdx := p.PageNum * perPage
-	toIdx := fromIdx + perPage
-
-	// Ensure the toIdx does not exceed the length of the slice, capping at numItems if it does.
-	if toIdx > numItems {
-		toIdx = numItems
-	}
+	toIdx := min(
+		// Ensure the toIdx does not exceed the length of the slice, capping at numItems if it does.
+		fromIdx+perPage, numItems)
 
 	return fromIdx, toIdx, nil
 }
@@ -1145,7 +1142,7 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		},
 		{
 			// We need to convert the WEP to get the corrected labels for the labelhandler.
-			Kind:      libapi.KindWorkloadEndpoint,
+			Kind:      internalapi.KindWorkloadEndpoint,
 			Converter: cq.wepConverter,
 		},
 		{
@@ -1156,7 +1153,7 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 		},
 		{
 			// We don't need these to be converted.
-			Kind: libapi.KindNode,
+			Kind: internalapi.KindNode,
 		},
 		{
 			Kind: v3.KindGlobalNetworkSet,

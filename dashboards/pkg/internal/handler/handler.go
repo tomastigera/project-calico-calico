@@ -37,7 +37,7 @@ func NewHandler(
 ) (handleradapters.RootRegistry, error) {
 
 	router := httprouter.New()
-	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err interface{}) {
+	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, err any) {
 		logger.WarnC(
 			r.Context(),
 			"a panic occurred in the http handler",
@@ -151,6 +151,8 @@ func withQueryRequest() handleradapters.ReqMapper[client.QueryRequest] {
 			return req, true
 		},
 		func(op *openapi3.Operation, specOps *handleradapters.SpecOps) {
+			// Delegate to WithReqBody's Document method to register the QueryRequest schema.
+			handleradapters.WithReqBody[client.QueryRequest]().Document(op, specOps)
 		},
 	)
 }

@@ -50,7 +50,7 @@ func NewEastWestController(ctx context.Context, cfg *config.Config, h *health.He
 	}
 
 	// List all GNPs in a tier
-	listFunc := func() (map[string]interface{}, error) {
+	listFunc := func() (map[string]any, error) {
 		log.Debug("Listing all GNP's in a Tier")
 		fwGNPS, err := getAllGlobalNetworkPoliciesFromTier(tier, calicoClient)
 		if err != nil {
@@ -62,7 +62,7 @@ func NewEastWestController(ctx context.Context, cfg *config.Config, h *health.He
 	// Setup a cache for FortiGate Firewall Addresses.
 	cacheArgs := rcache.ResourceCacheArgs{
 		ListFunc:    listFunc,
-		ObjectType:  reflect.TypeOf(apiv3.GlobalNetworkPolicy{}),
+		ObjectType:  reflect.TypeFor[apiv3.GlobalNetworkPolicy](),
 		LogTypeDesc: "Calico GlobalNetworkPolicies",
 	}
 	fcache := rcache.NewResourceCache(cacheArgs)
@@ -102,9 +102,9 @@ func createUpdateTierForFortimanager(cl clientv3.ProjectcalicoV3Interface, tierN
 }
 
 // List all GlobalNetworkPolicies in a tier
-func getAllGlobalNetworkPoliciesFromTier(tierName string, calicoClient clientv3.ProjectcalicoV3Interface) (map[string]interface{}, error) {
+func getAllGlobalNetworkPoliciesFromTier(tierName string, calicoClient clientv3.ProjectcalicoV3Interface) (map[string]any, error) {
 
-	fwGNPs := make(map[string]interface{})
+	fwGNPs := make(map[string]any)
 	labelSelector := fmt.Sprintf("projectcalico.org/tier = %s", tierName)
 	// List all GNPs with label name matches with tier.
 	gnps, err := calicoClient.GlobalNetworkPolicies().List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -192,18 +193,12 @@ func (f *fakeEC2) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubne
 			filterMatches := false
 			switch *f.Name {
 			case "availability-zone":
-				for _, v := range f.Values {
-					if *subnet.AvailabilityZone == v {
-						filterMatches = true
-						break
-					}
+				if slices.Contains(f.Values, *subnet.AvailabilityZone) {
+					filterMatches = true
 				}
 			case "vpc-id":
-				for _, v := range f.Values {
-					if *subnet.VpcId == v {
-						filterMatches = true
-						break
-					}
+				if slices.Contains(f.Values, *subnet.VpcId) {
+					filterMatches = true
 				}
 			default:
 				panic("fakeEC2 doesn't understand filter " + *f.Name)
@@ -312,7 +307,6 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 
 	var ENIs []types.NetworkInterface
 	for ENIID, ENI := range f.ENIsByID {
-		ENI := ENI
 		if params.NetworkInterfaceIds != nil {
 			found := false
 			for _, id := range params.NetworkInterfaceIds {
@@ -337,11 +331,8 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 					}
 				}
 			case "status":
-				for _, v := range filter.Values {
-					if string(ENI.Status) == v {
-						filterMatches = true
-						break
-					}
+				if slices.Contains(filter.Values, string(ENI.Status)) {
+					filterMatches = true
 				}
 			case "tag:calico:instance":
 				for _, v := range filter.Values {
@@ -940,7 +931,6 @@ func (f *fakeEC2) DescribeAddresses(ctx context.Context, params *ec2.DescribeAdd
 
 	var elasticIPs []types.Address
 	for _, eip := range f.ElasticIPsByID {
-		eip := eip
 		allFiltersMatch := true
 		for _, filter := range params.Filters {
 			filterMatches := false

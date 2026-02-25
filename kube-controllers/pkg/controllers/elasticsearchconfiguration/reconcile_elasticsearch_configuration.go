@@ -54,7 +54,7 @@ type reconciler struct {
 // to access elasticsearch. If the managed cluster this is running for is actually a management cluster, then the secret
 // for the elasticsearch public certificate and the ConfigMap containing elasticsearch configuration are not copied over
 func (c *reconciler) Reconcile(name types.NamespacedName) error {
-	reqLogger := log.WithFields(map[string]interface{}{
+	reqLogger := log.WithFields(map[string]any{
 		"cluster": c.clusterName,
 		"key":     name,
 	})
@@ -519,7 +519,7 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 }
 
 func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, error) {
-	obj := []interface{}{c.esHash, c.ownerReference, user.FullName, EsUserCredentialsSchemaVersion}
+	obj := []any{c.esHash, c.ownerReference, user.FullName, EsUserCredentialsSchemaVersion}
 	for _, role := range user.Roles {
 		obj = append(obj, role.Name)
 		if role.Definition != nil {

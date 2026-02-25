@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -843,7 +843,7 @@ var _ = infrastructure.DatastoreDescribe(
 		It("maps traffic to network sets with domain-based egress", func() {
 			// Generate traffic from each endpoint to the domain IP to create flow logs
 			By("Generating traffic to external domain IP to create flow logs")
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				canWgetDomain(ep1_1, "fake-microsoft.test")
 				canWgetDomain(ep1_2, "fake-microsoft.test")
 				canWgetDomain(ep2_1, "fake-microsoft.test")
@@ -919,7 +919,7 @@ var _ = infrastructure.DatastoreDescribe(
 		It("maps traffic to network sets with wildcard domain-based egress", func() {
 			// Generate traffic from each endpoint to the domain IP to create flow logs
 			By("Generating traffic to external domain IP to create flow logs")
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				canWgetDomain(ep1_1, "www.fake-google.test")
 				canWgetDomain(ep2_1, "mail.fake-yahoo.test")
 				canWgetDomain(ep1_1, "middle.fake-bing.test")

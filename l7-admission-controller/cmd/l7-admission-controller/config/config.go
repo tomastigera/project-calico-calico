@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 )
 
 type Config struct {
@@ -26,10 +27,8 @@ func FromEnv() (*Config, error) {
 		listenAddr = ":6443"
 	}
 
-	for _, v := range []string{tlsCert, tlsKey, envoyImg, dikastesImg} {
-		if v == "" {
-			return nil, fmt.Errorf("one of required env vars not declared")
-		}
+	if slices.Contains([]string{tlsCert, tlsKey, envoyImg, dikastesImg}, "") {
+		return nil, fmt.Errorf("one of required env vars not declared")
 	}
 
 	return &Config{

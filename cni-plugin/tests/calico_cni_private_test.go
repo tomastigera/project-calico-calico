@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -19,7 +19,7 @@ import (
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -43,7 +43,7 @@ var _ = Describe("CalicoCni Private", func() {
 		testutils.WipeDatastore()
 		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
 		var err error
-		n := api.NewNode()
+		n := internalapi.NewNode()
 		n.Name, err = names.Hostname()
 		Expect(err).NotTo(HaveOccurred())
 		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
@@ -142,7 +142,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 		testutils.WipeDatastore()
 		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
 		var err error
-		n := api.NewNode()
+		n := internalapi.NewNode()
 		n.Name, err = names.Hostname()
 		Expect(err).NotTo(HaveOccurred())
 		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
@@ -227,7 +227,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 				}
 			}()
 
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				// Now create a K8s pod.
 				name := fmt.Sprintf("run-%d-%d", i, rand.Uint32())
 				pod, err := clientset.CoreV1().Pods(testNS).Create(context.Background(), &v1.Pod{

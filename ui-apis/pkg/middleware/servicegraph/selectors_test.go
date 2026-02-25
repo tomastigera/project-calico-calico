@@ -2,7 +2,7 @@
 package servicegraph_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"

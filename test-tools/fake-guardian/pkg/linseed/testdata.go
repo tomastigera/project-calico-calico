@@ -37,7 +37,7 @@ func (g *DataGenerator) GenerateFlows(total int) []linseedv1.FlowLog {
 
 	examples := g.exampleFlows
 
-	for i := 0; i < total; i++ {
+	for range total {
 		flow := examples[rand.Intn(len(examples))]
 		flow.EndTime = time.Now().Unix()
 		flow.StartTime = flow.EndTime - int64(rand.Intn(60))

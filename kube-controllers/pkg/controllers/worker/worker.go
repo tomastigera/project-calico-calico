@@ -8,6 +8,7 @@ package worker
 
 import (
 	"reflect"
+	"slices"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -88,7 +89,7 @@ func (w *worker) resourceEventHandlerFuncs(options ...ResourceWatch) cache.Resou
 	r := cache.ResourceEventHandlerFuncs{}
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchAdd) {
-		r.AddFunc = func(obj interface{}) {
+		r.AddFunc = func(obj any) {
 			objMeta := obj.(metav1.Object)
 			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
@@ -99,7 +100,7 @@ func (w *worker) resourceEventHandlerFuncs(options ...ResourceWatch) cache.Resou
 	}
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchUpdate) {
-		r.UpdateFunc = func(oldObj interface{}, newObj interface{}) {
+		r.UpdateFunc = func(oldObj any, newObj any) {
 			objMeta := newObj.(metav1.Object)
 			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
@@ -110,7 +111,7 @@ func (w *worker) resourceEventHandlerFuncs(options ...ResourceWatch) cache.Resou
 	}
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchDelete) {
-		r.DeleteFunc = func(obj interface{}) {
+		r.DeleteFunc = func(obj any) {
 			objMeta := obj.(metav1.Object)
 			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
@@ -123,13 +124,7 @@ func (w *worker) resourceEventHandlerFuncs(options ...ResourceWatch) cache.Resou
 }
 
 func hasFuncOption(options []ResourceWatch, search ResourceWatch) bool {
-	for _, option := range options {
-		if option == search {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(options, search)
 }
 
 // Run creates the resource watches then starts the worker. The worker will be started in a go routine, and workerCount
@@ -154,7 +149,7 @@ func (w *worker) Run(workerCount int, stop chan struct{}) {
 		}
 	}
 
-	for i := 0; i < workerCount; i++ {
+	for range workerCount {
 		go wait.Until(w.startWorker, time.Second, stop)
 	}
 

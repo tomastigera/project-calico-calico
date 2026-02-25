@@ -171,7 +171,7 @@ func (m Migrator[T]) Retry(ctx context.Context, f RetryFunc[T], current operator
 	var err error
 	var list *v1.List[T]
 	var next *operator.TimeInterval
-	for i := 0; i < retryAttempts; i++ {
+	for i := range retryAttempts {
 		select {
 		case <-ctx.Done():
 			return list, next, ctx.Err()

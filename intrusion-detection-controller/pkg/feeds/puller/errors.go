@@ -32,10 +32,10 @@ func (e *pullerError) Fatal() bool {
 	return e.fatal
 }
 
-func NonFatalError(format string, a ...interface{}) PullerError {
+func NonFatalError(format string, a ...any) PullerError {
 	return &pullerError{fmt.Sprintf(format, a...), false}
 }
 
-func FatalError(format string, a ...interface{}) PullerError {
+func FatalError(format string, a ...any) PullerError {
 	return &pullerError{fmt.Sprintf(format, a...), true}
 }

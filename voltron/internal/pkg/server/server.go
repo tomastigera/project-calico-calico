@@ -13,6 +13,7 @@ import (
 	"net/textproto"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -672,12 +673,7 @@ func requestTargetPathMatches(r *http.Request, prxy *proxy.Proxy, targetPaths []
 		return false
 	}
 	path := prxy.GetTargetPath(r)
-	for _, p := range targetPaths {
-		if p == path {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(targetPaths, path)
 }
 
 func removeAuthHeaders(r *http.Request) {

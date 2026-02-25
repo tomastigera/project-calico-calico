@@ -127,12 +127,10 @@ func (s *server) ServeTLS(lis net.Listener) error {
 	config.ClientAuth = tls.RequireAndVerifyClientCert
 	config.ClientCAs = s.clientCertPool
 
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		<-s.ctx.Done()
 		_ = lis.Close()
-	}()
+	})
 
 	tlsLis := tls.NewListener(lis, config)
 	for {

@@ -4,6 +4,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"sync"
@@ -214,9 +215,7 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 		r2.Header[k] = append([]string(nil), s...)
 	}
 
-	for key, values := range ha.headers {
-		r2.Header[key] = values
-	}
+	maps.Copy(r2.Header, ha.headers)
 
 	return ha.rt.RoundTrip(r2)
 }

@@ -676,9 +676,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 	var lastResponse connectivity.Response
 
 	// Start a reader
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		lastSequence := 0
 		count := 0
@@ -737,12 +735,10 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				count++
 			}
 		}
-	}()
+	})
 
 	// start a writer
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 
 		count := 0
 		for {
@@ -778,7 +774,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				time.Sleep(5 * time.Millisecond)
 			}
 		}
-	}()
+	})
 
 	// Wait for writer and reader to complete.
 	wg.Wait()

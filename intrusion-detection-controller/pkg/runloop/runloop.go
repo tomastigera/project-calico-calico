@@ -16,7 +16,7 @@ func RunLoop(ctx context.Context, f func(), period time.Duration) error {
 	return runLoop(ctx, func() {}, f, period, make(chan struct{}), func() {}, 0)
 }
 
-func RunLoopRecvChannel(ctx context.Context, f func(interface{}), c interface{}) error {
+func RunLoopRecvChannel(ctx context.Context, f func(any), c any) error {
 	ch := reflect.ValueOf(c)
 	for {
 		chosen, v, ok := reflect.Select([]reflect.SelectCase{

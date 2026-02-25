@@ -40,8 +40,7 @@ var tigeraConfContents string
 var tigeraConfName = "tigera.conf"
 
 func TestRunServer(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	tempDir := t.TempDir()
 	confPath := filepath.Join(tempDir, tigeraConfName)

@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
@@ -44,6 +44,14 @@ var (
 	gatewayProxiedNoXFFLog string
 	//go:embed testdata/access_log.json
 	accessLog string
+	//go:embed testdata/gateway_null_upstream_404.json
+	gatewayNullUpstream404Log string
+	//go:embed testdata/gateway_null_upstream_503.json
+	gatewayNullUpstream503Log string
+	//go:embed testdata/gateway_edge_null_upstream.json
+	gatewayEdgeNullUpstreamLog string
+	//go:embed testdata/gateway_proxied_null_upstream.json
+	gatewayProxiedNullUpstreamLog string
 )
 
 var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
@@ -146,6 +154,63 @@ var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
 			Expect(log.DstIp).To(Equal("192.168.35.210"))
 			Expect(log.SrcPort).To(Equal(int32(34368)))
 			Expect(log.DstPort).To(Equal(int32(80)))
+		})
+	})
+	Context("With a gateway reporter log with null upstream_host (404 - no route matched)", func() {
+		It("should fallback to DSLocalAddress for destination", func() {
+			log, err := c.ParseAccessLogs(gatewayNullUpstream404Log)
+			Expect(err).NotTo(HaveOccurred())
+			// When upstream_host is null (no route matched), should fallback to
+			// downstream_local_address (127.0.0.1:10080) for destination
+			Expect(log.SrcIp).To(Equal("127.0.0.1"))
+			Expect(log.DstIp).To(Equal("127.0.0.1"))
+			Expect(log.SrcPort).To(Equal(int32(35074)))
+			Expect(log.DstPort).To(Equal(int32(10080)))
+			Expect(log.ResponseCode).To(Equal(int32(404)))
+		})
+	})
+	Context("With a gateway reporter log with null upstream_host (503 - backend unavailable)", func() {
+		It("should fallback to DSLocalAddress for destination", func() {
+			log, err := c.ParseAccessLogs(gatewayNullUpstream503Log)
+			Expect(err).NotTo(HaveOccurred())
+			// When upstream_host is null (backend unavailable), should fallback to
+			// downstream_local_address (192.168.148.178:10080) for destination
+			Expect(log.SrcIp).To(Equal("192.168.148.174"))
+			Expect(log.DstIp).To(Equal("192.168.148.178"))
+			Expect(log.SrcPort).To(Equal(int32(55550)))
+			Expect(log.DstPort).To(Equal(int32(10080)))
+			Expect(log.ResponseCode).To(Equal(int32(503)))
+			// Route name should still be populated even without upstream
+			Expect(log.RouteName).To(Equal("httproute/gateway-test-2/broken-route/rule/0/match/0/broken_example_com"))
+		})
+	})
+	Context("With a gateway-edge reporter log with null upstream_host", func() {
+		It("should fallback to DSLocalAddress for destination", func() {
+			log, err := c.ParseAccessLogs(gatewayEdgeNullUpstreamLog)
+			Expect(err).NotTo(HaveOccurred())
+			// When upstream_host is null, should fallback to
+			// downstream_local_address (192.168.35.210:80) for destination
+			Expect(log.SrcIp).To(Equal("192.168.138.208"))
+			Expect(log.DstIp).To(Equal("192.168.35.210"))
+			Expect(log.SrcPort).To(Equal(int32(34368)))
+			Expect(log.DstPort).To(Equal(int32(80)))
+			Expect(log.ResponseCode).To(Equal(int32(404)))
+		})
+	})
+	Context("With a gateway-proxied reporter log with null upstream_host (503 - backend unavailable)", func() {
+		It("should fallback to DSLocalAddress for destination and use XFF for source", func() {
+			log, err := c.ParseAccessLogs(gatewayProxiedNullUpstreamLog)
+			Expect(err).NotTo(HaveOccurred())
+			// When upstream_host is null, should fallback to
+			// downstream_local_address (192.168.35.210:80) for destination
+			// Source should use first XFF entry (10.1.1.1) with port from
+			// downstream_direct_remote_address (34368)
+			Expect(log.SrcIp).To(Equal("10.1.1.1"))
+			Expect(log.DstIp).To(Equal("192.168.35.210"))
+			Expect(log.SrcPort).To(Equal(int32(34368)))
+			Expect(log.DstPort).To(Equal(int32(80)))
+			Expect(log.ResponseCode).To(Equal(int32(503)))
+			Expect(log.RouteName).To(Equal("httproute/test-ns/unavailable-route/rule/0/match/0/unavailable_example_com"))
 		})
 	})
 })

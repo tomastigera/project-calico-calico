@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -120,17 +120,17 @@ func StateWithBlock(state State, cluster string, cidr string, flush bool, poolTy
 		kvp = KVPair{
 			Key: RemoteClusterResourceKey{
 				Cluster:     cluster,
-				ResourceKey: ResourceKey{Kind: libapiv3.KindIPAMBlock, Name: escapeCIDR(cidr)},
+				ResourceKey: ResourceKey{Kind: internalapi.KindIPAMBlock, Name: escapeCIDR(cidr)},
 			},
-			Value: &libapiv3.IPAMBlock{
+			Value: &internalapi.IPAMBlock{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       libapiv3.KindIPAMBlock,
+					Kind:       internalapi.KindIPAMBlock,
 					APIVersion: v3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: escapeCIDR(cidr),
 				},
-				Spec: libapiv3.IPAMBlockSpec{
+				Spec: internalapi.IPAMBlockSpec{
 					CIDR:        cidr,
 					Affinity:    &affinity,
 					Allocations: createAllocationsArray(cidr),
@@ -172,12 +172,12 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 	if cluster != "" {
 		keyName = cluster + "/" + host
 	}
-	node := &libapiv3.Node{
+	node := &internalapi.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: host,
 		},
-		Spec: libapiv3.NodeSpec{
-			BGP: &libapiv3.NodeBGPSpec{
+		Spec: internalapi.NodeSpec{
+			BGP: &internalapi.NodeBGPSpec{
 				IPv4Address: hostIP + "/24",
 			},
 		},
@@ -188,20 +188,20 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 	}
 
 	if wgTunnelIP != "" {
-		node.Spec.Wireguard = &libapiv3.NodeWireguardSpec{
+		node.Spec.Wireguard = &internalapi.NodeWireguardSpec{
 			InterfaceIPv4Address: wgTunnelIP,
 		}
 	}
 
 	if wgPublicKey != "" {
-		node.Status = libapiv3.NodeStatus{
+		node.Status = internalapi.NodeStatus{
 			WireguardPublicKey: wgPublicKey,
 		}
 	}
 
 	kvp := KVPair{
 		Key: ResourceKey{
-			Kind: libapiv3.KindNode,
+			Kind: internalapi.KindNode,
 			Name: keyName,
 		},
 		Value: node,

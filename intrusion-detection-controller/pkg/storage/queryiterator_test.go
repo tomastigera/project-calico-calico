@@ -29,8 +29,7 @@ func TestFlowLogIterator(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	client := lsclient.NewMockClient("", rest.MockResult{
 		Body: v1.List[v1.FlowLog]{
@@ -71,8 +70,7 @@ func TestFlowLogIterator(t *testing.T) {
 func TestFlowLogIteratorWithError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 	client := lsclient.NewMockClient("", rest.MockResult{
 		Body: v1.List[v1.FlowLog]{},
 		Err:  errors.New("any error"),
@@ -139,8 +137,7 @@ func TestFlowLogIteratorWithTwoQueries(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	i := newQueryIterator(ctx, queries, "mock")
 

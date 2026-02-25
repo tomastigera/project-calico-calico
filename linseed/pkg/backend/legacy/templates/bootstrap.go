@@ -26,13 +26,13 @@ type IndexInfo struct {
 	WriteIndexDeclared bool
 	IndexExists        bool
 	WriteIndexName     string
-	Mappings           map[string]interface{}
+	Mappings           map[string]any
 	Shards             int
 	Replicas           int
 	ILMPolicy          string
 }
 
-func (index IndexInfo) HasMappings(mappings map[string]interface{}) bool {
+func (index IndexInfo) HasMappings(mappings map[string]any) bool {
 	// We need to compare the mappings as JSON strings because deep equal
 	// doesn't work well with maps that have interface{} values, as field types may be
 	// slightly different even if the values are the same.
@@ -167,8 +167,8 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 }
 
 // getIndexSettings retrieves the Index settings for an index.
-func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error {
-	indexSettings, ok := settings["index"].(map[string]interface{})
+func (index *IndexInfo) getIndexSettings(settings map[string]any) error {
+	indexSettings, ok := settings["index"].(map[string]any)
 	if !ok {
 		return errors.New("index settings not found")
 	}
@@ -186,7 +186,7 @@ func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error 
 
 	// ILM policy will be part of lifecycle map
 	// Some index may not have ILM policy eg: tigera_secure_ee_threatfeeds_ipset , tigera_secure_ee_threatfeeds_domainnameset
-	indexSettings, ok = indexSettings["lifecycle"].(map[string]interface{})
+	indexSettings, ok = indexSettings["lifecycle"].(map[string]any)
 	if ok {
 		ilmPolicy, err := extractPropertyFromSettings(indexSettings, "name")
 		if err != nil {
@@ -209,7 +209,7 @@ func (index *IndexInfo) getIndexSettings(settings map[string]interface{}) error 
 	return nil
 }
 
-func extractPropertyFromSettings(settings map[string]interface{}, propertyName string) (string, error) {
+func extractPropertyFromSettings(settings map[string]any, propertyName string) (string, error) {
 	propertyValue, ok := settings[propertyName].(string)
 	if !ok {
 		return "", fmt.Errorf("property '%s' not found", propertyName)
@@ -305,9 +305,9 @@ func GetIndexInfo(ctx context.Context, client *elastic.Client, config *TemplateC
 // and the docs suggest that's correct: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/dynamic-field-mapping.html
 // However when reading the mappings from the index, we get `"dynamic": "false"`, probably because
 // the "dynamic" property can accept multiple types, and is just serialized as a string for some reason...
-func updateMappingsDynamicProperty(mappings map[string]interface{}) error {
+func updateMappingsDynamicProperty(mappings map[string]any) error {
 	if mappings["dynamic"] != nil {
-		if reflect.TypeOf(mappings["dynamic"]) == reflect.TypeOf(string("")) {
+		if reflect.TypeOf(mappings["dynamic"]) == reflect.TypeFor[string]() {
 			s, ok := mappings["dynamic"].(string)
 			if !ok {
 				return fmt.Errorf("dynamic property in not a string (%v)", mappings["dynamic"])
@@ -331,7 +331,7 @@ func CreateIndexAndAlias(ctx context.Context, client *elastic.Client, config *Te
 	// Create the bootstrap index and mark it to be used for writes
 	response, err := client.
 		CreateIndex(config.BootstrapIndexName()).
-		BodyJson(map[string]interface{}{"aliases": json.RawMessage(aliasJson)}).
+		BodyJson(map[string]any{"aliases": json.RawMessage(aliasJson)}).
 		Do(ctx)
 	if err != nil {
 		return err

@@ -237,7 +237,7 @@ type endpointManager struct {
 	bpfLogLevel            string
 }
 
-type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string, extraInfo interface{})
+type EndpointStatusUpdateCallback func(ipVersion uint8, id any, status string, extraInfo any)
 
 type procSysWriter func(path, value string) error
 
@@ -417,7 +417,7 @@ func newEndpointManagerWithShims(
 	return epManager
 }
 
-func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
+func (m *endpointManager) OnUpdate(protoBufMsg any) {
 	log.WithField("msg", protoBufMsg).Debug("Received message")
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:

@@ -3,6 +3,7 @@ package v1
 
 import (
 	"encoding/json"
+	"maps"
 	"sort"
 
 	"github.com/projectcalico/calico/ui-apis/pkg/math"
@@ -49,9 +50,7 @@ type GraphEndpointProcesses map[string]GraphEndpointProcess
 
 func (p GraphEndpointProcesses) Copy() GraphEndpointProcesses {
 	pcopy := make(GraphEndpointProcesses)
-	for n, gep := range p {
-		pcopy[n] = gep
-	}
+	maps.Copy(pcopy, p)
 	return pcopy
 }
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
@@ -293,7 +293,6 @@ var _ = Describe("Test CC TenantID Claim", func() {
 		{name: "should reject a user with incorrect claim value", tenantIDsClaim: []any{"someOtherTenantID"}},
 		{name: "should reject a user with incorrect claim type", tenantIDsClaim: ccRequiredTenantID /* `string`, not `[]any` */},
 	} {
-		test := test // beware loop variable capture
 
 		It(test.name, func() {
 

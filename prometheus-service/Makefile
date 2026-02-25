@@ -89,7 +89,7 @@ ut: report-dir
 
 .PHONY: fv
 fv: image report-dir run-prometheus-service-proxy fv/fv.test
-		cd fv && ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
+		cd fv && ./fv.test $(GINKGO_ARGS) --ginkgo.slow-spec-threshold=30s
 		$(MAKE) clean
 
 fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
@@ -129,7 +129,7 @@ run-prometheus-service-proxy: create-tls
 .PHONY: ci
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: clean image ut fv static-checks
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

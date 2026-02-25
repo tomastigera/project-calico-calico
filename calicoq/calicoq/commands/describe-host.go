@@ -34,8 +34,8 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 		outputFormat:      outputFormat,
 		dispatcher:        disp,
 		done:              make(chan bool),
-		epIDToPolIDs:      make(map[interface{}]map[model.PolicyKey]bool),
-		epIDToProfileIDs:  make(map[interface{}][]string),
+		epIDToPolIDs:      make(map[any]map[model.PolicyKey]bool),
+		epIDToProfileIDs:  make(map[any][]string),
 		polIDToPolicy:     make(map[model.PolicyKey]*model.Policy),
 		policySorter:      calc.NewPolicySorter(),
 		evalCmd:           nil,
@@ -175,8 +175,8 @@ type describeCmd struct {
 	// their rules become active/inactive.
 	activeRulesCalculator *calc.ActiveRulesCalculator
 	dispatcher            *dispatcher.Dispatcher
-	epIDToPolIDs          map[interface{}]map[model.PolicyKey]bool
-	epIDToProfileIDs      map[interface{}][]string
+	epIDToPolIDs          map[any]map[model.PolicyKey]bool
+	epIDToProfileIDs      map[any][]string
 	polIDToPolicy         map[model.PolicyKey]*model.Policy
 	policySorter          *calc.PolicySorter
 
@@ -196,7 +196,7 @@ func (cbs *describeCmd) OnConfigLoaded(globalConfig map[string]string,
 }
 
 type endpointDatum struct {
-	epID   interface{}
+	epID   any
 	polIDs map[model.PolicyKey]bool
 }
 
@@ -221,7 +221,7 @@ func (a ByName) Less(i, j int) bool {
 
 func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
-		var matches map[interface{}][]string
+		var matches map[any][]string
 		if cbs.includeRules {
 			endpointMatch := func(update api.Update) (filterOut bool) {
 				if update.Value == nil {
@@ -314,7 +314,7 @@ func (cbs *describeCmd) print(output OutputList) {
 	}
 }
 
-func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputList {
+func (cbs *describeCmd) printObjects(matches map[any][]string) OutputList {
 	output := OutputList{}
 
 	if cbs.hostname != "" {

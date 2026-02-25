@@ -17,7 +17,7 @@ import (
 )
 
 type gnpCacheEntry struct {
-	value interface{}
+	value any
 }
 
 type GnpCache struct {
@@ -81,6 +81,6 @@ func (c *GnpCache) SyncDatastoreBackoff() {
 	c.cache = entries
 }
 
-func (c *GnpCache) PolicyNotChanged(name string, read interface{}) bool {
+func (c *GnpCache) PolicyNotChanged(name string, read any) bool {
 	return cmp.Equal(c.cache[name].value, read)
 }

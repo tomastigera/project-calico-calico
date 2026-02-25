@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -37,7 +37,7 @@ var _ = Describe("Windows CNI config template tests", func() {
 		// __DSR_SUPPORT__ is a placeholder for a boolean so we need to swap it for something valid.
 		f = bytes.ReplaceAll(f, []byte("__DSR_SUPPORT__"), []byte("0"))
 
-		var data map[string]interface{}
+		var data map[string]any
 		err = json.Unmarshal(f, &data)
 		Expect(err).NotTo(HaveOccurred())
 	})

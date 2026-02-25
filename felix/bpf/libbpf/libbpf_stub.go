@@ -219,6 +219,7 @@ const (
 
 	AttachTypeTcxIngress
 	AttachTypeTcxEgress
+	AttachTypeXDP
 )
 
 func (m *Map) SetSize(size int) error {

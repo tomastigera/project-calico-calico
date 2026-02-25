@@ -25,7 +25,7 @@ func TestCompareAuditStructAndTemplate(t *testing.T) {
 		jsonLog, err := aud.MarshalJSON()
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, auditMap["properties"].(map[string]interface{}), excludeAuditFields))
+		require.True(t, utils.CheckFieldsInJSON(t, m, auditMap["properties"].(map[string]any), excludeAuditFields))
 	})
 
 	t.Run("Check for Audit api and template not matches", func(t *testing.T) {
@@ -35,6 +35,6 @@ func TestCompareAuditStructAndTemplate(t *testing.T) {
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
 		m["unknown"] = "unknown"
-		require.False(t, utils.CheckFieldsInJSON(t, m, auditMap["properties"].(map[string]interface{}), excludeAuditFields))
+		require.False(t, utils.CheckFieldsInJSON(t, m, auditMap["properties"].(map[string]any), excludeAuditFields))
 	})
 }

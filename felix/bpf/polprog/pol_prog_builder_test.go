@@ -171,9 +171,9 @@ func TestProgramSplitting(t *testing.T) {
 		EndRuleID: 1234,
 	}
 	actions := []string{"pass", "deny"}
-	for i := 0; i < 250; i++ {
+	for i := range 250 {
 		pol := Policy{}
-		for j := 0; j < 40; j++ {
+		for j := range 40 {
 			pol.Rules = append(pol.Rules, Rule{Rule: &proto.Rule{
 				Action:      actions[j%len(actions)],
 				IpVersion:   4,
@@ -189,9 +189,9 @@ func TestProgramSplitting(t *testing.T) {
 		Name:      "tier0",
 		EndRuleID: 1234,
 	}
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		pol := Policy{}
-		for j := 0; j < 40; j++ {
+		for j := range 40 {
 			pol.Rules = append(pol.Rules, Rule{Rule: &proto.Rule{
 				Action:      actions[j%len(actions)],
 				IpVersion:   4,

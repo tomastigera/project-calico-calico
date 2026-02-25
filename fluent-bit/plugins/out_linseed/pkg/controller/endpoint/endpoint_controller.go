@@ -110,7 +110,7 @@ func (c *EndpointController) getAndWatchEndpoint() (string, error) {
 	return endpoint, nil
 }
 
-func (c *EndpointController) updateFunc(oldObj, newObj interface{}) {
+func (c *EndpointController) updateFunc(oldObj, newObj any) {
 	logrus.Debug("receive nonclusterhost update event")
 
 	unstructuredObj, ok := newObj.(*unstructured.Unstructured)

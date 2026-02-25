@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -208,11 +209,8 @@ func validateGlobalAlertDescriptionOrSummaryContents(description, fieldName stri
 				continue
 			}
 			var found bool
-			for _, ag := range s.AggregateBy {
-				if key == ag {
-					found = true
-					break
-				}
+			if slices.Contains(s.AggregateBy, key) {
+				found = true
 			}
 			if !found {
 				structLevel.ReportError(

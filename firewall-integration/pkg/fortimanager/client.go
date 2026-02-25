@@ -569,7 +569,7 @@ func (f *FortiGateClient) URL(path string) string {
 	return url.String()
 }
 
-func (f *FortiManagerClient) fortimanagerRestPost(req SessionManager, resp interface{}, adom string, addrName string) error {
+func (f *FortiManagerClient) fortimanagerRestPost(req SessionManager, resp any, adom string, addrName string) error {
 
 	// If we don't have a session, then try to recreate one.
 	if f.Client.session == "" {

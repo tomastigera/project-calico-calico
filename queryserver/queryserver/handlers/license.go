@@ -25,7 +25,7 @@ type License struct {
 type UnixJSONTime time.Time
 
 func (t UnixJSONTime) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.UnixDate))), nil
+	return fmt.Appendf(nil, "\"%s\"", time.Time(t).Format(time.UnixDate)), nil
 }
 
 type licenseResponse struct {

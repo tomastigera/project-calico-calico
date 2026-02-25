@@ -38,7 +38,7 @@ type pip struct {
 
 type FlowLogResults struct {
 	pelastic.CompositeAggregationResults `json:",inline"`
-	AggregationsPreview                  map[string]interface{} `json:"aggregations_preview"`
+	AggregationsPreview                  map[string]any `json:"aggregations_preview"`
 }
 
 // GetFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is

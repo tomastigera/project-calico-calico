@@ -40,8 +40,7 @@ func TestWatcher_processQueue(t *testing.T) {
 
 	g.Expect(w).ShouldNot(BeNil())
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 	w.ctx = ctx
 
 	// a non-existing feed is deleted.
@@ -174,8 +173,7 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -229,8 +227,7 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -288,8 +285,7 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -333,8 +329,7 @@ func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -375,8 +370,7 @@ func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -411,8 +405,7 @@ func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -448,8 +441,7 @@ func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -497,8 +489,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -544,8 +535,7 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -563,8 +553,7 @@ func TestWatcher_stopFeed_notExists(t *testing.T) {
 	}
 
 	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1).(*watcher)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	g.Expect(func() { w.stopFeedWatcher(ctx, "mock") }).Should(Panic())
 }
@@ -604,8 +593,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	g.Expect(func() { w.updateFeedWatcher(ctx, f, f.DeepCopy()) }).Should(Panic())
 }
@@ -645,8 +633,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -710,8 +697,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -765,8 +751,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -826,8 +811,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -887,8 +871,7 @@ func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, mockSet, mockSet, &storage.MockSuspicious{}, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -959,8 +942,7 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -1011,8 +993,7 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -1067,8 +1048,7 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -1124,8 +1104,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -1181,8 +1160,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	w.startFeedWatcher(ctx, f)
 
@@ -1233,8 +1211,7 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 
 	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1).(*watcher)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	g.Expect(func() { w.restartPuller(ctx, globalThreatFeed) }).Should(Panic())
 }

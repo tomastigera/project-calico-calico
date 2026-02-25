@@ -463,7 +463,7 @@ func (f *eventForwarder) retrieveAndForward(pager client.ListPager[lsv1.Event], 
 	}()
 
 	l.Debugf("Waiting for retrieval and forward to finish")
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		<-doneCh
 	}
 	return nil

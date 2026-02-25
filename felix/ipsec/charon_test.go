@@ -5,6 +5,7 @@ package ipsec_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	"time"
 
 	"github.com/bronze1man/goStrongswanVici"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -180,8 +181,7 @@ var _ = Describe("Charon", func() {
 
 		const numToleratedErrors = 3
 
-		for numErrors := 0; numErrors < numToleratedErrors; numErrors++ {
-			numErrors := numErrors // Fresh variable to capture on each loop.
+		for numErrors := range numToleratedErrors {
 			Describe(fmt.Sprintf("with %d errors queued up", numErrors), func() {
 				BeforeEach(func() {
 					for _, e := range []string{"LoadConn", "UnloadConn", "LoadShared", "UnloadShared"} {
@@ -344,9 +344,7 @@ func (c *mockCharon) LoadConn(conn *map[string]goStrongswanVici.IKEConf) error {
 
 	Expect(conn).ToNot(BeNil())
 	Expect(*conn).To(HaveLen(1))
-	for k, v := range *conn {
-		c.IKEConfig[k] = v
-	}
+	maps.Copy(c.IKEConfig, *conn)
 
 	return nil
 }

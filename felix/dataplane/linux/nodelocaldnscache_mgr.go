@@ -42,7 +42,7 @@ func newNodeLocalDNSManager(
 	}
 }
 
-func (m *nodeLocalDNSManager) OnUpdate(msg interface{}) {
+func (m *nodeLocalDNSManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *ifaceStateUpdate:
 		// Called when the status update is for the nodelocaldns

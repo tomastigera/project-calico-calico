@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -83,9 +83,9 @@ var _ = Describe("RecommendationEngine", func() {
 		parsedSelector, err := libcselector.Parse(`projectcalico.org/name == 'default'`)
 		Expect(err).NotTo(HaveOccurred())
 
-		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockClientSet := &lmak8s.MockClientSet{}
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
 
 		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("test-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -98,7 +98,7 @@ var _ = Describe("RecommendationEngine", func() {
 		listRecommendations := func(ret int) ([]v3.StagedNetworkPolicy, error) {
 			var err error
 			var snps *v3.StagedNetworkPolicyList
-			for i := 0; i < ret; i++ {
+			for range ret {
 				snps, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 					LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
 				})
@@ -115,13 +115,13 @@ var _ = Describe("RecommendationEngine", func() {
 			return snps.Items, nil
 		}
 		// Define the list of items handled by the policy recommendation cache.
-		listFunc := func() (map[string]interface{}, error) {
+		listFunc := func() (map[string]any, error) {
 			snps, err := listRecommendations(retries)
 			if err != nil {
 				return nil, err
 			}
 
-			snpMap := make(map[string]interface{})
+			snpMap := make(map[string]any)
 			for _, snp := range snps {
 				snpMap[snp.Namespace] = snp
 			}
@@ -132,7 +132,7 @@ var _ = Describe("RecommendationEngine", func() {
 		// Create a cache to store recommendations in.
 		cacheArgs := rcache.ResourceCacheArgs{
 			ListFunc:    listFunc,
-			ObjectType:  reflect.TypeOf(v3.StagedNetworkPolicy{}),
+			ObjectType:  reflect.TypeFor[v3.StagedNetworkPolicy](),
 			LogTypeDesc: kindRecommendations,
 			ReconcilerConfig: rcache.ReconcilerConfig{
 				DisableUpdateOnChange: true,

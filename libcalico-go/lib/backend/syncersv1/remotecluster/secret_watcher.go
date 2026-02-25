@@ -174,21 +174,21 @@ func (sw *secretWatcher) SweepStale() {
 	}
 }
 
-func (sw *secretWatcher) OnAdd(obj interface{}, isInInitialList bool) {
+func (sw *secretWatcher) OnAdd(obj any, isInInitialList bool) {
 	log.Debug("Secret added")
 	s := obj.(*v1.Secret)
 	sw.updateSecret(s)
 	sw.secretReceiver.OnSecretUpdated(s.Namespace, s.Name)
 }
 
-func (sw *secretWatcher) OnUpdate(oldObj, newObj interface{}) {
+func (sw *secretWatcher) OnUpdate(oldObj, newObj any) {
 	log.Debug("Secret updated")
 	s := newObj.(*v1.Secret)
 	sw.updateSecret(s)
 	sw.secretReceiver.OnSecretUpdated(s.Namespace, s.Name)
 }
 
-func (sw *secretWatcher) OnDelete(obj interface{}) {
+func (sw *secretWatcher) OnDelete(obj any) {
 	log.Debug("Secret deleted")
 	s := obj.(*v1.Secret)
 	sk := secretKey{s.Namespace, s.Name}

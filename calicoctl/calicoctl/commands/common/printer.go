@@ -54,7 +54,7 @@ func (r ResourcePrinterJSON) Print(client client.Interface, resources []runtime.
 
 func (r ResourcePrinterJSON) FPrint(w io.Writer, client client.Interface, resources []runtime.Object) error {
 	// If the results contain a single entry then extract the only value.
-	var rs interface{}
+	var rs any
 	if len(resources) == 1 {
 		rs = resources[0]
 	} else {
@@ -78,7 +78,7 @@ func (r ResourcePrinterYAML) Print(client client.Interface, resources []runtime.
 
 func (r ResourcePrinterYAML) FPrint(w io.Writer, client client.Interface, resources []runtime.Object) error {
 	// If the results contain a single entry then extract the only value.
-	var rs interface{}
+	var rs any
 	if len(resources) == 1 {
 		rs = resources[0]
 	} else {
@@ -230,7 +230,7 @@ func (r ResourcePrinterTemplate) Print(client client.Interface, resources []runt
 
 // localTime takes jwt.NumericDate which is an alias for time.Unix (int64)
 // and converts it to time.Time for the local timezone.
-func localTime(t interface{}) string {
+func localTime(t any) string {
 	exp, ok := t.(*jwt.NumericDate)
 	if !ok {
 		return "unknown - license corrupted"
@@ -242,14 +242,14 @@ func localTime(t interface{}) string {
 // join is similar to strings.Join() but takes an arbitrary slice of interfaces and converts
 // each to its string representation and joins them together with the provided separator
 // string.
-func join(items interface{}, separator string) string {
+func join(items any, separator string) string {
 	return joinAndTruncate(items, separator, 0)
 }
 
 // joinAndTruncate is similar to strings.Join() but takes an arbitrary slice of interfaces and converts
 // each to its string representation, joins them together with the provided separator
 // string and (if maxLen is >0) truncates the output at the given maximum length.
-func joinAndTruncate(items interface{}, separator string, maxLen int) string {
+func joinAndTruncate(items any, separator string, maxLen int) string {
 	// Nil types.
 	if items == nil {
 		return ""
@@ -272,7 +272,7 @@ func joinAndTruncate(items interface{}, separator string, maxLen int) string {
 	if reflect.TypeOf(items).Kind() != reflect.Slice {
 		// Input wasn't a slice, convert it to one so we can take advantage of shared
 		// buffer/truncation logic...
-		items = []interface{}{items}
+		items = []any{items}
 	}
 
 	slice := reflect.ValueOf(items)

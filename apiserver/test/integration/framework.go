@@ -56,7 +56,7 @@ func NewTestServerConfig() *TestServerConfig {
 	}
 }
 
-func withConfigGetFreshApiserverServerAndClient(
+func withConfigGetFreshAPIServerServerAndClient(
 	t *testing.T,
 	serverConfig *TestServerConfig,
 ) (*apiserver.ProjectCalicoServer,
@@ -106,7 +106,7 @@ func withConfigGetFreshApiserverServerAndClient(
 		}
 	}()
 
-	if err := waitForApiserverUp(secureAddr, serverFailed); err != nil {
+	if err := waitForAPIServerUp(secureAddr, serverFailed); err != nil {
 		t.Fatalf("%v", err)
 	}
 	if pcs == nil {
@@ -135,42 +135,35 @@ func withConfigGetFreshApiserverServerAndClient(
 	return pcs, clientset, cfg, shutdownServer
 }
 
-func getFreshApiserverServerAndClient(
-	t *testing.T,
-	newEmptyObj func() runtime.Object,
-) (*apiserver.ProjectCalicoServer, calicoclient.Interface, func()) {
+func getFreshAPIServerServerAndClient(t *testing.T, newEmptyObj func() runtime.Object) (*apiserver.ProjectCalicoServer, calicoclient.Interface, func()) {
 	serverConfig := &TestServerConfig{
 		etcdServerList:     []string{"http://localhost:2379"},
 		emptyObjFunc:       newEmptyObj,
 		applyTigeraLicense: true,
 	}
-	pcs, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	pcs, client, _, shutdownFunc := withConfigGetFreshAPIServerServerAndClient(t, serverConfig)
 	return pcs, client, shutdownFunc
 }
 
-func getFreshApiserverAndClient(
-	t *testing.T,
-	newEmptyObj func() runtime.Object,
-	applyTigeraLicense bool,
-) (calicoclient.Interface, func()) {
+func getFreshAPIServerAndClient(t *testing.T, newEmptyObj func() runtime.Object, applyTigeraLicense bool) (calicoclient.Interface, func()) {
 	serverConfig := &TestServerConfig{
 		etcdServerList:     []string{"http://localhost:2379"},
 		emptyObjFunc:       newEmptyObj,
 		applyTigeraLicense: applyTigeraLicense,
 	}
-	_, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	_, client, _, shutdownFunc := withConfigGetFreshAPIServerServerAndClient(t, serverConfig)
 	return client, shutdownFunc
 }
 
-func customizeFreshApiserverAndClient(
+func customizeFreshAPIServerAndClient(
 	t *testing.T,
 	serverConfig *TestServerConfig,
 ) (calicoclient.Interface, *restclient.Config, func()) {
-	_, client, restConfig, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	_, client, restConfig, shutdownFunc := withConfigGetFreshAPIServerServerAndClient(t, serverConfig)
 	return client, restConfig, shutdownFunc
 }
 
-func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {
+func waitForAPIServerUp(serverURL string, stopCh <-chan struct{}) error {
 	interval := 1 * time.Second
 	timeout := 30 * time.Second
 	startWaiting := time.Now()

@@ -458,15 +458,13 @@ func Start(cfg *Config) error {
 		Addr:    cfg.ListenAddr,
 		Handler: httputils.LogRequestHeaders(sm),
 	}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		logrus.Infof("Starting server on %v", cfg.ListenAddr)
 		err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 		if err != nil {
 			logrus.WithError(err).Error("Error when starting server")
 		}
-		wg.Done()
-	}()
+	})
 
 	return nil
 }

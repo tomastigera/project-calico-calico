@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -86,7 +86,7 @@ var _ = Context("with a k8s clientset", func() {
 			addNamespaces(clientset, nsPrefix)
 			heapInUseMeasurements := []leastsquares.Point{}
 			heapAllocMeasurements := []leastsquares.Point{}
-			for ii := 0; ii < cycles; ii++ {
+			for ii := range cycles {
 				// Add 10,000 endpoints.
 				addEndpoints(clientset, nsPrefix, d, 10000)
 
@@ -178,7 +178,7 @@ var _ = Context("with a k8s clientset", func() {
 				}
 				pod1 := createPod(clientset, d, nsName, podSpec{})
 				pod2 := createPod(clientset, d, nsName, podSpec{})
-				for ii := 0; ii < 5; ii++ {
+				for ii := range 5 {
 					// Run an nmap scan between the pods.
 					runNmap(pod1, pod2)
 					sumCalicoDeniedPackets(felixIP)
@@ -218,7 +218,7 @@ var _ = Context("with a k8s clientset", func() {
 
 		It("should handle 10 local endpoints", func() {
 			createNamespace(clientset, nsPrefix+"test", nil)
-			for ii := 0; ii < 10; ii++ {
+			for range 10 {
 				createPod(clientset, d, nsPrefix+"test", podSpec{})
 			}
 			time.Sleep(10 * time.Second)
@@ -226,7 +226,7 @@ var _ = Context("with a k8s clientset", func() {
 
 		It("should handle 100 local endpoints", func() {
 			createNamespace(clientset, nsPrefix+"test", nil)
-			for ii := 0; ii < 100; ii++ {
+			for range 100 {
 				createPod(clientset, d, nsPrefix+"test", podSpec{})
 			}
 			time.Sleep(10 * time.Second)
@@ -257,8 +257,8 @@ var _ = Context("with a k8s clientset", func() {
 		// Slow: takes about 15 minutes.
 		It("should add and remove 1000 pods, of which about 100 on local node [slow]", func() {
 			createNamespace(clientset, nsPrefix+"scale", nil)
-			for cycle := 0; cycle < 10; cycle++ {
-				for ii := 0; ii < 1000; ii++ {
+			for range 10 {
+				for range 1000 {
 					createPod(clientset, d, nsPrefix+"scale", podSpec{})
 					time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 				}
@@ -285,7 +285,7 @@ func expectFelixReady() {
 
 func getCalicoMetrics(felixIP, name string) (metrics []string, err error) {
 	var resp *http.Response
-	for retry := 0; retry < 5; retry++ {
+	for range 5 {
 		resp, err = http.Get("http://" + felixIP + ":9092/metrics")
 		if err == nil {
 			break
@@ -303,8 +303,8 @@ func getCalicoMetrics(felixIP, name string) (metrics []string, err error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		log.Infof("Line: %v", line)
-		if strings.HasPrefix(line, name) {
-			metrics = append(metrics, strings.TrimSpace(strings.TrimPrefix(line, name)))
+		if after, ok := strings.CutPrefix(line, name); ok {
+			metrics = append(metrics, strings.TrimSpace(after))
 		}
 	}
 	err = scanner.Err()

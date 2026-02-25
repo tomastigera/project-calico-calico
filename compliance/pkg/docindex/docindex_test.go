@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"sort"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/compliance/pkg/docindex"
@@ -34,7 +34,7 @@ var _ = Describe("Document index tests", func() {
 			id1, id2, id3, id4, id5, id6, id7, id8, id9, id10, id11, id12, id13, id14,
 		}
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			By("creating a shuffled list and shuffling some more")
 			randomOrder := docindex.SortableDocIndexes{
 				id8, id14, id1, id4, id9, id7, id6, id3, id5, id12, id11, id10, id13, id2,

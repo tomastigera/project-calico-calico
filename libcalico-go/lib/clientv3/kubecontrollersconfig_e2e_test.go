@@ -18,8 +18,7 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +70,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 		},
 	}
 	status1 := apiv3.KubeControllersConfigurationStatus{
-		RunningConfig: apiv3.KubeControllersConfigurationSpec{
+		RunningConfig: &apiv3.KubeControllersConfigurationSpec{
 			LogSeverityScreen: "Debug",
 			HealthChecks:      apiv3.Enabled,
 			Controllers: apiv3.ControllersConfig{
@@ -92,7 +91,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 		},
 	}
 	status2 := apiv3.KubeControllersConfigurationStatus{
-		RunningConfig: apiv3.KubeControllersConfigurationSpec{
+		RunningConfig: &apiv3.KubeControllersConfigurationSpec{
 			HealthChecks: apiv3.Disabled,
 			Controllers: apiv3.ControllersConfig{
 				Node: &apiv3.NodeControllerConfig{

@@ -65,7 +65,7 @@ type logWithExtras struct {
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *dnsLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.DNSLog) interface{} {
+func (b *dnsLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.DNSLog) any {
 	l.Cluster = i.Cluster
 
 	if b.singleIndex {
@@ -222,7 +222,7 @@ func (b *dnsLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.D
 	}, nil
 }
 
-func (b *dnsLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *dnsLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests
@@ -300,7 +300,7 @@ func (b *dnsLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSLogParams) (e
 	if len(opts.DomainMatches) > 0 {
 		for _, match := range opts.DomainMatches {
 			// Get the list of values as an interface{}, as needed for a terms query.
-			values := []interface{}{}
+			values := []any{}
 			for _, t := range match.Domains {
 				values = append(values, t)
 			}

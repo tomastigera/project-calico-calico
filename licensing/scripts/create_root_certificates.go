@@ -128,7 +128,7 @@ func createCertificate(cn, keyFilePath, certFilePath, rootKeyFilePath, rootCertF
 }
 
 // Function to read a PEM encoded file and return the private key and certificate
-func readPEMFile(certFile, keyFile string) (*x509.Certificate, interface{}, error) {
+func readPEMFile(certFile, keyFile string) (*x509.Certificate, any, error) {
 	// Read certificate PEM file
 	certData, err := os.ReadFile(certFile)
 	if err != nil {

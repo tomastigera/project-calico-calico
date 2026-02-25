@@ -31,6 +31,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -427,6 +428,7 @@ type bpfEndpointManagerDataplane struct {
 	tunnelIP            net.IP
 	iptablesFilterTable Table
 	ipSetIDAlloc        *idalloc.IDAllocator
+	workloadRemoveChan  chan string
 }
 
 type serviceKey struct {
@@ -466,6 +468,7 @@ func NewBPFEndpointManager(
 	healthAggregator *health.HealthAggregator,
 	dataplanefeatures *environment.Features,
 	bpfIfaceMTU int,
+	workloadRemoveChanV4, workloadRemoveChanV6 chan string,
 ) (*bpfEndpointManager, error) {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
@@ -628,10 +631,10 @@ func NewBPFEndpointManager(
 			m.bpfAttachType = apiv3.BPFAttachOptionTC
 		}
 	}
-	m.v4 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV4, bpfmaps.V4, iptablesFilterTableV4, ipSetIDAllocV4, m)
+	m.v4 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV4, bpfmaps.V4, iptablesFilterTableV4, ipSetIDAllocV4, workloadRemoveChanV4, m)
 
 	if m.ipv6Enabled {
-		m.v6 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV6, bpfmaps.V6, iptablesFilterTableV6, ipSetIDAllocV6, m)
+		m.v6 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV6, bpfmaps.V6, iptablesFilterTableV6, ipSetIDAllocV6, workloadRemoveChanV6, m)
 	}
 
 	if m.hostNetworkedNATMode != hostNetworkedNATDisabled {
@@ -728,6 +731,7 @@ func newBPFEndpointManagerDataplane(
 	ipMaps *bpfmap.IPMaps,
 	iptablesFilterTable Table,
 	ipSetIDAlloc *idalloc.IDAllocator,
+	workloadRemoveChan chan string,
 	epMgr *bpfEndpointManager,
 ) *bpfEndpointManagerDataplane {
 	return &bpfEndpointManagerDataplane{
@@ -737,6 +741,7 @@ func newBPFEndpointManagerDataplane(
 		IPMaps:              ipMaps,
 		iptablesFilterTable: iptablesFilterTable,
 		ipSetIDAlloc:        ipSetIDAlloc,
+		workloadRemoveChan:  workloadRemoveChan,
 	}
 }
 
@@ -862,7 +867,7 @@ func (m *bpfEndpointManager) updateHostIP(ipAddr string, ipFamily int) {
 	}
 }
 
-func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
+func (m *bpfEndpointManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	// Updates from the dataplane:
 
@@ -1340,6 +1345,18 @@ func (m *bpfEndpointManager) onWorkloadEndpointRemove(msg *proto.WorkloadEndpoin
 	}
 	// Remove policy debug info if any
 	m.removeIfaceAllPolicyDebugInfo(oldWEP.Name)
+	if m.v4 != nil && m.v4.workloadRemoveChan != nil {
+		for _, addr := range oldWEP.GetIpv4Nets() {
+			addr = strings.SplitN(addr, "/", 2)[0]
+			m.v4.workloadRemoveChan <- addr
+		}
+	}
+	if m.v6 != nil && m.v6.workloadRemoveChan != nil {
+		for _, addr := range oldWEP.GetIpv6Nets() {
+			addr = strings.SplitN(addr, "/", 2)[0]
+			m.v6.workloadRemoveChan <- addr
+		}
+	}
 }
 
 // onPolicyUpdate stores the policy in the cache and marks any endpoints using it dirty.
@@ -1445,7 +1462,7 @@ func (m *bpfEndpointManager) markExistingWEPDirty(wlID types.WorkloadEndpointID,
 }
 
 func jumpMapDeleteSubProgs(m maps.Map, idx, stride int) error {
-	for subProg := 0; subProg < jump.MaxSubPrograms; subProg++ {
+	for subProg := range jump.MaxSubPrograms {
 		if err := m.Delete(jump.Key(polprog.SubProgramJumpIdx(idx, subProg, stride))); err != nil {
 			if maps.IsNotExists(err) {
 				if subProg == 0 {
@@ -1870,12 +1887,10 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface, masterIface string,
 	}
 
 	if m.v6 != nil {
-		parallelWG.Add(1)
-		go func() {
-			defer parallelWG.Done()
+		parallelWG.Go(func() {
 			ingressAP6, egressAP6, xdpAP6, err6 = m.v6.applyPolicyToDataIface(iface, hepPtr, &state,
 				tcAttachPoint, xdpAttachPoint, xdpMode)
-		}()
+		})
 	}
 	if m.v4 != nil {
 		ingressAP4, egressAP4, xdpAP4, err4 = m.v4.applyPolicyToDataIface(iface, hepPtr, &state,
@@ -1885,20 +1900,16 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface, masterIface string,
 	parallelWG.Wait()
 
 	// Attach ingress program.
-	parallelWG.Add(1)
-	go func() {
-		defer parallelWG.Done()
+	parallelWG.Go(func() {
 		ingressAP := mergeAttachPoints(ingressAP4, ingressAP6)
 		if ingressAP != nil {
 			m.loadFilterProgram(ingressAP)
 			ingressErr = m.dp.ensureProgramAttached(ingressAP)
 		}
-	}()
+	})
 
 	// Attach xdp program.
-	parallelWG.Add(1)
-	go func() {
-		defer parallelWG.Done()
+	parallelWG.Go(func() {
 		xdpAP := mergeAttachPoints(xdpAP4, xdpAP6)
 		if xdpAP != nil {
 			if hepPtr != nil && len(hepPtr.UntrackedTiers) == 1 {
@@ -1907,7 +1918,7 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface, masterIface string,
 				xdpErr = m.dp.ensureNoProgram(xdpAP)
 			}
 		}
-	}()
+	})
 
 	// Attach egress program.
 	egressAP := mergeAttachPoints(egressAP4, egressAP6)
@@ -2518,11 +2529,9 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 	}
 
 	if m.v6 != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			ingressAP6, egressAP6, err6 = m.v6.applyPolicyToWeps(v6Readiness, ifaceName, &state, wep, ap)
-		}()
+		})
 	}
 
 	if m.v4 != nil {
@@ -2546,15 +2555,13 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 
 	// Attach preamble TC program
 	if attachPreamble {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			ingressAP := mergeAttachPoints(ingressAP4, ingressAP6)
 			if ingressAP != nil {
 				m.loadFilterProgram(ingressAP)
 				ingressErr = m.dp.ensureProgramAttached(ingressAP)
 			}
-		}()
+		})
 		egressAP := mergeAttachPoints(egressAP4, egressAP6)
 		if egressAP != nil {
 			m.loadFilterProgram(egressAP)
@@ -2843,12 +2850,10 @@ func (d *bpfEndpointManagerDataplane) applyPolicyToWeps(
 	var ingressAP *tc.AttachPoint
 	var ingressErr error
 
-	parallelWG.Add(1)
-	go func() {
-		defer parallelWG.Done()
+	parallelWG.Go(func() {
 		ingressAP, ingressErr = d.wepApplyPolicyToDirection(readiness,
 			state, endpoint, PolDirnIngress, &ingressAttachPoint)
-	}()
+	})
 
 	egressAP, egressErr := d.wepApplyPolicyToDirection(readiness,
 		state, endpoint, PolDirnEgress, &egressAttachPoint)
@@ -2878,19 +2883,15 @@ func (d *bpfEndpointManagerDataplane) applyPolicyToDataIface(
 	var ingressErr, egressErr, xdpErr error
 
 	if xdpMode != XDPModeNone {
-		parallelWG.Add(1)
-		go func() {
-			defer parallelWG.Done()
+		parallelWG.Go(func() {
 			xdpAP, xdpErr = d.attachXDPProgram(&xdpAttachPoint, ep, state)
-		}()
+		})
 	}
 
 	if xdpMode != XDPModeOnly {
-		parallelWG.Add(1)
-		go func() {
-			defer parallelWG.Done()
+		parallelWG.Go(func() {
 			ingressAP, ingressErr = d.attachDataIfaceProgram(ifaceName, ep, PolDirnIngress, state, &ingressAttachPoint)
-		}()
+		})
 
 		egressAP, egressErr = d.attachDataIfaceProgram(ifaceName, ep, PolDirnEgress, state, &egressAttachPoint)
 	}
@@ -3376,7 +3377,7 @@ func (m *bpfEndpointManager) addWEPToIndexes(wlID types.WorkloadEndpointID, wl *
 	m.addProfileToEPMappings(wl.ProfileIds, wlID)
 }
 
-func (m *bpfEndpointManager) addPolicyToEPMappings(tier string, policies []*proto.PolicyID, id interface{}) {
+func (m *bpfEndpointManager) addPolicyToEPMappings(tier string, policies []*proto.PolicyID, id any) {
 	for _, p := range policies {
 		polID := types.ProtoToPolicyID(p)
 		if m.policiesToWorkloads[polID] == nil {
@@ -3386,7 +3387,7 @@ func (m *bpfEndpointManager) addPolicyToEPMappings(tier string, policies []*prot
 	}
 }
 
-func (m *bpfEndpointManager) addProfileToEPMappings(profileIds []string, id interface{}) {
+func (m *bpfEndpointManager) addProfileToEPMappings(profileIds []string, id any) {
 	for _, profName := range profileIds {
 		profID := types.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]
@@ -3416,7 +3417,7 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID types.WorkloadEndpointID,
 	})
 }
 
-func (m *bpfEndpointManager) removePolicyToEPMappings(tier string, policies []*proto.PolicyID, id interface{}) {
+func (m *bpfEndpointManager) removePolicyToEPMappings(tier string, policies []*proto.PolicyID, id any) {
 	for _, pol := range policies {
 		polID := types.ProtoToPolicyID(pol)
 		polSet := m.policiesToWorkloads[polID]
@@ -3826,8 +3827,8 @@ func (m *bpfEndpointManager) ensureQdisc(iface string) (bool, error) {
 	return tc.EnsureQdisc(iface)
 }
 
-func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap) (hook.Layout, error) {
-	layout, err := pm.LoadObj(at, string(m.bpfAttachType))
+func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap, dnsInline bool) (hook.Layout, error) {
+	layout, err := pm.LoadObj(at, string(m.bpfAttachType), dnsInline)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load obj for %#v: %w", at, err)
 	}
@@ -3837,7 +3838,7 @@ func (m *bpfEndpointManager) loadTCObj(at hook.AttachType, pm *hook.ProgramsMap)
 	}
 
 	at.LogLevel = "off"
-	layoutNoDebug, err := pm.LoadObj(at, string(m.bpfAttachType))
+	layoutNoDebug, err := pm.LoadObj(at, string(m.bpfAttachType), dnsInline)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load non-debug obj for %#v: %w", at, err)
 	}
@@ -3862,12 +3863,12 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		policyIdx := aptc.PolicyIdxV4
 		ap.Log().Debugf("ensureProgramLoaded %d", ipFamily)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if aptc.HookLayoutV6, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
+			if aptc.HookLayoutV6, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap), aptc.DNSInlineProcessing); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 			policyIdx = aptc.PolicyIdxV6
 		} else {
-			if aptc.HookLayoutV4, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap)); err != nil {
+			if aptc.HookLayoutV4, err = m.loadTCObj(at, aptc.ProgramsMap.(*hook.ProgramsMap), aptc.DNSInlineProcessing); err != nil {
 				return fmt.Errorf("loading generic v%d tc hook program: %w", ipFamily, err)
 			}
 		}
@@ -3895,11 +3896,11 @@ func (m *bpfEndpointManager) ensureProgramLoaded(ap attachPoint, ipFamily proto.
 		at.Family = int(ipFamily)
 		pm := m.commonMaps.XDPProgramsMap.(*hook.ProgramsMap)
 		if ipFamily == proto.IPVersion_IPV6 {
-			if apxdp.HookLayoutV6, err = pm.LoadObj(at, ""); err != nil {
+			if apxdp.HookLayoutV6, err = pm.LoadObj(at, "", false); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		} else {
-			if apxdp.HookLayoutV4, err = pm.LoadObj(at, ""); err != nil {
+			if apxdp.HookLayoutV4, err = pm.LoadObj(at, "", false); err != nil {
 				return fmt.Errorf("loading generic xdp hook program: %w", err)
 			}
 		}
@@ -4245,6 +4246,7 @@ func (m *bpfEndpointManager) doUpdatePolicyProgram(
 	if hk == hook.XDP {
 		polProgsMap = m.commonMaps.XDPJumpMap
 		stride = jump.XDPMaxEntryPoints
+		attachType = libbpf.AttachTypeXDP
 	}
 	opts = append(opts, polprog.WithPolicyMapIndexAndStride(polJumpMapIdx, stride))
 
@@ -4507,13 +4509,7 @@ func (m *bpfEndpointManager) onServiceUpdate(update *proto.ServiceUpdate) {
 
 	// Check which IPs have been removed (no-op if we haven't seen it yet)
 	for _, old := range m.services[key] {
-		exists := false
-		for _, svcIP := range ips {
-			if old == svcIP {
-				exists = true
-				break
-			}
-		}
+		exists := slices.Contains(ips, old)
 		if !exists {
 			m.dp.delRoute(old)
 		}
@@ -4966,7 +4962,7 @@ func newJumpMapAlloc(name string, entryPoints int) *jumpMapAlloc {
 		freeStack: make([]int, entryPoints),
 		inUse:     map[int]string{},
 	}
-	for i := 0; i < entryPoints; i++ {
+	for i := range entryPoints {
 		a.free.Add(i)
 		a.freeStack[entryPoints-1-i] = i
 	}

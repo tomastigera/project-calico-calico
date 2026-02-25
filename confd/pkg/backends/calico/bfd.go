@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -58,7 +58,7 @@ func (r *bfdResolver) OnUpdate(u api.Update) bool {
 			newRelevant = r.nodeLabelManager.selectorMatchesNode(r.node, u.Value.(*apiv3.BFDConfiguration).Spec.NodeSelector)
 		}
 		return oldRelevant || newRelevant
-	case libapiv3.KindNode:
+	case internalapi.KindNode:
 		// The node label manager is already updated. Use this opportunity to check if our own
 		// node has been modified, and if so, recompute.
 		return v3Key.Name == r.node

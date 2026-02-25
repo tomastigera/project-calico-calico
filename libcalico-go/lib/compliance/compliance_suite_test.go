@@ -17,16 +17,16 @@ package compliance_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
 func TestSet(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/compliance_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Compliance Suite", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/compliance_suite.xml"
+	ginkgo.RunSpecs(t, "Compliance Suite", suiteConfig, reporterConfig)
 }

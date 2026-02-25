@@ -14,7 +14,7 @@ const (
 type resourceUpdate struct {
 	typ      string
 	name     string
-	resource interface{}
+	resource any
 }
 
 type k8sUpdateHandler struct {

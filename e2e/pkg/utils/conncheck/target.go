@@ -148,12 +148,18 @@ func NewPodPingTarget(pod *v1.Pod) Target {
 	}
 }
 
-func NewTarget(dst string, targetType AccessType, proto Protocol) Target {
-	return &target{
+func NewTarget(dst string, targetType AccessType, proto Protocol, opts ...TargetOption) Target {
+	t := &target{
 		destination: dst,
 		targetType:  targetType,
 		protocol:    proto,
 	}
+	for _, opt := range opts {
+		if err := opt(t); err != nil {
+			panic(fmt.Sprintf("failed to apply target option: %v", err))
+		}
+	}
+	return t
 }
 
 type TargetOption func(*target) error

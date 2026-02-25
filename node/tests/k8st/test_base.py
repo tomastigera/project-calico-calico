@@ -24,7 +24,7 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
-from utils.utils import retry_until_success, run, kubectl, copy_cnx_pull_secret
+from tests.k8st.utils.utils import retry_until_success, run, kubectl, copy_cnx_pull_secret
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class TestBase(TestCase):
             try:
                 cleanup()
             except Exception as e:
-                logger.exception("Error during cleanup")
+                logger.error("Error during cleanup: %s", e)
                 errors.append(e)
         super(TestBase, self).tearDown()
         if errors:
@@ -70,7 +70,7 @@ class TestBase(TestCase):
         Compares two things.  Debug logs the differences between them before
         asserting that they are the same.
         """
-        assert cmp(thing1, thing2) == 0, \
+        assert thing1 == thing2, \
             "Items are not the same.  Difference is:\n %s" % \
             pformat(DeepDiff(thing1, thing2), indent=2)
 
@@ -96,8 +96,8 @@ class TestBase(TestCase):
         if first_log_time is None:
             first_log_time = time_now
         time_now -= first_log_time
-        elapsed_hms = "%02d:%02d:%02d " % (time_now / 3600,
-                                           (time_now % 3600) / 60,
+        elapsed_hms = "%02d:%02d:%02d " % (time_now // 3600,
+                                           (time_now % 3600) // 60,
                                            time_now % 60)
 
         level = kwargs.pop("level", logging.INFO)
@@ -259,7 +259,7 @@ class TestBase(TestCase):
     def get_ds_env(self, ds, ns, key):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
+        node_ds = api.read_namespaced_daemon_set(ds, ns)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for env in container.env:
@@ -393,12 +393,9 @@ spec:
         return calicoPod
 
 
-# Default is for K8ST tests to run vanilla tests, and not to run
-# specialized tests (e.g., dual_dor, egress_ip).
-# Individual test classes can override this.
-TestBase.vanilla = True
-TestBase.dual_tor = False
-TestBase.egress_ip = False
+# Default is for K8ST tests to run vanilla tests (which are all those that *don't* have
+# the "non_vanilla" marker), and not to run specialized tests (e.g., dual_tor,
+# egress_ip).  Individual test classes can override this.
 
 
 class Container(object):

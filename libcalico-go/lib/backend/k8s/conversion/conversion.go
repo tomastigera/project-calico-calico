@@ -971,6 +971,7 @@ func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 	}
 	policy.Spec = apiv3.NetworkPolicySpec{
 		Order:    &order,
+		Tier:     names.DefaultTierName,
 		Selector: K8sSelectorToCalico(&np.Spec.PodSelector, SelectorPod),
 		Ingress:  ingressRules,
 		Egress:   egressRules,

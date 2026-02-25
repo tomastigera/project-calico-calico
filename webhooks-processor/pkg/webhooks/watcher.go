@@ -97,17 +97,17 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 
 	configMapInfomer := informerFactory.Core().V1().ConfigMaps().Informer()
 	eventHandlerConfigMapFunctions := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if cm, ok := obj.(v1.ConfigMap); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &cm}
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			if cm, ok := newObj.(v1.ConfigMap); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &cm}
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if cm, ok := obj.(v1.ConfigMap); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &cm}
 			}
@@ -122,17 +122,17 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 
 	secretInformer := informerFactory.Core().V1().Secrets().Informer()
 	eventHandlerSecretFunctions := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if secret, ok := obj.(v1.Secret); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			if secret, ok := newObj.(v1.Secret); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &secret}
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if secret, ok := obj.(v1.Secret); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &secret}
 			}

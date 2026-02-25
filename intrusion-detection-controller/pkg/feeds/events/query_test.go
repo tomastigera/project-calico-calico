@@ -3,12 +3,11 @@
 package events
 
 import (
-	"context"
 	"errors"
 	"testing"
 
 	. "github.com/onsi/gomega"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
@@ -19,7 +18,7 @@ import (
 func TestSuspiciousIP_Success(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 
 	logs := []v1.FlowLog{
@@ -113,8 +112,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
 	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
@@ -152,10 +150,9 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 	q := &storage.MockSetQuerier{IteratorFlow: i}
 	uut := NewSuspiciousIP(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("test")))
@@ -167,10 +164,9 @@ func TestSuspiciousIP_QueryFails(t *testing.T) {
 	q := &storage.MockSetQuerier{IteratorDNS: nil, QueryError: errors.New("query failed")}
 	uut := NewSuspiciousIP(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))
@@ -206,10 +202,9 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	q := &storage.MockSetQuerier{IteratorDNS: i, Set: domains}
 	uut := NewSuspiciousDomainNameSet(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
@@ -245,10 +240,9 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 	q := &storage.MockSetQuerier{IteratorDNS: i, Set: domains}
 	uut := NewSuspiciousDomainNameSet(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("iteration failed")))
@@ -261,10 +255,9 @@ func TestSuspiciousDomain_GetFails(t *testing.T) {
 	q := &storage.MockSetQuerier{GetError: errors.New("get failed")}
 	uut := NewSuspiciousDomainNameSet(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("get failed")))
@@ -282,10 +275,9 @@ func TestSuspiciousDomain_QueryFails(t *testing.T) {
 	q := &storage.MockSetQuerier{Set: domains, QueryError: errors.New("query failed")}
 	uut := NewSuspiciousDomainNameSet(q)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := t.Context()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed := &apiv3.GlobalThreatFeed{}
 	testFeed.Name = "test"
 	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))

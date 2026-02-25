@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -160,7 +160,7 @@ var _ = Describe("List", func() {
 				Type:        reportGetTypeGet.ReportTypeName,
 				StartTime:   now,
 				EndTime:     nowPlusHour,
-				UISummary:   map[string]interface{}{"foobar": "hello-100-goodbye"},
+				UISummary:   map[string]any{"foobar": "hello-100-goodbye"},
 				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
@@ -180,7 +180,7 @@ var _ = Describe("List", func() {
 				Type:            reportGetTypeNoGet.ReportTypeName,
 				StartTime:       now,
 				EndTime:         nowPlusHour,
-				UISummary:       map[string]interface{}{"foobar": "hello-100-goodbye"},
+				UISummary:       map[string]any{"foobar": "hello-100-goodbye"},
 				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,

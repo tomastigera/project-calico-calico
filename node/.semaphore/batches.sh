@@ -28,13 +28,13 @@ run_batch() {
       cmd=("make" "--directory=${CALICO_DIR_NAME}/node" "external-network-test")
       ;;
     egw-none)
-      cmd=('K8ST_TO_RUN="-A egress_ip_no_overlay"' 'K8ST_REPORT_FILENAME=node-k8s-egress-ip-no-overlay.xml' 'make' "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
+      cmd=('K8ST_TO_RUN="-m egress_ip_no_overlay"' 'K8ST_REPORT_FILENAME=node-k8s-egress-ip-no-overlay.xml' 'make' "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
       ;;
     egw-ipip)
-      cmd=('K8ST_TO_RUN="-A egress_ip_ipip"' "K8ST_REPORT_FILENAME=node-k8s-egress-ip-ipip.xml" "make" "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
+      cmd=('K8ST_TO_RUN="-m egress_ip_ipip"' "K8ST_REPORT_FILENAME=node-k8s-egress-ip-ipip.xml" "make" "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
       ;;
     egw-vxlan)
-      cmd=('K8ST_TO_RUN="-A egress_ip_vxlan"' "K8ST_REPORT_FILENAME=node-k8s-egress-ip-vxlan.xml" "make" "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
+      cmd=('K8ST_TO_RUN="-m egress_ip_vxlan"' "K8ST_REPORT_FILENAME=node-k8s-egress-ip-vxlan.xml" "make" "--directory=${CALICO_DIR_NAME}/node" "k8s-test")
       ;;
     *)
       echo "invalid batch name" && exit 1

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -61,7 +61,7 @@ var _ = Describe("NAT", func() {
 
 	var renderer RuleRenderer
 	JustBeforeEach(func() {
-		renderer = NewRenderer(rrConfigNormal)
+		renderer = NewRenderer(rrConfigNormal, false)
 	})
 
 	It("should render rules when active", func() {
@@ -80,7 +80,7 @@ var _ = Describe("NAT", func() {
 	It("should render rules when active with all hosts NAT exclusion", func() {
 		localConfig := rrConfigNormal
 		localConfig.NATOutgoingExclusions = "IPPoolsAndHostIPs"
-		renderer = NewRenderer(localConfig)
+		renderer = NewRenderer(localConfig, false)
 
 		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
@@ -99,7 +99,7 @@ var _ = Describe("NAT", func() {
 		snatAddress := "192.168.0.1"
 		localConfig := rrConfigNormal
 		localConfig.NATOutgoingAddress = net.ParseIP(snatAddress)
-		renderer = NewRenderer(localConfig)
+		renderer = NewRenderer(localConfig, false)
 
 		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
@@ -117,7 +117,7 @@ var _ = Describe("NAT", func() {
 		// copy struct
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
-		renderer = NewRenderer(localConfig)
+		renderer = NewRenderer(localConfig, false)
 
 		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
@@ -160,7 +160,7 @@ var _ = Describe("NAT", func() {
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 		localConfig.IptablesNATOutgoingInterfaceFilter = "cali-123"
-		renderer = NewRenderer(localConfig)
+		renderer = NewRenderer(localConfig, false)
 
 		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
@@ -209,7 +209,7 @@ var _ = Describe("NAT", func() {
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 		localConfig.NATOutgoingAddress = net.ParseIP(snatAddress)
-		renderer = NewRenderer(localConfig)
+		renderer = NewRenderer(localConfig, false)
 
 		expectedAddress := fmt.Sprintf("%s:%s", snatAddress, "99-100")
 
@@ -296,7 +296,7 @@ var _ = Describe("NAT", func() {
 			// copy struct
 			localConfig := rrConfigNormal
 			localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
-			renderer = NewRenderer(localConfig)
+			renderer = NewRenderer(localConfig, false)
 
 			Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
 				Name: "cali-nat-outgoing",

@@ -133,8 +133,7 @@ func TestNoData(t *testing.T) {
 		lastValueSeen = make(chan map[statscache.Tuple]statscache.Values, 1)
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	interval := 200 * time.Millisecond
 	mt := newMockTicker().(*mockTickerImpl)

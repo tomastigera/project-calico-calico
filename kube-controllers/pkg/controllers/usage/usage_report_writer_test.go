@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	usagev1 "github.com/tigera/api/pkg/apis/usage.tigera.io/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,7 +16,6 @@ import (
 	k8sFake "k8s.io/client-go/kubernetes/fake"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	usagev1 "github.com/projectcalico/calico/libcalico-go/lib/apis/usage.tigera.io/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 

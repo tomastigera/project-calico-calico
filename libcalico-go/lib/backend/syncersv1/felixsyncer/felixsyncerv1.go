@@ -21,7 +21,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
@@ -89,7 +89,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
-				ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindNode},
+				ListInterface:   model.ResourceListOptions{Kind: internalapi.KindNode},
 				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(cfg.K8sUsePodCIDR),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
@@ -99,7 +99,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
-				ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
+				ListInterface:   model.ResourceListOptions{Kind: internalapi.KindWorkloadEndpoint},
 				UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
@@ -240,7 +240,7 @@ type felixRemoteClusterProcessor struct{}
 func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode, usePodCIDR bool) []watchersyncer.ResourceType {
 	resourceTypes := []watchersyncer.ResourceType{
 		{
-			ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
+			ListInterface:   model.ResourceListOptions{Kind: internalapi.KindWorkloadEndpoint},
 			UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		},
 		{
@@ -256,7 +256,7 @@ func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv
 	if overlayRoutingMode == apiv3.OverlayRoutingModeEnabled {
 		resourceTypes = append(resourceTypes, []watchersyncer.ResourceType{
 			{
-				ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindNode},
+				ListInterface:   model.ResourceListOptions{Kind: internalapi.KindNode},
 				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(usePodCIDR),
 			},
 			// Remote IP pool updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
@@ -323,7 +323,7 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					updates[i].Value.(*apiv3.Profile).Spec.Ingress = nil
 					updates[i].Value.(*apiv3.Profile).Spec.Egress = nil
 					updates[i].Key = t
-				case libapiv3.KindNode:
+				case internalapi.KindNode:
 					t.Name = clusterName + "/" + t.Name
 					updates[i].Key = t
 				case apiv3.KindIPPool:
@@ -337,9 +337,11 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
 			case model.BlockKey:
-				// Convert the v1 object to the internal v3 Resource object.
+				// For historical reasons, we receive Block updates as model/v1 resources but we convert them to
+				// libcalico-go/lib/api/v3.IPAMBlock resources here. Felix then translates them back to v1 on receipt.
+				// This could be cleaned up in future, but requires care to support version skew during upgrades.
 				v3KVPair := resources.IPAMBlockV1toV3(&updates[i].KVPair)
-				v3Block := v3KVPair.Value.(*libapiv3.IPAMBlock)
+				v3Block := v3KVPair.Value.(*internalapi.IPAMBlock)
 				v3Block.APIVersion = apiv3.GroupVersionCurrent
 
 				// Prefix any node references with the cluster name.
@@ -393,7 +395,7 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					// federation of the legacy v1 ProfileLabels object.
 					t.Name = clusterName + "/" + t.Name
 					updates[i].Key = t
-				case libapiv3.KindNode:
+				case internalapi.KindNode:
 					t.Name = clusterName + "/" + t.Name
 					updates[i].Key = t
 				case apiv3.KindIPPool:
@@ -410,7 +412,7 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				name := names.CIDRToName(t.CIDR)
 				key := model.ResourceKey{
 					Name: name,
-					Kind: libapiv3.KindIPAMBlock,
+					Kind: internalapi.KindIPAMBlock,
 				}
 				remoteKey := model.RemoteClusterResourceKey{
 					Cluster:     clusterName,

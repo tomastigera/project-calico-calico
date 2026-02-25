@@ -158,7 +158,7 @@ func TestL7_L7Logs(t *testing.T) {
 		// Create 5 logs.
 		logTime := time.Now().UTC().Unix()
 		totalItems := 10
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -207,7 +207,7 @@ func TestL7_L7Logs(t *testing.T) {
 
 		// Create 5 logs.
 		logTime := time.Now().UTC().Unix()
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs := []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -225,7 +225,7 @@ func TestL7_L7Logs(t *testing.T) {
 		require.NoError(t, err)
 
 		// Iterate through the first 4 pages and check they are correct.
-		var afterKey map[string]interface{}
+		var afterKey map[string]any
 		for i := 0; i < totalItems-1; i++ {
 			params := v1.L7LogParams{
 				QueryParams: v1.QueryParams{
@@ -297,7 +297,7 @@ func TestL7_L7Logs(t *testing.T) {
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
 		var logs []v1.L7Log
-		for i := 0; i < totalItems; i++ {
+		for i := range totalItems {
 			logs = append(logs, v1.L7Log{
 				StartTime: logTime,
 				EndTime:   logTime + int64(i), // Make sure logs are ordered.
@@ -385,13 +385,13 @@ func numBuckets(aggregations elastic.Aggregations) int {
 		logrus.Info("[TEST] tb key not found")
 		return 0
 	}
-	var tb map[string]interface{}
+	var tb map[string]any
 	err := json.Unmarshal([]byte(tbJSON), &tb)
 	if err != nil {
 		logrus.WithError(err).Info("[TEST] failed to unmarshal tb")
 		return 0
 	}
-	buckets, ok := tb["buckets"].([]interface{})
+	buckets, ok := tb["buckets"].([]any)
 	if !ok {
 		logrus.Info("[TEST] buckets key not found")
 		return 0

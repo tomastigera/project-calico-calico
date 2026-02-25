@@ -21,7 +21,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -29,7 +29,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/utils"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -135,6 +135,10 @@ func (eds *EtcdDatastoreInfra) GetCalicoClient() client.Interface {
 	return eds.client
 }
 
+func (eds *EtcdDatastoreInfra) UseProjectCalicoV3API() bool {
+	return false
+}
+
 func (eds *EtcdDatastoreInfra) GetClusterGUID() string {
 	ci, err := eds.GetCalicoClient().ClusterInformation().Get(
 		context.Background(),
@@ -178,7 +182,7 @@ func (eds *EtcdDatastoreInfra) RemoveNodeAddresses(felix *Felix) {
 	if err != nil {
 		panic(err)
 	}
-	node.Spec.Addresses = []libapi.NodeAddress{}
+	node.Spec.Addresses = []internalapi.NodeAddress{}
 	_, err = eds.GetCalicoClient().Nodes().Update(utils.Ctx, node, utils.NoOptions)
 	if err != nil {
 		panic(err)
@@ -186,12 +190,12 @@ func (eds *EtcdDatastoreInfra) RemoveNodeAddresses(felix *Felix) {
 }
 
 func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, v4CIDR *net.IPNet, v6CIDR *net.IPNet, idx int, needBGP bool) {
-	felixNode := libapi.NewNode()
+	felixNode := internalapi.NewNode()
 	felixNode.Name = felix.Hostname
 	felixNode.Spec.IPv4VXLANTunnelAddr = felix.ExpectedVXLANTunnelAddr
 	felixNode.Spec.IPv6VXLANTunnelAddr = felix.ExpectedVXLANV6TunnelAddr
 	if needBGP {
-		felixNode.Spec.BGP = &libapi.NodeBGPSpec{
+		felixNode.Spec.BGP = &internalapi.NodeBGPSpec{
 			IPv4Address:        fmt.Sprintf("%s/%s", felix.IP, felix.IPPrefix),
 			IPv4IPIPTunnelAddr: felix.ExpectedIPIPTunnelAddr,
 		}
@@ -200,15 +204,15 @@ func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, v4CIDR *net.IPNet, v6CIDR *
 		}
 	}
 	if felix.ExpectedWireguardTunnelAddr != "" {
-		felixNode.Spec.Wireguard = &libapi.NodeWireguardSpec{
+		felixNode.Spec.Wireguard = &internalapi.NodeWireguardSpec{
 			InterfaceIPv4Address: felix.ExpectedWireguardTunnelAddr,
 		}
 	}
 
-	nodeAddress := libapi.NodeAddress{Address: felix.IP, Type: libapi.InternalIP}
+	nodeAddress := internalapi.NodeAddress{Address: felix.IP, Type: internalapi.InternalIP}
 	felixNode.Spec.Addresses = append(felixNode.Spec.Addresses, nodeAddress)
 	if len(felix.IPv6) > 0 {
-		nodeAddressV6 := libapi.NodeAddress{Address: felix.IPv6, Type: libapi.InternalIP}
+		nodeAddressV6 := internalapi.NodeAddress{Address: felix.IPv6, Type: internalapi.InternalIP}
 		felixNode.Spec.Addresses = append(felixNode.Spec.Addresses, nodeAddressV6)
 	}
 	gomega.Eventually(func() error {
@@ -220,7 +224,7 @@ func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, v4CIDR *net.IPNet, v6CIDR *
 	}, "10s", "500ms").ShouldNot(gomega.HaveOccurred())
 }
 
-func (eds *EtcdDatastoreInfra) AddWorkload(wep *libapi.WorkloadEndpoint) (*libapi.WorkloadEndpoint, error) {
+func (eds *EtcdDatastoreInfra) AddWorkload(wep *internalapi.WorkloadEndpoint) (*internalapi.WorkloadEndpoint, error) {
 	return eds.GetCalicoClient().WorkloadEndpoints().Create(utils.Ctx, wep, utils.NoOptions)
 }
 
@@ -229,7 +233,7 @@ func (eds *EtcdDatastoreInfra) RemoveWorkload(ns string, name string) error {
 	return err
 }
 
-func (eds *EtcdDatastoreInfra) UpdateWorkload(wep *libapi.WorkloadEndpoint) (*libapi.WorkloadEndpoint, error) {
+func (eds *EtcdDatastoreInfra) UpdateWorkload(wep *internalapi.WorkloadEndpoint) (*internalapi.WorkloadEndpoint, error) {
 	return eds.GetCalicoClient().WorkloadEndpoints().Update(utils.Ctx, wep, options.SetOptions{})
 }
 
@@ -292,7 +296,7 @@ func (eds *EtcdDatastoreInfra) DumpErrorData() {
 func (eds *EtcdDatastoreInfra) Stop() {
 	// Collect diagnostics first, before tearing anything down.
 	log.Info("Stopping etcd infra.")
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		// Queue up the diags dump so that the cleanupStack will handle any
 		// panic from it.
 		eds.AddCleanup(eds.DumpErrorData)

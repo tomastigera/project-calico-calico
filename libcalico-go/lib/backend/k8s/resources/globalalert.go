@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,20 +26,13 @@ const (
 	GlobalAlertCRDName      = "globalalerts.crd.projectcalico.org"
 )
 
-func NewGlobalAlertClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewGlobalAlertClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            GlobalAlertCRDName,
 		resource:        GlobalAlertResourceName,
-		description:     "Tigera Alerts",
-		k8sResourceType: reflect.TypeOf(apiv3.GlobalAlert{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindGlobalAlert,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.GlobalAlertList{}),
-		resourceKind: apiv3.KindGlobalAlert,
-		namespaced:   false,
+		k8sResourceType: reflect.TypeFor[apiv3.GlobalAlert](),
+		k8sListType:     reflect.TypeFor[apiv3.GlobalAlertList](),
+		kind:            apiv3.KindGlobalAlert,
+		apiGroup:        group,
 	}
 }

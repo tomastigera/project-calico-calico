@@ -570,7 +570,7 @@ func TestComplianceGetBenchmark(t *testing.T) {
 	}
 }
 
-func complianceGetReports(response interface{}, err error) *compliance {
+func complianceGetReports(response any, err error) *compliance {
 	mockBenchmarksBackend := &api.MockBenchmarksBackend{}
 	mockSnapshotsBackend := &api.MockSnapshotsBackend{}
 	mockReportsBackend := &api.MockReportsBackend{}

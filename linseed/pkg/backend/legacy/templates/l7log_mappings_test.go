@@ -26,7 +26,7 @@ func TestCompareL7logStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]interface{}), excludeL7LogsField))
+		require.True(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]any), excludeL7LogsField))
 	})
 	t.Run("Check for L7Log api and template not matches", func(t *testing.T) {
 		l7logMap := testutils.MustUnmarshalToMap(t, L7LogMappings)
@@ -39,6 +39,6 @@ func TestCompareL7logStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]interface{}), nil))
+		require.False(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]any), nil))
 	})
 }

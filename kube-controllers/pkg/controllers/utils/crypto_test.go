@@ -3,13 +3,13 @@
 package utils
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Test password generation", func() {
 	It("should generate the correct password lengths", func() {
-		for l := 0; l < 100; l++ {
+		for l := range 100 {
 			p := GeneratePassword(l)
 			Expect(p).To(HaveLen(l), "GeneratePassword returned result with incorrect length")
 		}
@@ -18,7 +18,7 @@ var _ = Describe("Test password generation", func() {
 	It("should not generate duplicates", func() {
 		seenPasswords := map[string]bool{}
 		seenChars := map[rune]bool{}
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			p := GeneratePassword(22) // 132 bits of entropy, vanishingly unlikely to see dupes by chance
 			Expect(seenPasswords).NotTo(HaveKey(p), "GeneratePassword generated duplicate passwords")
 			seenPasswords[p] = true

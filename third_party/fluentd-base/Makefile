@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/fluentd-base
 FLUENTD_BASE_IMAGE ?= fluentd-base
 BUILD_IMAGES ?= $(FLUENTD_BASE_IMAGE)
 
-FLUENTD_VERSION ?= 1.19.1
+FLUENTD_VERSION ?= 1.19.2
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)

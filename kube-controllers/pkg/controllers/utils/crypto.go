@@ -27,7 +27,7 @@ func GeneratePassword(length int) string {
 }
 
 // GenerateTruncatedHash Takes any interface and creates a hash. Length inputs larger than 64 or smaller are turned into 64.
-func GenerateTruncatedHash(obj interface{}, length int) (string, error) {
+func GenerateTruncatedHash(obj any, length int) (string, error) {
 	if length < 0 || length > 64 {
 		length = 64
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -44,10 +45,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	licclient "github.com/projectcalico/calico/licensing/client"
@@ -58,7 +57,7 @@ import (
 func TestGroupVersion(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -83,7 +82,7 @@ func testGroupVersion(client calicoclient.Interface) error {
 
 func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	serverConfig := NewTestServerConfig()
-	_, _, clientconfig, shutdownServer := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	_, _, clientconfig, shutdownServer := withConfigGetFreshAPIServerServerAndClient(t, serverConfig)
 	t.Log(clientconfig.Host)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -93,7 +92,7 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	var resp *http.Response
 	var err error
 	retryInterval := 500 * time.Millisecond
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		resp, err = c.Get(clientconfig.Host + "/healthz")
 		if err != nil || http.StatusOK != resp.StatusCode {
 			success = false
@@ -125,7 +124,7 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 func TestNoName(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -157,7 +156,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 	const name = "test-networkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -338,14 +337,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = policyClient.Delete(ctx, defaultTierPolicyName, metav1.DeleteOptions{})
 	if err != nil {
@@ -366,7 +363,7 @@ func TestStagedNetworkPolicyClient(t *testing.T) {
 	const name = "test-networkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -535,14 +532,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = policyClient.Delete(ctx, defaultTierPolicyName, metav1.DeleteOptions{})
 	if err != nil {
@@ -562,7 +557,7 @@ func TestPolicyRecommendationScopeClient(t *testing.T) {
 	name := "test-policy-recommendation-scope"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.Tier{}
 			}, true)
 			defer shutdownServer()
@@ -719,7 +714,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -731,7 +726,7 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 	}()
 
 	// Create two PolicyRecScopes
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.PolicyRecommendationScope{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.PolicyRecommendationScopeSpec{
@@ -764,7 +759,7 @@ func TestTierClient(t *testing.T) {
 	const name = "test-tier"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.Tier{}
 			}, true)
 			defer shutdownServer()
@@ -839,7 +834,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 	const name = "test-globalnetworkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalNetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -1003,7 +998,7 @@ func TestStagedGlobalNetworkPolicyClient(t *testing.T) {
 	const name = "test-stagedglobalnetworkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.StagedGlobalNetworkPolicy{}
 			}, true)
 			defer shutdownServer()
@@ -1169,7 +1164,7 @@ func TestGlobalNetworkSetClient(t *testing.T) {
 	const name = "test-globalnetworkset"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalNetworkSet{}
 			}, true)
 			defer shutdownServer()
@@ -1235,7 +1230,7 @@ func TestNetworkSetClient(t *testing.T) {
 	const name = "test-networkset"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.NetworkSet{}
 			}, true)
 			defer shutdownServer()
@@ -1305,14 +1300,12 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = networkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -1328,7 +1321,7 @@ func TestLicenseKeyClient(t *testing.T) {
 	const name = "default"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.LicenseKey{}
 			}, false)
 			defer shutdownServer()
@@ -1422,7 +1415,7 @@ func TestAlertExceptionClient(t *testing.T) {
 	const name = "test-alertexception"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.AlertException{}
 			}, true)
 			defer shutdownServer()
@@ -1530,7 +1523,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1542,7 +1535,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	}()
 
 	// Create two AlertExceptions
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ae := &v3.AlertException{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ae%d", i)},
 			Spec: v3.AlertExceptionSpec{
@@ -1572,7 +1565,7 @@ func TestSecurityEventWebhookClient(t *testing.T) {
 	const name = "test-securityeventwebhook"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.SecurityEventWebhook{}
 			}, true)
 			defer shutdownServer()
@@ -1653,7 +1646,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1665,7 +1658,7 @@ func testSecurityEventWebhookClient(client calicoclient.Interface, name string) 
 	}()
 
 	// Create two SecurityEventWebhooks
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.SecurityEventWebhook{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.SecurityEventWebhookSpec{
@@ -1699,7 +1692,7 @@ func TestGlobalAlertClient(t *testing.T) {
 	const name = "test-globalalert"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalAlert{}
 			}, true)
 			defer shutdownServer()
@@ -1824,7 +1817,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1836,7 +1829,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two GlobalAlerts
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.GlobalAlert{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.GlobalAlertSpec{
@@ -1866,7 +1859,7 @@ func TestGlobalAlertTemplateClient(t *testing.T) {
 	const name = "test-globalalert"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalAlertTemplate{}
 			}, true)
 			defer shutdownServer()
@@ -1956,7 +1949,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -1968,7 +1961,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	}()
 
 	// Create two GlobalAlertTemplates
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		ga := &v3.GlobalAlertTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
 			Spec: v3.GlobalAlertSpec{
@@ -2001,7 +1994,7 @@ func TestGlobalThreatFeedClient(t *testing.T) {
 
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalThreatFeed{
 					Spec: v3.GlobalThreatFeedSpec{
 						Mode:        &mode,
@@ -2026,7 +2019,7 @@ func TestIPReservationClient(t *testing.T) {
 	const name = "test-ipreservation"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.IPReservation{}
 			}, true)
 			defer shutdownServer()
@@ -2205,7 +2198,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2217,7 +2210,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}()
 
 	// Create two GlobalThreatFeeds
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gtf := &v3.GlobalThreatFeed{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
 			Spec: v3.GlobalThreatFeedSpec{
@@ -2239,7 +2232,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}
 
 	// Delete two GlobalThreatFeeds
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gtf := fmt.Sprintf("gtf%d", i)
 		err = globalThreatFeedClient.Delete(ctx, gtf, metav1.DeleteOptions{})
 		if err != nil {
@@ -2253,7 +2246,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 // TestHostEndpointClient exercises the HostEndpoint client.
 func TestHostEndpointClient(t *testing.T) {
 	const name = "test-hostendpoint"
-	client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+	client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 		return &v3.HostEndpoint{}
 	}, true)
 	defer shutdownServer()
@@ -2262,7 +2255,7 @@ func TestHostEndpointClient(t *testing.T) {
 	}()
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.HostEndpoint{}
 			}, true)
 			defer shutdownServer()
@@ -2352,7 +2345,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2364,7 +2357,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two HostEndpoints
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		hep := createTestHostEndpoint(fmt.Sprintf("hep%d", i), "192.168.0.1", "test-node")
 		_, err = hostEndpointClient.Create(ctx, hep, metav1.CreateOptions{})
 		if err != nil {
@@ -2388,7 +2381,7 @@ func TestGlobalReportClient(t *testing.T) {
 	const name = "test-global-report"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalReport{}
 			}, true)
 			defer shutdownServer()
@@ -2580,7 +2573,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2592,7 +2585,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}()
 
 	// Create two GlobalReports
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		gr := &v3.GlobalReport{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
 			Spec:       v3.ReportSpec{ReportType: "inventory"},
@@ -2625,7 +2618,7 @@ func TestGlobalReportTypeClient(t *testing.T) {
 	const name = "test-global-report-type"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalReportType{}
 			}, true)
 			defer shutdownServer()
@@ -2706,7 +2699,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -2718,7 +2711,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	}()
 
 	// Create two GlobalReports
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		grt := &v3.GlobalReportType{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("grt%d", i)},
 			Spec: v3.ReportTypeSpec{
@@ -2750,7 +2743,7 @@ func TestIPPoolClient(t *testing.T) {
 	const name = "test-ippool"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.IPPool{}
 			}, true)
 			defer shutdownServer()
@@ -2819,7 +2812,7 @@ func TestBGPConfigurationClient(t *testing.T) {
 	const name = "test-bgpconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.BGPConfiguration{}
 			}, true)
 			defer shutdownServer()
@@ -2880,7 +2873,7 @@ func TestBGPPeerClient(t *testing.T) {
 	const name = "test-bgppeer"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.BGPPeer{}
 			}, true)
 			defer shutdownServer()
@@ -2945,7 +2938,7 @@ func TestProfileClient(t *testing.T) {
 	const name = "kns.namespace-1"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.Profile{}
 			}, true)
 			defer shutdownServer()
@@ -3010,7 +3003,7 @@ func TestRemoteClusterConfigurationClient(t *testing.T) {
 	const name = "test-remoteclusterconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.RemoteClusterConfiguration{}
 			}, true)
 			defer shutdownServer()
@@ -3076,7 +3069,7 @@ func TestFelixConfigurationClient(t *testing.T) {
 	const name = "test-felixconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.FelixConfiguration{}
 			}, true)
 			defer shutdownServer()
@@ -3149,7 +3142,7 @@ func TestKubeControllersConfigurationClient(t *testing.T) {
 	const name = "test-kubecontrollersconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.KubeControllersConfiguration{}
 			}, true)
 			defer shutdownServer()
@@ -3169,7 +3162,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	kubeControllersConfig := &v3.KubeControllersConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
 		Status: v3.KubeControllersConfigurationStatus{
-			RunningConfig: v3.KubeControllersConfigurationSpec{
+			RunningConfig: &v3.KubeControllersConfigurationSpec{
 				Controllers: v3.ControllersConfig{
 					Node: &v3.NodeControllerConfig{
 						SyncLabels: v3.Enabled,
@@ -3267,7 +3260,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -3315,7 +3308,7 @@ func TestManagedClusterClient(t *testing.T) {
 				applyTigeraLicense:            true,
 			}
 
-			client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+			client, _, shutdownServer := customizeFreshAPIServerAndClient(t, serverConfig)
 
 			createCASecret(t)
 
@@ -3342,7 +3335,7 @@ func TestManagedClusterClient(t *testing.T) {
 			applyTigeraLicense:            true,
 		}
 
-		client, _, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+		client, _, shutdownServer := customizeFreshAPIServerAndClient(t, serverConfig)
 		defer shutdownServer()
 
 		managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
@@ -3512,7 +3505,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	// watch for 2 events
 	go func() {
 		defer done.Done()
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			select {
 			case e := <-w.ResultChan():
 				events = append(events, e)
@@ -3524,7 +3517,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}()
 
 	// Create two ManagedClusters
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		mc := &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("mc%d", i)},
 		}
@@ -3549,7 +3542,7 @@ func TestClusterInformationClient(t *testing.T) {
 	const name = "default"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.ClusterInformation{}
 			}, true)
 			defer shutdownServer()
@@ -3601,67 +3594,11 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 	return nil
 }
 
-// TestAuthenticationReviewsClient exercises the AuthenticationReviews client.
-func TestAuthenticationReviewsClient(t *testing.T) {
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &v3.AuthenticationReview{}
-			}, true)
-			defer shutdownServer()
-			if err := testAuthenticationReviewsClient(client); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-
-	if !t.Run("test-authentication-reviews", rootTestFunc()) {
-		t.Errorf("test-authentication-reviews failed")
-	}
-}
-
-func testAuthenticationReviewsClient(client calicoclient.Interface) error {
-	ar := v3.AuthenticationReview{}
-	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-
-	name := "name"
-	groups := []string{name}
-	extra := map[string][]string{name: groups}
-	uid := "uid"
-
-	ctx := request.NewContext()
-	ctx = request.WithUser(ctx, &user.DefaultInfo{
-		Name:   name,
-		Groups: groups,
-		Extra:  extra,
-		UID:    uid,
-	})
-
-	auth := authenticationreview.NewREST()
-	obj, err := auth.Create(ctx, auth.New(), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	if obj == nil {
-		return errors.New("expected an authentication review")
-	}
-
-	status := obj.(*v3.AuthenticationReview).Status
-	if status.Name != name || status.Groups[0] != name || status.UID != uid || status.Extra[name][0] != name {
-		return errors.New("unexpected user info from authentication review")
-	}
-	return nil
-}
-
 // TestAuthorizationReviewsClient exercises the AuthorizationReviews client.
 func TestAuthorizationReviewsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			pcs, client, shutdownServer := getFreshApiserverServerAndClient(t, func() runtime.Object {
+			pcs, client, shutdownServer := getFreshAPIServerServerAndClient(t, func() runtime.Object {
 				return &v3.AuthorizationReview{}
 			})
 			defer shutdownServer()
@@ -3758,11 +3695,18 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 			{
 				APIGroup: "",
 				Resource: "namespaces",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "get", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			}, {
 				APIGroup: "",
 				Resource: "pods",
-				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+				Verbs: []v3.AuthorizedResourceVerb{
+					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "delete", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+					{Verb: "patch", ResourceGroups: []v3.AuthorizedResourceGroup{}},
+				},
 			},
 		},
 	}); err != nil {
@@ -3788,7 +3732,7 @@ func TestPacketCaptureClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		const name = "test-packetcapture"
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.PacketCapture{}
 			}, true)
 			defer shutdownServer()
@@ -3881,14 +3825,12 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = packetCaptureClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -3904,7 +3846,7 @@ func TestDeepPacketInspectionClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		const name = "test-deeppacketinspection"
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.DeepPacketInspection{}
 			}, true)
 			defer shutdownServer()
@@ -3986,14 +3928,12 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 		return fmt.Errorf("Error on watch")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
 		}
-	}()
+	})
 
 	err = deepPacketInspectionClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -4009,7 +3949,7 @@ func TestUISettingsGroupClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		const name = "test-uisettingsgroup"
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.UISettingsGroup{}
 			}, true)
 			defer shutdownServer()
@@ -4115,7 +4055,7 @@ func TestUISettingsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		const name = "test-uisettings"
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.UISettings{}
 			}, true)
 			defer shutdownServer()
@@ -4354,7 +4294,7 @@ func TestCalicoNodeStatusClient(t *testing.T) {
 	const name = "test-caliconodestatus"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.CalicoNodeStatus{}
 			}, true)
 			defer shutdownServer()
@@ -4419,25 +4359,27 @@ func testCalicoNodeStatusClient(client calicoclient.Interface, name string) erro
 
 // TestIPAMConfigClient exercises the IPAMConfig client.
 func TestIPAMConfigClient(t *testing.T) {
-	const name = "test-ipamconfig"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.IPAMConfiguration{}
 			}, false)
 			defer shutdownServer()
-			if err := testIPAMConfigClient(client, name); err != nil {
+			if err := testIPAMConfigClient(client); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 
-	if !t.Run(name, rootTestFunc()) {
+	if !t.Run("test-ipamconfig", rootTestFunc()) {
 		t.Errorf("test-ipamconfig test failed")
 	}
 }
 
-func testIPAMConfigClient(client calicoclient.Interface, name string) error {
+func testIPAMConfigClient(client calicoclient.Interface) error {
+	logrus.SetLevel(logrus.DebugLevel)
+	name := "default"
+
 	ipamConfigClient := client.ProjectcalicoV3().IPAMConfigurations()
 	ipamConfig := &v3.IPAMConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -4447,19 +4389,21 @@ func testIPAMConfigClient(client calicoclient.Interface, name string) error {
 			MaxBlocksPerHost: 28,
 		},
 	}
-	ctx := context.Background()
 
+	ctx := context.Background()
 	_, err := ipamConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing IPAMConfigurations: %s", err)
 	}
 
-	_, err = ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
+	// Should not be able to create a non-default IPAM config.
+	badConfig := ipamConfig.DeepCopy()
+	badConfig.Name = "not-default"
+	_, err = ipamConfigClient.Create(ctx, badConfig, metav1.CreateOptions{})
 	if err == nil {
-		return fmt.Errorf("should not be able to create ipam config %s ", ipamConfig.Name)
+		return fmt.Errorf("should not be able to create ipam config %s ", badConfig.Name)
 	}
 
-	ipamConfig.Name = "default"
 	ipamConfigNew, err := ipamConfigClient.Create(ctx, ipamConfig, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("error creating the object '%v' (%v)", ipamConfig, err)
@@ -4508,7 +4452,7 @@ func TestBlockAffinityClient(t *testing.T) {
 	const name = "test-blockaffinity"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.BlockAffinity{}
 			}, true)
 			defer shutdownServer()
@@ -4524,7 +4468,7 @@ func TestBlockAffinityClient(t *testing.T) {
 }
 
 func testBlockAffinityClient(client calicoclient.Interface, name string) error {
-	blockAffinityClient := client.ProjectcalicoV3().BlockAffinities()
+	v3client := client.ProjectcalicoV3().BlockAffinities()
 	blockAffinity := &v3.BlockAffinity{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 
@@ -4534,22 +4478,19 @@ func testBlockAffinityClient(client calicoclient.Interface, name string) error {
 			State: "pending",
 		},
 	}
-	libV3BlockAffinity := &libapiv3.BlockAffinity{
+	v3BlockAff := &v3.BlockAffinity{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 
-		Spec: libapiv3.BlockAffinitySpec{
+		Spec: v3.BlockAffinitySpec{
 			CIDR:    "10.0.0.0/24",
 			Node:    "node1",
 			State:   "pending",
-			Deleted: "false",
+			Deleted: false,
 		},
 	}
 	ctx := context.Background()
 
 	// Calico libv3 client instantiation in order to get around the API create restrictions
-	// TODO: Currently these tests only run on a Kubernetes datastore since profile creation
-	// does not work in etcd. Figure out how to divide this configuration to etcd once that
-	// is fixed.
 	config := apiconfig.NewCalicoAPIConfig()
 	config.Spec = apiconfig.CalicoAPIConfigSpec{
 		DatastoreType: apiconfig.Kubernetes,
@@ -4557,57 +4498,61 @@ func testBlockAffinityClient(client calicoclient.Interface, name string) error {
 			EtcdEndpoints: "http://localhost:2379",
 		},
 		KubeConfig: apiconfig.KubeConfig{
-			Kubeconfig: os.Getenv("KUBECONFIG"),
+			Kubeconfig:     os.Getenv("KUBECONFIG"),
+			CalicoAPIGroup: os.Getenv("CALICO_API_GROUP"),
 		},
 	}
-	apiClient, err := libclient.New(*config)
+	libcalicoClient, err := libclient.New(*config)
 	if err != nil {
 		return fmt.Errorf("unable to create Calico lib v3 client: %s", err)
 	}
 
-	_, err = blockAffinityClient.Create(ctx, blockAffinity, metav1.CreateOptions{})
+	_, err = v3client.Create(ctx, blockAffinity, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("should not be able to create block affinity %s ", blockAffinity.Name)
 	}
 
 	// Create the block affinity using the libv3 client.
-	_, err = apiClient.BlockAffinities().Create(ctx, libV3BlockAffinity, options.SetOptions{})
+	_, err = libcalicoClient.BlockAffinities().Create(ctx, v3BlockAff, options.SetOptions{})
 	if err != nil {
-		return fmt.Errorf("error creating the object through the Calico v3 API '%v' (%v)", libV3BlockAffinity, err)
+		return fmt.Errorf("error creating the object through libcalico API '%v' (%v)", v3BlockAff, err)
 	}
 
-	blockAffinityNew, err := blockAffinityClient.Get(ctx, name, metav1.GetOptions{})
+	blockAffinityNew, err := v3client.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting object %s (%s)", name, err)
 	}
 
-	blockAffinityList, err := blockAffinityClient.List(ctx, metav1.ListOptions{})
+	blockAffinityList, err := v3client.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing BlockAffinity (%s)", err)
 	}
 	if blockAffinityList.Items == nil {
 		return fmt.Errorf("items field should not be set to nil")
 	}
+	if len(blockAffinityList.Items) != 1 {
+		return fmt.Errorf("expected 1 block affinity got %d", len(blockAffinityList.Items))
+	}
 
 	blockAffinityNew.Spec.State = "confirmed"
 
-	_, err = blockAffinityClient.Update(ctx, blockAffinityNew, metav1.UpdateOptions{})
+	_, err = v3client.Update(ctx, blockAffinityNew, metav1.UpdateOptions{})
 	if err == nil {
 		return fmt.Errorf("should not be able to update block affinity %s", blockAffinityNew.Name)
 	}
 
-	err = blockAffinityClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil == err {
+	err = v3client.Delete(ctx, name, metav1.DeleteOptions{})
+	if err == nil {
 		return fmt.Errorf("should not be able to delete block affinity %s", blockAffinity.Name)
 	}
 
 	// Test watch
-	w, err := blockAffinityClient.Watch(ctx, metav1.ListOptions{})
+	w, err := v3client.Watch(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching block affinities (%s)", err)
 	}
 
-	_, err = apiClient.BlockAffinities().Delete(ctx, name, options.DeleteOptions{ResourceVersion: blockAffinityNew.ResourceVersion})
+	_, err = libcalicoClient.BlockAffinities().Delete(ctx, name, options.DeleteOptions{ResourceVersion: blockAffinityNew.ResourceVersion})
 	if err != nil {
 		return fmt.Errorf("error deleting the object through the Calico v3 API '%v' (%v)", name, err)
 	}
@@ -4615,25 +4560,20 @@ func testBlockAffinityClient(client calicoclient.Interface, name string) error {
 	// Verify watch
 	var events []watch.Event
 	timeout := time.After(500 * time.Millisecond)
-	var timeoutErr error
+
 	// watch for 2 events
-loop:
 	for range 2 {
 		select {
 		case e := <-w.ResultChan():
 			events = append(events, e)
 		case <-timeout:
-			timeoutErr = fmt.Errorf("timed out waiting for events")
-			break loop
+			return fmt.Errorf("timed out waiting for events")
 		}
 	}
-	if timeoutErr != nil {
-		return timeoutErr
-	}
+
 	if len(events) != 2 {
 		return fmt.Errorf("expected 2 watch events got %d", len(events))
 	}
-
 	return nil
 }
 
@@ -4642,7 +4582,7 @@ func TestBGPFilterClient(t *testing.T) {
 	const name = "test-bgpfilter"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.BGPFilter{}
 			}, false)
 			defer shutdownServer()
@@ -4773,7 +4713,7 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", bgpFilter, bgpFilterNew)
 	}
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		if bgpFilterNew.Spec.ExportV4[i] != bgpFilter.Spec.ExportV4[i] {
 			return fmt.Errorf("didn't get the correct object back from the server. Incorrect ExportV4: \n%+v\n%+v",
 				bgpFilter.Spec.ExportV4, bgpFilterNew.Spec.ExportV4)
@@ -4826,7 +4766,7 @@ func TestExternalNetworkClient(t *testing.T) {
 	const name = "test-externalnetwork"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.ExternalNetwork{}
 			}, false)
 			defer shutdownServer()
@@ -4906,7 +4846,7 @@ func TestEgressGatewayPolicyClient(t *testing.T) {
 	const name = "test-egressgatewaypolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.EgressGatewayPolicy{}
 			}, false)
 			defer shutdownServer()
@@ -5020,7 +4960,7 @@ func TestPolicyWatch(t *testing.T) {
 	const name = "test-policywatch"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+			client, shutdownServer := getFreshAPIServerAndClient(t, func() runtime.Object {
 				return &v3.GlobalNetworkPolicy{}
 			}, true)
 			defer shutdownServer()

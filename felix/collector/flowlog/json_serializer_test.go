@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
@@ -130,7 +130,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := ToOutput(&flowLog)
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
-		oType := reflect.TypeOf(out)
+		oType := reflect.TypeFor[JSONOutput]()
 		oVal := reflect.ValueOf(out)
 		for i := 0; i < oType.NumField(); i++ {
 			field := oType.Field(i)
@@ -226,7 +226,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 
 		out := ToOutput(&flowLog)
 
-		zeroFieldNames := map[string]interface{}{
+		zeroFieldNames := map[string]any{
 			"SourceIP":             nil,
 			"DestIP":               nil,
 			"SourcePortNum":        nil,
@@ -247,7 +247,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
-		oType := reflect.TypeOf(out)
+		oType := reflect.TypeFor[JSONOutput]()
 		oVal := reflect.ValueOf(out)
 		for i := 0; i < oType.NumField(); i++ {
 			field := oType.Field(i)
@@ -349,7 +349,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 
 		out := ToOutput(&flowLog)
 
-		zeroFieldNames := map[string]interface{}{
+		zeroFieldNames := map[string]any{
 			"SourceIP":             nil,
 			"DestIP":               nil,
 			"SourcePortNum":        nil,
@@ -368,7 +368,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
-		oType := reflect.TypeOf(out)
+		oType := reflect.TypeFor[JSONOutput]()
 		oVal := reflect.ValueOf(out)
 		for i := 0; i < oType.NumField(); i++ {
 			field := oType.Field(i)

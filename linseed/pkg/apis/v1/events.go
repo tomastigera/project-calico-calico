@@ -166,8 +166,8 @@ type Event struct {
 	MitreTactic     string          `json:"mitre_tactic,omitempty"`
 	MitreIDs        *[]string       `json:"mitre_ids,omitempty"`
 	Mitigations     *[]string       `json:"mitigations,omitempty"`
-	Record          interface{}     `json:"record,omitempty"`
-	GeoInfo         IPGeoInfo       `json:"geo_info,omitempty"`
+	Record          any             `json:"record,omitempty"`
+	GeoInfo         IPGeoInfo       `json:"geo_info"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
@@ -177,7 +177,7 @@ type Event struct {
 
 // Events can take records of numerous forms. GetRecord extracts the record
 // on the event into the given object.
-func (e *Event) GetRecord(into interface{}) error {
+func (e *Event) GetRecord(into any) error {
 	bs, err := json.Marshal(e.Record)
 	if err != nil {
 		return err
@@ -186,7 +186,7 @@ func (e *Event) GetRecord(into interface{}) error {
 }
 
 // RawRecordData is a generic record with arbitrary fields.
-type RawRecordData map[string]interface{}
+type RawRecordData map[string]any
 
 type EventRecord struct {
 	// Structured fields

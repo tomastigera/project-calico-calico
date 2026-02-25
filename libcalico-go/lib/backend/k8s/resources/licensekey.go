@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,19 +26,13 @@ const (
 	LicenseKeyCRDName      = "licensekeys.crd.projectcalico.org"
 )
 
-func NewLicenseKeyClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewLicenseKeyClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            LicenseKeyCRDName,
 		resource:        LicenseKeyResourceName,
-		description:     "Calico Enterprise License Key",
-		k8sResourceType: reflect.TypeOf(apiv3.LicenseKey{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindLicenseKey,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.LicenseKeyList{}),
-		resourceKind: apiv3.KindLicenseKey,
+		k8sResourceType: reflect.TypeFor[apiv3.LicenseKey](),
+		k8sListType:     reflect.TypeFor[apiv3.LicenseKeyList](),
+		kind:            apiv3.KindLicenseKey,
+		apiGroup:        group,
 	}
 }

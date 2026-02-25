@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 )
@@ -78,7 +78,7 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		}()
 	})
 
-	AfterSuite(func() {
+	AfterEach(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 

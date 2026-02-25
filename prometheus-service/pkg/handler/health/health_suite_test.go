@@ -3,11 +3,11 @@ package handler_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestHealth(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "Health Suite")
 }

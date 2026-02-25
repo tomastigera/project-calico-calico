@@ -34,13 +34,18 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
 endif
 
+# The API server tests always use the crd.projectcalico.org API group, since
+# the server is never used when the projectcalico.org/v3 API is implemented directly as CRDs.
+# Define this prior to including ../lib.Makefile so that the variable is available there.
+CALICO_API_GROUP := crd.projectcalico.org/v1
+
 ##############################################################################
-# Download and include ../lib.Makefile before anything else
+# Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-
 include ../lib.Makefile
+
 
 FIPS ?= false
 
@@ -133,7 +138,10 @@ lint-cache-dir:
 
 .PHONY: ut
 ut: lint-cache-dir run-etcd
-	$(DOCKER_RUN) -v $(SECRETS_PATH):/home/user/secrets  $(CALICO_BUILD) \
+	$(DOCKER_RUN) \
+		-v $(SECRETS_PATH):/home/user/secrets \
+		-e CALICO_API_GROUP=$(CALICO_API_GROUP) \
+		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
@@ -203,6 +211,7 @@ fv-kdd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) \
 		-v $(CERTS_PATH):/home/user/certs \
 		-v $(SECRETS_PATH):/home/user/secrets \
+		-e CALICO_API_GROUP=$(CALICO_API_GROUP) \
 		-e KUBECONFIG=/home/user/certs/kubeconfig \
 		$(CALICO_BUILD) \
 		sh -c 'DATASTORE_TYPE="kubernetes" test/integration.sh'
@@ -227,7 +236,7 @@ clean-hack-lib:
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean image ut fv static-checks
+ci: clean static-checks image ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common

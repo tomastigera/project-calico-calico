@@ -5,7 +5,7 @@ package storage
 import (
 	"context"
 
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -23,11 +23,11 @@ func (m *MockSetQuerier) GetDomainNameSet(ctx context.Context, name string) (Dom
 	return m.Set, m.GetError
 }
 
-func (m *MockSetQuerier) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (Iterator[v1.FlowLog], string, error) {
+func (m *MockSetQuerier) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) (Iterator[v1.FlowLog], string, error) {
 	return m.IteratorFlow, "", m.QueryError
 }
 
-func (m *MockSetQuerier) QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator[v1.DNSLog], string, error) {
+func (m *MockSetQuerier) QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiv3.GlobalThreatFeed) (Iterator[v1.DNSLog], string, error) {
 	return m.IteratorDNS, "", m.QueryError
 }
 

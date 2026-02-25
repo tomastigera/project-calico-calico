@@ -18,7 +18,7 @@ import (
 type Controller interface {
 	// Add or update a new Set including the spec. f is function the controller should call
 	// if we fail to update, and feedCacher is the GlobalThreatFeedCacher we should report or clear errors on.
-	Add(ctx context.Context, name string, value interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
+	Add(ctx context.Context, name string, value any, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
 
 	// Delete, and NoGC alter the desired state the controller will attempt to
 	// maintain, by syncing with the database.
@@ -41,7 +41,7 @@ type Controller interface {
 }
 
 type Data interface {
-	Put(ctx context.Context, name string, value interface{}) error
+	Put(ctx context.Context, name string, value any) error
 	List(ctx context.Context) ([]storage.Meta, error)
 	Delete(ctx context.Context, m storage.Meta) error
 }
@@ -77,7 +77,7 @@ const (
 type update struct {
 	name       string
 	op         op
-	value      interface{}
+	value      any
 	fail       func(error)
 	feedCacher cacher.GlobalThreatFeedCacher
 }
@@ -92,7 +92,7 @@ var NewTicker = func() *time.Ticker {
 	return tkr
 }
 
-func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+func (c *controller) Add(ctx context.Context, name string, value any, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	select {
 	case <-ctx.Done():
 		return

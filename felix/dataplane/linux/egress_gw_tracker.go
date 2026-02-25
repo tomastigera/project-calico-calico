@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"sort"
 	"time"
@@ -453,7 +454,6 @@ func (g gatewaysByIP) activeGateways() gatewaysByIP {
 	active := make(gatewaysByIP)
 	now := time.Now()
 	for _, m := range g {
-		m := m
 		if now.After(m.maintenanceStarted) && now.Before(m.maintenanceFinished) {
 			continue
 		}
@@ -515,8 +515,6 @@ func (g gatewaysByIP) latestTerminatingGateway() *gateway {
 }
 
 func (g gatewaysByIP) mergeWithAnother(gwsByIP gatewaysByIP) gatewaysByIP {
-	for ip, gw := range gwsByIP {
-		g[ip] = gw
-	}
+	maps.Copy(g, gwsByIP)
 	return g
 }

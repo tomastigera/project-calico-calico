@@ -71,7 +71,9 @@ rules:
       - pods/status
     verbs:
       - update
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups:
+      - "crd.projectcalico.org"
+      - "projectcalico.org"
     resources:
       - bgppeers
       - bgpfilters

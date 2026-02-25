@@ -21,8 +21,7 @@ import (
 	"net/http/httptest"
 	"sort"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
@@ -30,7 +29,7 @@ import (
 
 var esAdminName = "any"
 var esAdminPassword = "any"
-var token = base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", esAdminName, esAdminPassword)))
+var token = base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", esAdminName, esAdminPassword))
 var esUser = elasticsearch.User{
 	Username: "anyUser",
 }

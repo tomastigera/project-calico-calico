@@ -8,7 +8,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/calc"
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -178,7 +178,7 @@ func (c *policiesCache) policyEndpointMatch(matchType labelhandler.MatchType, po
 	switch erk.Kind {
 	case apiv3.KindHostEndpoint:
 		pd.endpoints.NumHostEndpoints += matchTypeToDelta[matchType]
-	case libapi.KindWorkloadEndpoint:
+	case internalapi.KindWorkloadEndpoint:
 		pd.endpoints.NumWorkloadEndpoints += matchTypeToDelta[matchType]
 	default:
 		log.WithField("key", erk).Error("Unexpected resource in event type, expecting a v3 endpoint type")
@@ -203,7 +203,7 @@ func (c *policiesCache) ruleEndpointMatch(matchType labelhandler.MatchType, sele
 	switch erk.Kind {
 	case apiv3.KindHostEndpoint:
 		rsi.endpoints.NumHostEndpoints += matchTypeToDelta[matchType]
-	case libapi.KindWorkloadEndpoint:
+	case internalapi.KindWorkloadEndpoint:
 		rsi.endpoints.NumWorkloadEndpoints += matchTypeToDelta[matchType]
 	default:
 		log.WithField("key", erk).Error("Unexpected resource in event type, expecting a v3 endpoint type")

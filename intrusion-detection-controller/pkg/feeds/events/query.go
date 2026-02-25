@@ -7,7 +7,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
@@ -18,7 +18,7 @@ type ipSetQuerier struct {
 	storage.SetQuerier
 }
 
-func (i ipSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
+func (i ipSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
 	var results []v1.Event
 	lastSuccessfulSearch := time.Now()
 	iter, ipSetHash, err := i.QueryIPSet(ctx, geoDB, feed)
@@ -44,7 +44,7 @@ type domainNameSetQuerier struct {
 	storage.SetQuerier
 }
 
-func (d domainNameSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
+func (d domainNameSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiv3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
 	set, err := d.GetDomainNameSet(ctx, feed.Name)
 	if err != nil {
 		return nil, time.Time{}, "", err

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -1687,7 +1687,7 @@ var _ = infrastructure.DatastoreDescribe(
 		})
 
 		AfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
+			if CurrentSpecReport().Failed() {
 				if bpfEnabled {
 					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_2.InterfaceName, "all", "--asm")
@@ -2637,7 +2637,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with deleted service pod test
 	})
 
 	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
+		if CurrentSpecReport().Failed() {
 			if bpfEnabled {
 				tc.Felixes[0].Exec("calico-bpf", "policy", "dump", ep1_1.InterfaceName, "all", "--asm")
 			}

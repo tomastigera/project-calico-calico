@@ -15,8 +15,8 @@ installation:
   # Example: --set installation.imagePullSecrets[0].name=my-existing-secret
   imagePullSecrets: []
 
-  # Disable CSI driver by default.
-  kubeletVolumePluginPath: "None"
+  # kubeletVolumePluginPath is the path to the kubelet volume plugin directory on the host.
+  kubeletVolumePluginPath: "/var/lib/kubelet"
 
 # apiServer configures the Calico API server, needed for interacting with
 # the projectcalico.org/v3 suite of APIs.

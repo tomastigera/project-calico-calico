@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -298,6 +299,15 @@ func (h aggregationHandler[A]) Aggregate() http.HandlerFunc {
 			return
 		}
 
+		if p, ok := any(reqParams).(*v1.FlowLogAggregationParams); ok {
+			for k := range p.Aggregations {
+				// Apply recursive transformation for nested policies aggregation structure.
+				// Temporary fix for issue until policies aggregations [EV-6215] is resolved in the
+				// frontend.
+				p.Aggregations[k] = transformPoliciesAggregation(p.Aggregations[k])
+			}
+		}
+
 		// Get the timeout from the request, and use it to build a context.
 		timeout, err := Timeout(w, req)
 		if err != nil {
@@ -478,4 +488,78 @@ func NewRWDHandler[T any, P RequestParams, B BulkRequestParams](c CreateFn[B], l
 		listHandler:   lh,
 		deleteHandler: dh,
 	}
+}
+
+func transformPoliciesAggregation(v []byte) []byte {
+	var m map[string]any
+	if err := json.Unmarshal(v, &m); err != nil {
+		logrus.WithError(err).Warn("Failed to unmarshal aggregation for policy transformation")
+		return v
+	}
+
+	changed := false
+	var walk func(m map[string]any)
+	walk = func(node map[string]any) {
+		// Check for sub-aggregations
+		for _, key := range []string{"aggs", "aggregations"} {
+			if sub, ok := node[key].(map[string]any); ok {
+				for name, subAgg := range sub {
+					if subAggMap, ok := subAgg.(map[string]any); ok {
+						if name == "policies" {
+							if _, hasNested := subAggMap["nested"]; hasNested {
+								delete(subAggMap, "nested")
+								// Use a match_all filter to mimic the "wrapper bucket" behavior of nested agg
+								// without actually enforcing nested scope.
+								subAggMap["filter"] = map[string]any{"match_all": map[string]any{}}
+								changed = true
+							}
+						}
+						walk(subAggMap)
+					}
+				}
+			}
+		}
+
+		// Check for aggregations targeting "policies.all_policies" and replace
+		// with "policies.enforced_policies". This maintains backward compatibility
+		// with older UI versions during the data model transition.
+		// TODO(dimitrin): [EV-6215] In the future, we will update this short-term solution and
+		// update the UI query to specifically call enforced policies in its payload.
+		for _, aggType := range []string{
+			"terms",
+			"cardinality",
+			"value_count",
+			"stats",
+			"extended_stats",
+			"percentiles",
+			"percentile_ranks",
+			"sum",
+			"min",
+			"max",
+			"avg",
+			"median_absolute_deviation",
+			"scripted_metric",
+			"bucket_script",
+		} {
+			if agg, ok := node[aggType].(map[string]any); ok {
+				if field, ok := agg["field"].(string); ok {
+					if field == "policies.all_policies" {
+						agg["field"] = "policies.enforced_policies"
+						changed = true
+					}
+				}
+			}
+		}
+	}
+
+	walk(m)
+
+	if changed {
+		nb, err := json.Marshal(m)
+		if err == nil {
+			return nb
+		}
+		logrus.WithError(err).Warn("Failed to marshal transformed aggregation")
+	}
+	return v
 }

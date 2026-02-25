@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
@@ -445,7 +445,7 @@ func (b *mockDatastore) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
 }
 
 // IPAMConfig returns an interface for managing the IPAMConfig resources.
-func (b *mockDatastore) IPAMConfig() clientv3.IPAMConfigInterface {
+func (c *mockDatastore) IPAMConfiguration() clientv3.IPAMConfigurationInterface {
 	panic("not implemented")
 }
 

@@ -395,8 +395,8 @@ func (m *EnterpriseManager) getRegistryFromManifests() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	imgs := strings.Split(out, "\n")
-	for _, i := range imgs {
+	imgs := strings.SplitSeq(out, "\n")
+	for i := range imgs {
 		if strings.Contains(i, "operator") {
 			continue
 		} else if strings.Contains(i, "calicoctl") {
@@ -415,8 +415,8 @@ func (m *EnterpriseManager) getRegistryFromCharts() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	imgs := strings.Split(out, "\n")
-	for _, i := range imgs {
+	imgs := strings.SplitSeq(out, "\n")
+	for i := range imgs {
 		if strings.Contains(i, "operator") {
 			continue
 		} else if strings.Contains(i, "tigera/") {

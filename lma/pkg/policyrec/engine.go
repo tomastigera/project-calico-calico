@@ -3,6 +3,7 @@ package policyrec
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"sort"
 	"strings"
@@ -540,9 +541,7 @@ type selectorBuilder map[string]string
 // Creates and initializes a selectorBuilder with the provided labels.
 func NewSelectorBuilder(labels map[string]string) selectorBuilder {
 	sb := make(selectorBuilder)
-	for k, v := range labels {
-		sb[k] = v
-	}
+	maps.Copy(sb, labels)
 	return sb
 }
 

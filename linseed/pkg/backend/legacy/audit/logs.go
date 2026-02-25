@@ -74,7 +74,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 
 // prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
-func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType, l v1.AuditLog) (interface{}, error) {
+func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType, l v1.AuditLog) (any, error) {
 	l.Cluster = i.Cluster
 
 	// Audit logs have a special MarshalJSON implementation that we need to respect.
@@ -217,7 +217,7 @@ func (b *auditLogBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1
 	}, nil
 }
 
-func (b *auditLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+func (b *auditLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
 	// If an index has more than 10000 items or other value configured via index.max_result_window
 	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
 	// on all requests
@@ -346,7 +346,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 
 	// Check if any resource kinds were specified.
 	if len(opts.Kinds) > 0 {
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.Kinds {
 			values = append(values, a)
 		}
@@ -355,7 +355,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 
 	// Match on author.
 	if len(opts.Authors) > 0 {
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.Authors {
 			values = append(values, a)
 		}
@@ -364,7 +364,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 
 	// Match on verb.
 	if len(opts.Verbs) > 0 {
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.Verbs {
 			values = append(values, a)
 		}
@@ -413,7 +413,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 
 	// Match on response codes.
 	if len(opts.ResponseCodes) > 0 {
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.ResponseCodes {
 			values = append(values, a)
 		}
@@ -430,7 +430,7 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 	}
 
 	if len(opts.Levels) > 0 {
-		values := []interface{}{}
+		values := []any{}
 		for _, a := range opts.Levels {
 			values = append(values, a)
 		}

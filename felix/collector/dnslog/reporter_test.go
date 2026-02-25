@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -30,7 +30,7 @@ func (d *testReporter) Start() error {
 	return nil
 }
 
-func (d *testReporter) Report(logSlice interface{}) error {
+func (d *testReporter) Report(logSlice any) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

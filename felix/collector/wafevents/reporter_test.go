@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -25,13 +25,13 @@ func (r *testWAFEventReporter) Start() error {
 	return nil
 }
 
-func (r *testWAFEventReporter) Report(logs interface{}) error {
+func (r *testWAFEventReporter) Report(logs any) error {
 	log.Info("In dispatch")
 	r.logs <- logs.([]*v1.WAFLog)
 	return nil
 }
 
-var _ = Describe("WAFEvent Log Reporter", func() {
+var _ = ginkgo.Describe("WAFEvent Log Reporter", func() {
 	var (
 		r0, r1, r2   *Report
 		dispatcher   *testWAFEventReporter
@@ -39,7 +39,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 		r            *WAFEventReporter
 	)
 
-	JustBeforeEach(func() {
+	ginkgo.JustBeforeEach(func() {
 		dispatcher = &testWAFEventReporter{logs: make(chan []*v1.WAFLog)}
 		flushTrigger = make(chan time.Time)
 		r = NewReporterWithShims([]types.Reporter{dispatcher}, flushTrigger, nil)
@@ -222,7 +222,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 		}
 	})
 
-	It("should generate correct logs", func() {
+	ginkgo.It("should generate correct logs", func() {
 		// report the events
 		err := r.Report(r0)
 		Expect(err).NotTo(HaveOccurred())
@@ -365,7 +365,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 		))
 	})
 
-	It("should correct aggregate logs", func() {
+	ginkgo.It("should correct aggregate logs", func() {
 		// report the events
 		err := r.Report(r0)
 		Expect(err).NotTo(HaveOccurred())
@@ -387,7 +387,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 	})
 })
 
-var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", func() {
+var _ = ginkgo.Describe("WAFEvent Reporter with FileReporter (race condition test)", func() {
 	var (
 		tmpDir       string
 		fileReporter *file.FileReporter
@@ -395,7 +395,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		reporter     *WAFEventReporter
 	)
 
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		var err error
 		tmpDir, err = os.MkdirTemp("", "waf-test-*")
 		Expect(err).NotTo(HaveOccurred())
@@ -405,13 +405,13 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		reporter = NewReporterWithShims([]types.Reporter{fileReporter}, flushTrigger, nil)
 	})
 
-	AfterEach(func() {
+	ginkgo.AfterEach(func() {
 		if tmpDir != "" {
 			os.RemoveAll(tmpDir)
 		}
 	})
 
-	It("should not panic when flush is triggered immediately after Start()", func() {
+	ginkgo.It("should not panic when flush is triggered immediately after Start()", func() {
 		// This test reproduces the race condition where flush() is called
 		// before the health ticker can initialize the FileReporter's logger.
 		Expect(reporter.Start()).NotTo(HaveOccurred())
@@ -469,7 +469,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		time.Sleep(100 * time.Millisecond)
 	})
 
-	It("should properly initialize FileReporter when Start() is called", func() {
+	ginkgo.It("should properly initialize FileReporter when Start() is called", func() {
 		// This test verifies that after Start() is called,
 		// the FileReporter should be initialized and ready to write
 		Expect(reporter.Start()).NotTo(HaveOccurred())
@@ -522,7 +522,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should handle concurrent Report() calls without race conditions", func() {
+	ginkgo.It("should handle concurrent Report() calls without race conditions", func() {
 		// This test verifies that concurrent calls to Report() don't cause
 		// race conditions on the buffer's aggregation counter
 		Expect(reporter.Start()).NotTo(HaveOccurred())
@@ -572,7 +572,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		const numGoroutines = 100
 		done := make(chan bool, numGoroutines)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				err := reporter.Report(testReport)
 				Expect(err).NotTo(HaveOccurred())
@@ -581,7 +581,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		}
 
 		// Wait for all goroutines to complete
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			<-done
 		}
 
@@ -595,7 +595,7 @@ var _ = Describe("WAFEvent Reporter with FileReporter (race condition test)", fu
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should gracefully shutdown when Stop() is called", func() {
+	ginkgo.It("should gracefully shutdown when Stop() is called", func() {
 		// Start the reporter
 		Expect(reporter.Start()).NotTo(HaveOccurred())
 

@@ -16,6 +16,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -891,7 +892,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1100,7 +1101,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1296,7 +1297,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1492,7 +1493,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged:    true,
+						Staged:    ptr.To(true),
 						Type:      "knp",
 						Namespace: testutils.StringPtr("default"),
 					},
@@ -1506,7 +1507,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Staged: true,
+						Staged: ptr.To(true),
 						Tier:   "allow-tigera",
 					},
 				},
@@ -1759,7 +1760,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Tier:   "allow-tigera",
-						Staged: true,
+						Staged: ptr.To(true),
 					},
 				},
 			},
@@ -1771,7 +1772,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Namespace: testutils.StringPtr("namespace"),
-						Staged:    true,
+						Staged:    ptr.To(true),
 						Tier:      "tier",
 					},
 				},
@@ -1784,7 +1785,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Name:   testutils.StringPtr("allow-tigera.staged-cluster-dns"),
-						Staged: true,
+						Staged: ptr.To(true),
 					},
 				},
 			},
@@ -2006,7 +2007,7 @@ func TestElasticResponses(t *testing.T) {
 		name string
 
 		// Response from elastic to be returned by the mock server.
-		response interface{}
+		response any
 
 		// Expected error
 		err bool
@@ -2179,7 +2180,7 @@ func populateFlowData(t *testing.T, ctx context.Context, b *backendutils.FlowLog
 func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLogBuilder, client lmaelastic.Client, info bapi.ClusterInfo, n int) v1.L3Flow {
 	batch := []v1.FlowLog{}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// We want a variety of label keys and values,
 		// so base this one off of the loop variable.
 		// Note: We use a nested terms aggregation to get labels, which has an
@@ -2578,7 +2579,7 @@ func TestL3FlowCount(t *testing.T) {
 			Tenant:  backendutils.RandomTenantName(),
 		}
 
-		for i := int64(0); i < totalCount; i++ {
+		for i := range totalCount {
 			bld := backendutils.NewFlowLogBuilder()
 			bld.WithType("wep").
 				WithSourceNamespace(fmt.Sprintf("namespace-%d", i)).
@@ -2628,7 +2629,7 @@ func TestL3FlowCount(t *testing.T) {
 			require.False(t, response.GlobalCountTruncated)
 			require.NotNil(t, response.NamespacedCounts)
 			require.Len(t, response.NamespacedCounts, int(expectedCount+1)) // n source namespaces + kube-system
-			for i := int64(0); i < expectedCount; i++ {
+			for i := range expectedCount {
 				require.Equal(t, int64(1), response.NamespacedCounts[fmt.Sprintf("namespace-%d", i)])
 			}
 			require.Equal(t, expectedCount, response.NamespacedCounts["kube-system"])
@@ -2832,4 +2833,94 @@ func TestFlowFilteringEndpointTypes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConvertPoliciesCompatibility(t *testing.T) {
+	// 1. Get the bucket converter (a flowBackend with nil client)
+	converter := flows.NewBucketConverter()
+	entry := logrus.NewEntry(logrus.StandardLogger())
+
+	// Helper to create bucket with specific terms
+	createBucket := func(terms map[string]*lmaelastic.AggregatedTerm) *lmaelastic.CompositeAggregationBucket {
+		// Initialize dummy key
+		dummyKey := make(lmaelastic.CompositeAggregationKey, 50)
+		for i := range dummyKey {
+			dummyKey[i] = lmaelastic.CompositeAggregationSourceValue{Value: ""}
+		}
+
+		// Initialize required empty terms to avoid panics
+		requiredTerms := []string{
+			"dest_labels", "source_labels", "dest_domains",
+			"source_ip", "dest_ip",
+			"enforced_policies", "pending_policies", "transit_policies", "all_policies",
+		}
+
+		for _, term := range requiredTerms {
+			if _, exists := terms[term]; !exists {
+				terms[term] = &lmaelastic.AggregatedTerm{Buckets: map[any]int64{}}
+			}
+		}
+
+		return &lmaelastic.CompositeAggregationBucket{
+			DocCount:                10,
+			CompositeAggregationKey: dummyKey,
+			AggregatedTerms:         terms,
+			AggregatedSums:          make(map[string]float64),
+			AggregatedMin:           make(map[string]float64),
+			AggregatedMax:           make(map[string]float64),
+			AggregatedMean:          make(map[string]float64),
+		}
+	}
+
+	t.Run("should fallback to enforced_policies when all_policies is empty", func(t *testing.T) {
+		enforcedBuckets := make(map[any]int64)
+		enforcedBuckets["0|default|test-policy|allow|0"] = 10
+
+		aggTerms := map[string]*lmaelastic.AggregatedTerm{
+			"enforced_policies": {Buckets: enforcedBuckets},
+		}
+
+		bucket := createBucket(aggTerms)
+		flow := converter.ConvertBucket(entry, bucket)
+
+		require.NotEmpty(t, flow.EnforcedPolicies)
+		require.Equal(t, "default.test-policy", flow.EnforcedPolicies[0].Name)
+
+		// Policies should match EnforcedPolicies
+		require.Equal(t, flow.EnforcedPolicies, flow.Policies)
+	})
+
+	t.Run("should use all_policies when present", func(t *testing.T) {
+		allPolicyBuckets := make(map[any]int64)
+		allPolicyBuckets["0|default|all-policy|allow|0"] = 10
+
+		enforcedBuckets := make(map[any]int64)
+		enforcedBuckets["0|default|enforced-policy|allow|0"] = 10
+
+		aggTerms := map[string]*lmaelastic.AggregatedTerm{
+			"all_policies":      {Buckets: allPolicyBuckets},
+			"enforced_policies": {Buckets: enforcedBuckets},
+		}
+
+		bucket := createBucket(aggTerms)
+		flow := converter.ConvertBucket(entry, bucket)
+
+		// Check EnforcedPolicies is populated from its own term
+		require.NotEmpty(t, flow.EnforcedPolicies)
+		require.Equal(t, "default.enforced-policy", flow.EnforcedPolicies[0].Name)
+
+		// Check Policies matches all_policies, NOT enforced_policies
+		require.NotEmpty(t, flow.Policies)
+		require.Len(t, flow.Policies, 1)
+		require.Equal(t, "default.all-policy", flow.Policies[0].Name)
+		require.NotEqual(t, flow.EnforcedPolicies, flow.Policies)
+	})
+
+	t.Run("should respond with empty policies if both are empty", func(t *testing.T) {
+		bucket := createBucket(map[string]*lmaelastic.AggregatedTerm{})
+		flow := converter.ConvertBucket(entry, bucket)
+
+		require.Empty(t, flow.EnforcedPolicies)
+		require.Empty(t, flow.Policies)
+	})
 }

@@ -400,7 +400,10 @@ func getOrCreateSnapshot(ctx context.Context, kcc clientv3.KubeControllersConfig
 // mergeConfig takes the environment variables, and resulting config
 func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControllersConfigurationSpec) (RunConfig, v3.KubeControllersConfigurationStatus) {
 	var rCfg RunConfig
-	status := v3.KubeControllersConfigurationStatus{EnvironmentVars: map[string]string{}}
+	status := v3.KubeControllersConfigurationStatus{
+		RunningConfig:   &v3.KubeControllersConfigurationSpec{},
+		EnvironmentVars: map[string]string{},
+	}
 	rc := &rCfg.Controllers
 
 	mergeLogLevel(envVars, &status, &rCfg, apiCfg)
@@ -761,7 +764,7 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 	if p {
 		status.EnvironmentVars[EnvEnabledControllers] = v
 		log.WithField(EnvEnabledControllers, v).Debug("applying env config")
-		for _, controllerType := range strings.Split(v, ",") {
+		for controllerType := range strings.SplitSeq(v, ",") {
 			switch controllerType {
 			case "workloadendpoint":
 				rc.WorkloadEndpoint = &GenericControllerConfig{}

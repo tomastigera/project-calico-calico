@@ -17,13 +17,13 @@ package elasticsearch_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 func TestElasticsearch(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("./report/elasticsearch_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Elasticsearch", []Reporter{junitReporter})
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "./report/elasticsearch_suite.xml"
+	ginkgo.RunSpecs(t, "Elasticsearch", suiteConfig, reporterConfig)
 }

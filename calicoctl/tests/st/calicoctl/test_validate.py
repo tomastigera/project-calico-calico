@@ -15,8 +15,6 @@ import json
 import logging
 import copy
 
-from nose_parameterized import parameterized
-
 from tests.st.test_base import TestBase
 from tests.st.utils.utils import calicoctl
 from tests.st.utils.data import *

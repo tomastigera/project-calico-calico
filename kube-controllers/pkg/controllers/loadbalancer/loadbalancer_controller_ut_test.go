@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -289,6 +289,27 @@ var _ = Describe("LoadBalancer controller UTs", func() {
 		Expect(c.allocationTracker.ipsByService[*svcKey]).To(BeEmpty())
 		Expect(c.allocationTracker.ipsByBlock).To(BeEmpty())
 		Expect(c.allocationTracker.servicesByIP).To(BeEmpty())
+	})
+
+	It("should not panic on handleBlockUpdate with nil *AllocationBlock", func() {
+		cidr := cnet.MustParseCIDR("10.0.0.4/30")
+		key := model.BlockKey{CIDR: cidr}
+
+		// A nil *AllocationBlock wrapped in a non-nil interface passes the
+		// "kvp.Value == nil" check but causes a nil-pointer dereference on
+		// field access.
+		var nilBlock *model.AllocationBlock
+		kvp := model.KVPair{
+			Key:   key,
+			Value: nilBlock, // non-nil interface, nil underlying pointer
+		}
+
+		Expect(func() {
+			c.handleBlockUpdate(kvp)
+		}).ToNot(Panic())
+
+		// The block should have been cleaned up from the tracker.
+		Expect(c.allocationTracker.ipsByBlock).To(BeEmpty())
 	})
 
 	It("should parse calico annotations", func() {

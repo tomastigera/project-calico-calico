@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/ips"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	internalv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -116,7 +116,7 @@ func (c *CacheEntryEndpoint) GetOrderedTiersAndPolicies() []*TierWithOrderedPoli
 // versionedK8sNamespace implements the VersionedEndpointResource interface.
 type versionedK8sPod struct {
 	*corev1.Pod
-	v3      *internalv3.WorkloadEndpoint
+	v3      *internalapi.WorkloadEndpoint
 	v1      *model.WorkloadEndpoint
 	validIP bool
 }
@@ -141,7 +141,7 @@ func (v *versionedK8sPod) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) GetCalicoV1() interface{} {
+func (v *versionedK8sPod) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -248,7 +248,7 @@ func (v *versionedCalicoHostEndpoint) GetCalicoV3() resources.Resource {
 }
 
 // getCalicoV1 implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) GetCalicoV1() interface{} {
+func (v *versionedCalicoHostEndpoint) GetCalicoV1() any {
 	return v.v1
 }
 
@@ -414,7 +414,7 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 		// SAAS-833)
 		kvp := kvps[0]
 
-		v3, ok := kvp.Value.(*internalv3.WorkloadEndpoint)
+		v3, ok := kvp.Value.(*internalapi.WorkloadEndpoint)
 		if !ok {
 			// Handle gracefully the possibility that the Value is nil.
 			log.Error("Pod to workload endpoint conversion failed")

@@ -30,7 +30,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kapiv1 "k8s.io/api/core/v1"
 
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -305,7 +305,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 		return nil, err
 	}
 
-	wep := defaultKVP.Value.(*libapiv3.WorkloadEndpoint)
+	wep := defaultKVP.Value.(*internalapi.WorkloadEndpoint)
 
 	wepids := names.WorkloadEndpointIdentifiers{
 		Node:         pod.Spec.NodeName,
@@ -359,7 +359,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 		Key: model.ResourceKey{
 			Name:      wep.Name,
 			Namespace: pod.Namespace,
-			Kind:      libapiv3.KindWorkloadEndpoint,
+			Kind:      internalapi.KindWorkloadEndpoint,
 		},
 		Value:    wep,
 		Revision: pod.ResourceVersion,
@@ -411,7 +411,7 @@ func calculateHostSideVethName(namespace, podName string, interfaceIndex int) st
 	// A SHA1 is always 20 bytes long, and so is sufficient for generating the
 	// veth name and mac addr.
 	h := sha1.New()
-	h.Write([]byte(fmt.Sprintf("%s.%s", namespace, podName)))
+	h.Write(fmt.Appendf(nil, "%s.%s", namespace, podName))
 
 	var containerID string
 	var containerSuffixLen int

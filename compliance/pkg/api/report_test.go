@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -246,7 +246,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("storing >DefaultPageSize unique reportTypeName/reportName combination with repeats")
 		var unique []api.ReportTypeAndName
 		// Add DefaultPageSize * 2 unique combinations (and add 2 reports of each)
-		for ii := 0; ii < api.DefaultPageSize*2; ii++ {
+		for ii := range api.DefaultPageSize * 2 {
 			tn := fmt.Sprintf("type%d", ii)
 			rn := fmt.Sprintf("report%d", ii)
 			_ = addReport(tn, rn, ii*100)

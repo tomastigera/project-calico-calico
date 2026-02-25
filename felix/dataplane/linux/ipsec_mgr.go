@@ -27,7 +27,7 @@ type ipsecManager struct {
 	dataplane ipSecDataplane
 }
 
-func (d *ipsecManager) OnUpdate(msg interface{}) {
+func (d *ipsecManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *proto.IPSecTunnelAdd:
 		log.WithFields(log.Fields{

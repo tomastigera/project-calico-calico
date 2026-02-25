@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
@@ -76,99 +75,90 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 
 				mockESCLI.AssertExpectations(GinkgoT())
 			},
-			TableEntry{
-				Description: "The ClusterRole resource is *",
-				Parameters: []interface{}{
-					[]rbacv1.PolicyRule{{
-						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
-						Resources:     []string{"*"},
-					}},
-					elasticsearch.RoleMapping{
-						Name: "tigera-k8s-test-resource",
-						Roles: []string{"flows_viewer", "audit_viewer", "audit_ee_viewer",
-							"audit_kube_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer", "kibana_viewer", "kibana_admin", "superuser",
-						},
-						Rules: map[string][]elasticsearch.Rule{
-							"any": {
-								{
-									Field: map[string]string{
-										"username": "user@test.com",
-									},
+			Entry("The ClusterRole resource is *",
+				[]rbacv1.PolicyRule{{
+					APIGroups:     []string{"lma.tigera.io"},
+					ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+					Resources:     []string{"*"},
+				}},
+				elasticsearch.RoleMapping{
+					Name: "tigera-k8s-test-resource",
+					Roles: []string{"flows_viewer", "audit_viewer", "audit_ee_viewer",
+						"audit_kube_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer", "kibana_viewer", "kibana_admin", "superuser",
+					},
+					Rules: map[string][]elasticsearch.Rule{
+						"any": {
+							{
+								Field: map[string]string{
+									"username": "user@test.com",
 								},
-								{
-									Field: map[string]string{
-										"groups": "testgroup",
-									},
+							},
+							{
+								Field: map[string]string{
+									"groups": "testgroup",
 								},
 							},
 						},
-						Enabled: true,
 					},
+					Enabled: true,
 				},
-			},
-			TableEntry{
-				Description: "The ClusterRole resource is a specific list of clusters",
-				Parameters: []interface{}{
-					[]rbacv1.PolicyRule{{
-						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
-						Resources:     []string{"cluster_1", "cluster_2"},
-					}},
-					elasticsearch.RoleMapping{
-						Name: "tigera-k8s-test-resource",
-						Roles: []string{
-							"flows_viewer_cluster_1", "audit_viewer_cluster_1", "audit_ee_viewer_cluster_1", "audit_kube_viewer_cluster_1",
-							"events_viewer_cluster_1", "dns_viewer_cluster_1", "l7_viewer_cluster_1", "waf_viewer_cluster_1", "runtime_viewer_cluster_1", "flows_viewer_cluster_2", "audit_viewer_cluster_2",
-							"audit_ee_viewer_cluster_2", "audit_kube_viewer_cluster_2", "events_viewer_cluster_2", "dns_viewer_cluster_2",
-							"l7_viewer_cluster_2", "waf_viewer_cluster_2", "runtime_viewer_cluster_2", "kibana_viewer", "kibana_admin", "superuser",
-						},
-						Rules: map[string][]elasticsearch.Rule{
-							"any": {
-								{
-									Field: map[string]string{
-										"username": "user@test.com",
-									},
+			),
+			Entry("The ClusterRole resource is a specific list of clusters",
+				[]rbacv1.PolicyRule{{
+					APIGroups:     []string{"lma.tigera.io"},
+					ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "waf", "runtime", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+					Resources:     []string{"cluster_1", "cluster_2"},
+				}},
+				elasticsearch.RoleMapping{
+					Name: "tigera-k8s-test-resource",
+					Roles: []string{
+						"flows_viewer_cluster_1", "audit_viewer_cluster_1", "audit_ee_viewer_cluster_1", "audit_kube_viewer_cluster_1",
+						"events_viewer_cluster_1", "dns_viewer_cluster_1", "l7_viewer_cluster_1", "waf_viewer_cluster_1", "runtime_viewer_cluster_1", "flows_viewer_cluster_2", "audit_viewer_cluster_2",
+						"audit_ee_viewer_cluster_2", "audit_kube_viewer_cluster_2", "events_viewer_cluster_2", "dns_viewer_cluster_2",
+						"l7_viewer_cluster_2", "waf_viewer_cluster_2", "runtime_viewer_cluster_2", "kibana_viewer", "kibana_admin", "superuser",
+					},
+					Rules: map[string][]elasticsearch.Rule{
+						"any": {
+							{
+								Field: map[string]string{
+									"username": "user@test.com",
 								},
-								{
-									Field: map[string]string{
-										"groups": "testgroup",
-									},
+							},
+							{
+								Field: map[string]string{
+									"groups": "testgroup",
 								},
 							},
 						},
-						Enabled: true,
 					},
+					Enabled: true,
 				},
-			},
-			TableEntry{
-				Description: "The ClusterRole has no resource names",
-				Parameters: []interface{}{
-					[]rbacv1.PolicyRule{{
-						APIGroups: []string{"lma.tigera.io"},
-						Resources: []string{"*"},
-					}},
-					elasticsearch.RoleMapping{
-						Name:  "tigera-k8s-test-resource",
-						Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer"},
-						Rules: map[string][]elasticsearch.Rule{
-							"any": {
-								{
-									Field: map[string]string{
-										"username": "user@test.com",
-									},
+			),
+			Entry("The ClusterRole has no resource names",
+				[]rbacv1.PolicyRule{{
+					APIGroups: []string{"lma.tigera.io"},
+					Resources: []string{"*"},
+				}},
+				elasticsearch.RoleMapping{
+					Name:  "tigera-k8s-test-resource",
+					Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer", "l7_viewer", "waf_viewer", "runtime_viewer"},
+					Rules: map[string][]elasticsearch.Rule{
+						"any": {
+							{
+								Field: map[string]string{
+									"username": "user@test.com",
 								},
-								{
-									Field: map[string]string{
-										"groups": "testgroup",
-									},
+							},
+							{
+								Field: map[string]string{
+									"groups": "testgroup",
 								},
 							},
 						},
-						Enabled: true,
 					},
+					Enabled: true,
 				},
-			},
+			),
 		)
 	})
 

@@ -36,7 +36,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/azure"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -149,7 +149,7 @@ func MTUFromFile(filename string, conf types.NetConf) (int, error) {
 
 // CreateOrUpdate creates the WorkloadEndpoint if ResourceVersion is not specified,
 // or Update if it's specified.
-func CreateOrUpdate(ctx context.Context, client client.Interface, wep *api.WorkloadEndpoint, isDefault bool) (*api.WorkloadEndpoint, error) {
+func CreateOrUpdate(ctx context.Context, client client.Interface, wep *internalapi.WorkloadEndpoint, isDefault bool) (*internalapi.WorkloadEndpoint, error) {
 	if isDefault {
 		if wep.ResourceVersion != "" {
 			return client.WorkloadEndpoints().Update(ctx, wep, options.SetOptions{})
@@ -248,7 +248,7 @@ func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) er
 		// It just needs a valid CIDR, but it doesn't have to be the CIDR associated with the host.
 		dummyPodCidrv4 := "0.0.0.0/0"
 		dummyPodCidrv6 := "::/0"
-		var stdinData map[string]interface{}
+		var stdinData map[string]any
 		err := json.Unmarshal(args.StdinData, &stdinData)
 		if err != nil {
 			return err
@@ -334,8 +334,8 @@ func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) er
 //	  }
 //	  ...
 //	}
-func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]interface{}, getPodCIDRs func() (string, string, error)) error {
-	ipamData, ok := stdinData["ipam"].(map[string]interface{})
+func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]any, getPodCIDRs func() (string, string, error)) error {
+	ipamData, ok := stdinData["ipam"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("failed to parse host-local IPAM data; was expecting a dict, not: %v", stdinData["ipam"])
 	}
@@ -347,13 +347,13 @@ func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]int
 	// Newer versions store one or more subnets in the "ranges" list:
 	untypedRanges := ipamData["ranges"]
 	if untypedRanges != nil {
-		rangeSets, ok := untypedRanges.([]interface{})
+		rangeSets, ok := untypedRanges.([]any)
 		if !ok {
 			return fmt.Errorf("failed to parse host-local IPAM ranges section; was expecting a list, not: %v",
 				ipamData["ranges"])
 		}
 		for _, urs := range rangeSets {
-			rs, ok := urs.([]interface{})
+			rs, ok := urs.([]any)
 			if !ok {
 				return fmt.Errorf("failed to parse host-local IPAM range set; was expecting a list, not: %v", rs)
 			}
@@ -368,9 +368,9 @@ func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]int
 	return nil
 }
 
-func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, getPodCidrs func() (string, string, error)) error {
+func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData any, getPodCidrs func() (string, string, error)) error {
 	logrus.WithField("ipamData", rawIpamData).Debug("Examining IPAM data for usePodCidr")
-	ipamData, ok := rawIpamData.(map[string]interface{})
+	ipamData, ok := rawIpamData.(map[string]any)
 	if !ok {
 		return fmt.Errorf("failed to parse host-local IPAM data; was expecting a dict, not: %v", rawIpamData)
 	}
@@ -416,7 +416,7 @@ func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, 
 }
 
 // This function will update host-local IPAM data based on input from cni.conf
-func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interface{}) error {
+func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]any) error {
 	if len(subnet) == 0 {
 		return nil
 	}
@@ -573,7 +573,7 @@ func AddIgnoreUnknownArgs() error {
 
 // CreateResultFromEndpoint takes a WorkloadEndpoint, extracts IP information
 // and populates that into a CNI Result.
-func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*cniv1.Result, error) {
+func CreateResultFromEndpoint(wep *internalapi.WorkloadEndpoint) (*cniv1.Result, error) {
 	if wep == nil {
 		return nil, fmt.Errorf("endpoint not found")
 	}
@@ -596,7 +596,7 @@ func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*cniv1.Result, error) 
 
 // PopulateEndpointNets takes a WorkloadEndpoint and a CNI Result, extracts IP address and mask
 // and populates that information into the WorkloadEndpoint.
-func PopulateEndpointNets(wep *api.WorkloadEndpoint, result *cniv1.Result) error {
+func PopulateEndpointNets(wep *internalapi.WorkloadEndpoint, result *cniv1.Result) error {
 	var copyIpNet net.IPNet
 	if len(result.IPs) == 0 {
 		return errors.New("IPAM plugin did not return any IP addresses")
@@ -750,6 +750,11 @@ func CreateClient(conf types.NetConf) (client.Interface, error) {
 	}
 	if conf.Policy.K8sAuthToken != "" {
 		if err := os.Setenv("K8S_API_TOKEN", conf.Policy.K8sAuthToken); err != nil {
+			return nil, err
+		}
+	}
+	if conf.CalicoAPIGroup != "" {
+		if err := os.Setenv("CALICO_API_GROUP", string(conf.CalicoAPIGroup)); err != nil {
 			return nil, err
 		}
 	}

@@ -37,7 +37,7 @@ func expectedQueryParams(now *time.Time) lsv1.QueryParams {
 			To:   time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
 			Now:  now,
 		},
-		AfterKey: map[string]interface{}{"startFrom": 0},
+		AfterKey: map[string]any{"startFrom": 0},
 		Clusters: []string{"fake-cluster"},
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/tds-apiserver/lib/slices"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/collections"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/domain/filters"
@@ -107,34 +108,42 @@ func TestParams(t *testing.T) {
 
 			t.Run("policy type", func(t *testing.T) {
 				testCases := []struct {
-					name             string
-					filter           filters.Criterion
-					expectedSelector string
+					name               string
+					filter             filters.Criterion
+					expectedSelector   string
+					expectedPendingPM  []lsv1.PolicyMatch
+					expectedEnforcedPM []lsv1.PolicyMatch
 				}{
 					{
-						name:             "staged",
-						filter:           filters.NewIn(policyTypeField, []string{"staged"}, false),
-						expectedSelector: `( "policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"} )`,
+						name:              "staged",
+						filter:            filters.NewIn(policyTypeField, []string{"staged"}, false),
+						expectedSelector:  "",
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
-						name:             "staged negated",
-						filter:           filters.NewIn(policyTypeField, []string{"staged"}, true),
-						expectedSelector: `( "policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"} )`,
+						name:               "staged negated",
+						filter:             filters.NewIn(policyTypeField, []string{"staged"}, true),
+						expectedSelector:   "",
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
-						name:             "enforced",
-						filter:           filters.NewIn(policyTypeField, []string{"enforced"}, false),
-						expectedSelector: `( "policies.enforced_policies" IN {"*|*|*|*|*"} )`,
+						name:               "enforced",
+						filter:             filters.NewIn(policyTypeField, []string{"enforced"}, false),
+						expectedSelector:   "",
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
-						name:             "enforced negated",
-						filter:           filters.NewIn(policyTypeField, []string{"enforced"}, true),
-						expectedSelector: `( "policies.enforced_policies" NOTIN {"*|*|*|*|*"} )`,
+						name:              "enforced negated",
+						filter:            filters.NewIn(policyTypeField, []string{"enforced"}, true),
+						expectedSelector:  "",
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
-						name:             "staged and enforced",
-						filter:           filters.NewIn(policyTypeField, []string{"staged", "enforced"}, false),
-						expectedSelector: `( "policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.enforced_policies" IN {"*|*|*|*|*"} )`,
+						name:               "staged and enforced",
+						filter:             filters.NewIn(policyTypeField, []string{"staged", "enforced"}, false),
+						expectedSelector:   "",
+						expectedPendingPM:  []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 				}
 
@@ -147,12 +156,27 @@ func TestParams(t *testing.T) {
 						require.NoError(t, err)
 
 						require.Equal(t, tc.expectedSelector, subject.linseedLogSelectionParams.Selector)
+						require.Equal(t, tc.expectedPendingPM, subject.pendingPolicyMatches)
+						require.Equal(t, tc.expectedEnforcedPM, subject.enforcedPolicyMatches)
 					})
 				}
 			})
 		})
 
 		t.Run("or", func(t *testing.T) {
+			t.Run("policy type error", func(t *testing.T) {
+				subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"}, nil)
+				require.NoError(t, err)
+
+				err = subject.setCriteria(filters.Criteria{
+					filters.NewOr(filters.Criteria{
+						filters.NewEquals(policyTypeField, "staged", false),
+						filters.NewEquals(clientNameField, "test-value", false),
+					}, false),
+				}, time.Time{})
+				require.ErrorContains(t, err, "policy.type filter is only supported at the top level")
+			})
+
 			subject, err := newQueryParams(0, 0, "start_time", []string{"fake-cluster"}, nil)
 			require.NoError(t, err)
 
@@ -346,29 +370,35 @@ func TestParams(t *testing.T) {
 			t.Run("policy type", func(t *testing.T) {
 
 				testCases := []struct {
-					name             string
-					filter           filters.Criterion
-					expectedSelector string
+					name               string
+					filter             filters.Criterion
+					expectedSelector   string
+					expectedPendingPM  []lsv1.PolicyMatch
+					expectedEnforcedPM []lsv1.PolicyMatch
 				}{
 					{
-						name:             "staged",
-						filter:           filters.NewEquals(policyTypeField, "staged", false),
-						expectedSelector: `"policies.all_policies" IN {"*|*|*.staged:*|*|*"} OR "policies.pending_policies" IN {"*|*|*.staged:*|*|*"}`,
+						name:              "staged",
+						filter:            filters.NewEquals(policyTypeField, "staged", false),
+						expectedSelector:  "",
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 					{
-						name:             "staged negated",
-						filter:           filters.NewEquals(policyTypeField, "staged", true),
-						expectedSelector: `"policies.all_policies" NOTIN {"*|*|*.staged:*|*|*"} AND "policies.pending_policies" NOTIN {"*|*|*.staged:*|*|*"}`,
+						name:               "staged negated",
+						filter:             filters.NewEquals(policyTypeField, "staged", true),
+						expectedSelector:   "",
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
-						name:             "enforced",
-						filter:           filters.NewEquals(policyTypeField, "enforced", false),
-						expectedSelector: `"policies.enforced_policies" IN {"*|*|*|*|*"}`,
+						name:               "enforced",
+						filter:             filters.NewEquals(policyTypeField, "enforced", false),
+						expectedSelector:   "",
+						expectedEnforcedPM: []lsv1.PolicyMatch{{Staged: ptr.To(false)}},
 					},
 					{
-						name:             "enforced negated",
-						filter:           filters.NewEquals(policyTypeField, "enforced", true),
-						expectedSelector: `"policies.enforced_policies" NOTIN {"*|*|*|*|*"}`,
+						name:              "enforced negated",
+						filter:            filters.NewEquals(policyTypeField, "enforced", true),
+						expectedSelector:  "",
+						expectedPendingPM: []lsv1.PolicyMatch{{Staged: ptr.To(true)}},
 					},
 				}
 
@@ -395,6 +425,8 @@ func TestParams(t *testing.T) {
 							linseedLogSelectionParams: lsv1.LogSelectionParams{
 								Selector: tc.expectedSelector,
 							},
+							enforcedPolicyMatches: tc.expectedEnforcedPM,
+							pendingPolicyMatches:  tc.expectedPendingPM,
 						}, subject)
 					})
 				}

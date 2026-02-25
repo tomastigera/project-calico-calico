@@ -144,8 +144,8 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 }`
 	)
 
-	expectedTenantQuery := map[string]interface{}{
-		"term": map[string]interface{}{
+	expectedTenantQuery := map[string]any{
+		"term": map[string]any{
 			"tenant.keyword": tenantID,
 		},
 	}
@@ -274,12 +274,12 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 			req, err := http.NewRequest(http.MethodPost, tt.url, bytes.NewBufferString(tt.body))
 			require.NoError(t, err)
 
-			var wantFilterClause map[string]interface{}
+			var wantFilterClause map[string]any
 			if tt.wantStatus == http.StatusOK {
-				var initialQuery map[string]interface{}
+				var initialQuery map[string]any
 				err = json.Unmarshal([]byte(tt.body), &initialQuery)
 				require.NoError(t, err)
-				wantFilterClause = initialQuery["query"].(map[string]interface{})
+				wantFilterClause = initialQuery["query"].(map[string]any)
 			}
 
 			// Process the requests
@@ -293,19 +293,19 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check that the new query is valid json
-				queryBody := make(map[string]interface{})
+				queryBody := make(map[string]any)
 				err = json.Unmarshal(body, &queryBody)
 				require.NoError(t, err)
 
 				// Check that we have a boolean query defined
 				require.NotNil(t, queryBody["query"])
-				query := queryBody["query"].(map[string]interface{})
+				query := queryBody["query"].(map[string]any)
 				require.NotNil(t, query["bool"])
-				booleanQuery := query["bool"].(map[string]interface{})
+				booleanQuery := query["bool"].(map[string]any)
 
 				// Check tenancy query is included on must clause
 				require.NotNil(t, booleanQuery["must"])
-				tenantQuery := booleanQuery["must"].(map[string]interface{})
+				tenantQuery := booleanQuery["must"].(map[string]any)
 				require.Equal(t, expectedTenantQuery, tenantQuery)
 
 				// Check initial query is included on filter query

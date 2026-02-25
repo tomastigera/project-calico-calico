@@ -5,6 +5,7 @@
 package dnsresolver_test
 
 import (
+	"maps"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -254,9 +255,7 @@ func TestDomainTrackerRestart(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	pfxCp := make(map[string]string)
-	for k, v := range pfxMockMap.Contents {
-		pfxCp[k] = v
-	}
+	maps.Copy(pfxCp, pfxMockMap.Contents)
 
 	tracker2, err := dnsresolver.NewDomainTrackerWithMaps(func(s string) uint64 {
 		return ids[s]

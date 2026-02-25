@@ -52,6 +52,6 @@ $(ELASTICSEARCH_METRICS_IMAGE_CREATED): Dockerfile bin/elasticsearch-metrics-$(A
 ###############################################################################
 # CI/CD
 ###############################################################################
-ci: clean image static-checks
+ci: clean static-checks image
 
 cd: image-all cd-common

@@ -11,7 +11,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/confd/pkg/backends"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 const (
@@ -222,7 +222,7 @@ func constructExternalNetworkKVPs(idxs []uint32, t *testing.T) memkv.KVPairs {
 func constructBGPPeerKVPs(peerIPStrs []string, enet string, port uint16, t *testing.T) memkv.KVPairs {
 	var kvps memkv.KVPairs
 	for _, peerIPStr := range peerIPStrs {
-		peerIP := cnet.ParseIP(peerIPStr)
+		peerIP := net.ParseIP(peerIPStr)
 		peer := backends.BGPPeer{
 			PeerIP:          *peerIP,
 			ExternalNetwork: enet,

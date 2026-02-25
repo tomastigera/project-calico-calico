@@ -8,8 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -19,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
@@ -466,7 +465,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				By("Configuring the RemoteClusterConfiguration referencing secret")
 				rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
 				rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
-					Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
+					Kind:      reflect.TypeFor[kapiv1.Secret]().String(),
 					Namespace: "namespace-1",
 					Name:      rccSecretName,
 				}
@@ -619,7 +618,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 
 		// addWep creates a WEP on the remoteClient and adds the expected events to expectedEvents for later checking
 		addWep := func() {
-			wep := libapiv3.NewWorkloadEndpoint()
+			wep := internalapi.NewWorkloadEndpoint()
 			wep.Namespace = "ns1"
 			wep.Spec.Node = "node1"
 			wep.Spec.Orchestrator = "k8s"
@@ -637,7 +636,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 			kvp := model.KVPair{
 				Key: model.ResourceKey{
-					Kind:      libapiv3.KindWorkloadEndpoint,
+					Kind:      internalapi.KindWorkloadEndpoint,
 					Name:      "node1-k8s-pod--1-eth0",
 					Namespace: "ns1",
 				},
@@ -876,11 +875,11 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 
 			if mode == apiv3.OverlayRoutingModeEnabled {
 				remoteAffinity := "host:remote-cluster/test-node"
-				ipamBlock := libapiv3.NewIPAMBlock()
+				ipamBlock := internalapi.NewIPAMBlock()
 				ipamBlock.Name = "192-168-10-0-30"
 				ipamBlock.Spec.CIDR = "192.168.10.0/30"
 				ipamBlock.Spec.Affinity = &remoteAffinity
-				ipamBlock.Spec.Attributes = []libapiv3.AllocationAttribute{
+				ipamBlock.Spec.Attributes = []internalapi.AllocationAttribute{
 					{
 						AttrPrimary: &handle,
 						AttrSecondary: map[string]string{
@@ -892,7 +891,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				ipamBlock.Spec.Unallocated = []int{1, 2, 3}
 				v3Key := model.ResourceKey{
 					Name: "192-168-10-0-30",
-					Kind: libapiv3.KindIPAMBlock,
+					Kind: internalapi.KindIPAMBlock,
 				}
 
 				// Expect RemoteClusterResourceKey pairs.
@@ -920,13 +919,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 		}
 
 		addNode := func(mode apiv3.OverlayRoutingMode) {
-			node := libapiv3.NewNode()
+			node := internalapi.NewNode()
 			node.Name = "test-node"
-			node.Spec.BGP = &libapiv3.NodeBGPSpec{
+			node.Spec.BGP = &internalapi.NodeBGPSpec{
 				IPv4Address: "1.2.3.4/24",
 			}
 			node.Spec.IPv4VXLANTunnelAddr = "192.168.56.78"
-			node.Spec.Wireguard = &libapiv3.NodeWireguardSpec{
+			node.Spec.Wireguard = &internalapi.NodeWireguardSpec{
 				InterfaceIPv4Address: "192.168.12.34",
 			}
 			node.Status.WireguardPublicKey = "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="
@@ -950,7 +949,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 						KVPair: model.KVPair{
 							Key: model.ResourceKey{
 								Name: "remote-cluster/test-node",
-								Kind: libapiv3.KindNode,
+								Kind: internalapi.KindNode,
 							},
 							Value: node,
 						},

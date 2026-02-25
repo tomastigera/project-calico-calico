@@ -6,11 +6,11 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
-type JsonObject map[string]interface{}
+type JsonObject map[string]any
 
 type JsonObjectElasticQuery JsonObject
 
-func (q JsonObjectElasticQuery) Source() (interface{}, error) {
+func (q JsonObjectElasticQuery) Source() (any, error) {
 	return JsonObject(q), nil
 }
 
@@ -30,7 +30,7 @@ type converter struct {
 }
 
 // comparatorToElastic converts the comparator to an elastic JsonObject.
-func comparatorToElastic(c query.Comparator, key string, value interface{}) JsonObject {
+func comparatorToElastic(c query.Comparator, key string, value any) JsonObject {
 	switch c {
 	case query.CmpEqual:
 		return JsonObject{

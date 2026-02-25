@@ -5,7 +5,7 @@ package v3
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +34,7 @@ var _ = DescribeTable("GlobalAlert extractVariablesFromTemplate",
 )
 
 var _ = DescribeTable("GlobalAlert Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")
@@ -881,7 +881,7 @@ var _ = DescribeTable("GlobalAlert Validator",
 )
 
 var _ = DescribeTable("GlobalAlertTemplate Validator",
-	func(input interface{}, valid bool) {
+	func(input any, valid bool) {
 		if valid {
 			Expect(Validate(input)).NotTo(HaveOccurred(),
 				"expected value to be valid")

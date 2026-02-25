@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/voltron/pkg/conn"
@@ -23,19 +23,15 @@ var _ = Describe("Forwarding connections", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				dst1, err = lst1.Accept()
 				Expect(err).ShouldNot(HaveOccurred())
-			}()
+			})
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				dst2, err = lst2.Accept()
 				Expect(err).ShouldNot(HaveOccurred())
-			}()
+			})
 
 			By("connecting to those localhost listens")
 			src1, err := net.Dial("tcp", lst1.Addr().String())
@@ -43,11 +39,9 @@ var _ = Describe("Forwarding connections", func() {
 
 			wg.Wait()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				conn.Forward(dst1, src2)
-			}()
+			})
 
 			request := "request"
 			response := "response"

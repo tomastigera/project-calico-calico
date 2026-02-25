@@ -323,7 +323,7 @@ func intoLogParams(ctx context.Context, t SearchType, request *v1.CommonSearchRe
 	if request.PageNum != 0 {
 		// TODO: Ideally, clients don't know the format of the AfterKey. In order to satisfy
 		// the exising UI API, we need to for now.
-		params.SetAfterKey(map[string]interface{}{
+		params.SetAfterKey(map[string]any{
 			"startFrom": request.PageNum * (*request.PageSize),
 		})
 	}

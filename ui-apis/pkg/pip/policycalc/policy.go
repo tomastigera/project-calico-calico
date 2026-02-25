@@ -1,6 +1,8 @@
 package policycalc
 
 import (
+	"slices"
+
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -181,12 +183,7 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange 
 
 // policyTypesContains checks if the supplied policy type is in the policy type slice
 func policyTypesContains(s []v3.PolicyType, e v3.PolicyType) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, e)
 }
 
 // add adds the FlowMatcher to the set of matchers for the policy. It may be called with a nil matcher, in which case

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -172,7 +172,7 @@ var _ = Describe("RouteGenerator", func() {
 		rg = &routeGenerator{
 			nodeName:                   "foobar",
 			svcIndexer:                 cache.NewIndexer(cache.MetaNamespaceKeyFunc, nil),
-			epIndexer:                  cache.NewIndexer(cache.MetaNamespaceKeyFunc, nil),
+			epIndexer:                  cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{endpointSliceServiceIndex: endpointSliceServiceIndexFunc}),
 			svcRouteMap:                make(map[string]map[string]bool),
 			routeAdvertisementRefCount: make(map[string]int),
 			client: &client{

@@ -4,8 +4,9 @@ package rbac_test
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -134,12 +135,7 @@ var (
 )
 
 func isOneOf(rt ResourceType, rts ...ResourceType) bool {
-	for _, rtss := range rts {
-		if rt == rtss {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(rts, rt)
 }
 
 var allResourceVerbs []ResourceVerbs
@@ -244,7 +240,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)), "one result for each resource type")
 
-		Describe("all resources", func() {
+		By("all resources", func() {
 			for _, resourceType := range defaultResourceTypes {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceNamespaces]).To(haveMatchAllForVerbs(
@@ -263,7 +259,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("tiered policies", func() {
+		By("tiered policies", func() {
 			for _, resourceType := range tieredPolicyResources {
 				Expect(res[resourceType]).To(haveOnlyMatchesForVerbs([]Match{
 					{Tier: "default"},
@@ -275,7 +271,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaces", func() {
+		By("namespaces", func() {
 			Expect(res[resourceNamespaces]).To(haveMatchForVerbs([]Match{
 				{Namespace: "ns1"},
 				{Namespace: "ns2"},
@@ -285,7 +281,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("get tiers", func() {
+		By("get tiers", func() {
 			Expect(res[resourceTiers]).To(haveMatchForVerbs([]Match{
 				{Tier: "default"},
 				{Tier: "tier1"},
@@ -295,7 +291,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("get uisettingsgroup", func() {
+		By("get uisettingsgroup", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveMatchForVerbs([]Match{
 				{UISettingsGroup: "group1"},
 				{UISettingsGroup: "group2"},
@@ -304,7 +300,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("managed clusters", func() {
+		By("managed clusters", func() {
 			Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
 				{ManagedCluster: "cluster1"},
 				{ManagedCluster: "cluster2"},
@@ -339,7 +335,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		res, err := calc.CalculatePermissions(myUser, allResourceVerbs)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
-		Describe("all resources", func() {
+		By("all resources", func() {
 			for _, resourceType := range defaultResourceTypes {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
@@ -351,7 +347,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(haveMatchNoneForVerbs(VerbWatch, VerbCreate, VerbList, VerbUpdate))
 			Expect(res[resourceTiers]).To(haveMatchAllForVerbs(VerbDelete, VerbPatch))
 			Expect(res[resourceTiers]).To(haveMatchForVerbs([]Match{
@@ -360,7 +356,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettingsgroup", func() {
+		By("uisettingsgroup", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveMatchNoneForVerbs(VerbWatch, VerbCreate, VerbList, VerbUpdate))
 			Expect(res[resourceUISettingsGroup]).To(haveMatchAllForVerbs(VerbDelete, VerbPatch))
 			Expect(res[resourceUISettingsGroup]).To(haveMatchForVerbs([]Match{
@@ -369,7 +365,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettings", func() {
+		By("uisettings", func() {
 			// UISettings, expect delete/patch for each group.
 			Expect(res[resourceUISettings]).To(haveOnlyMatchesForVerbs([]Match{
 				{UISettingsGroup: "group1"},
@@ -377,7 +373,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbDelete, VerbPatch))
 		})
 
-		Describe("tiered policies", func() {
+		By("tiered policies", func() {
 			// Matches for tiered policy should only contain the gettable Tiers.
 			for _, resourceType := range tieredPolicyResources {
 				Expect(res[resourceType]).To(haveOnlyMatchesForVerbs([]Match{
@@ -387,7 +383,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("all other resources", func() {
+		By("all other resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceHostEndpoints,
 				resourceNamespaces,
@@ -431,7 +427,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
-		Describe("cluster-scoped resources", func() {
+		By("cluster-scoped resources", func() {
 			for _, resourceType := range clusterScopedResources {
 				Expect(res).To(HaveKey(resourceType), "one result for each resource type")
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
@@ -445,11 +441,11 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaces", func() {
+		By("namespaces", func() {
 			Expect(res[resourceNamespaces]).To(haveMatchNoneForAllVerbs())
 		})
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(haveOnlyMatchesForVerbs([]Match{
 				{Tier: "default"},
 				{Tier: "tier1"},
@@ -459,7 +455,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("uisettingsgroups", func() {
+		By("uisettingsgroups", func() {
 			Expect(res[resourceUISettingsGroup]).To(haveOnlyMatchesForVerbs([]Match{
 				{UISettingsGroup: "group1"},
 				{UISettingsGroup: "group2"},
@@ -468,7 +464,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}, VerbGet))
 		})
 
-		Describe("cluster-scoped tiered policy resources", func() {
+		By("cluster-scoped tiered policy resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceGlobalNetworkPolicies,
 				resourceStagedGlobalNetworkPolicies,
@@ -477,7 +473,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaced tiered policy resources", func() {
+		By("namespaced tiered policy resources", func() {
 			for _, resourceType := range []ResourceType{
 				resourceCalicoNetworkPolicies,
 				resourceStagedCalicoNetworkPolicies,
@@ -493,12 +489,12 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)))
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{
 							{Namespace: "ns1", Tier: "default"},
 							{Namespace: "ns1", Tier: "tier1"},
@@ -509,7 +505,7 @@ var _ = Describe("RBAC calculator tests", func() {
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch), resourceType.String())
 					})
 				} else {
-					Describe("resources (excluding tiered-policy resources", func() {
+					By("resources (excluding tiered-policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{{Namespace: "ns1"}}, VerbUpdate, VerbCreate, VerbList), resourceType.String())
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch), resourceType.String())
 					})
@@ -533,16 +529,16 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
 		// namespaced resources that aren't tiered policies should have ns matchers
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(haveMatchNoneForAllVerbs(), resourceType.String())
 					})
 				} else {
-					Describe("resources (except tiered-policies)", func() {
+					By("resources (except tiered-policies)", func() {
 						Expect(res[resourceType]).To(haveMatchForVerbs([]Match{{Namespace: "ns1"}}, VerbUpdate, VerbCreate, VerbList))
 						Expect(res[resourceType]).To(haveMatchNoneForVerbs(VerbGet, VerbDelete, VerbPatch, VerbWatch))
 					})
@@ -550,7 +546,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("cluster-scoped", func() {
+		By("cluster-scoped", func() {
 			for _, resourceType := range clusterScopedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				Expect(res[resourceType]).To(haveMatchNoneForAllVerbs())
@@ -587,7 +583,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res).To(HaveLen(len(defaultResourceTypes)))
 
-		Describe("tiers", func() {
+		By("tiers", func() {
 			Expect(res[resourceTiers]).To(Equal(map[Verb][]Match{
 				VerbGet: {
 					{Tier: "tier2"},
@@ -603,12 +599,12 @@ var _ = Describe("RBAC calculator tests", func() {
 		})
 
 		// namespaced resources that aren't tiered policies should have ns matchers
-		Describe("namespaced", func() {
+		By("namespaced", func() {
 			for _, resourceType := range namespacedResources {
 				Expect(res[resourceType]).To(HaveLen(len(AllVerbs)), "one result for each defined verb")
 				if resourceType == resourceCalicoNetworkPolicies ||
 					resourceType == resourceStagedCalicoNetworkPolicies {
-					Describe("tiered policy resources", func() {
+					By("tiered policy resources", func() {
 						Expect(res[resourceType]).To(Equal(map[Verb][]Match{
 							VerbCreate: nil,
 							VerbPatch:  {{Tier: "tier2", Namespace: "ns1"}, {Tier: "tier3", Namespace: "ns1"}},
@@ -620,7 +616,7 @@ var _ = Describe("RBAC calculator tests", func() {
 						}), resourceType.String())
 					})
 				} else {
-					Describe("resources (except tiered-policies)", func() {
+					By("resources (except tiered-policies)", func() {
 						Expect(res[resourceType]).To(Equal(map[Verb][]Match{
 							VerbCreate: nil,
 							VerbPatch:  {{Namespace: "ns1"}},
@@ -635,7 +631,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			}
 		})
 
-		Describe("cluster-scoped", func() {
+		By("cluster-scoped", func() {
 			for _, resourceType := range clusterScopedResources {
 				if resourceType == resourceTiers {
 					// handle tiers separately as they have different GET permissions
@@ -722,38 +718,36 @@ var _ = Describe("RBAC calculator tests", func() {
 		By("adding two managed clusters")
 		mock.ClusterRoleBindings = []string{"get-ManagedClusters"}
 
-		Context("wildcard access", func() {
-			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-				"get-ManagedClusters": {{
-					Verbs:     []string{"get", "watch"},
-					Resources: []string{"managedclusters"},
-					APIGroups: []string{"projectcalico.org"},
-				}},
-			}
-			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(res).To(HaveKey(resourceManagedClusters))
-			Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
-			Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
-				{ManagedCluster: "cluster1"},
-				{ManagedCluster: "cluster2"},
-			}, VerbGet), "get always expanded to all resources")
-		})
+		By("wildcard access")
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-ManagedClusters": {{
+				Verbs:     []string{"get", "watch"},
+				Resources: []string{"managedclusters"},
+				APIGroups: []string{"projectcalico.org"},
+			}},
+		}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(resourceManagedClusters))
+		Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
+		Expect(res[resourceManagedClusters]).To(haveMatchForVerbs([]Match{
+			{ManagedCluster: "cluster1"},
+			{ManagedCluster: "cluster2"},
+		}, VerbGet), "get always expanded to all resources")
 
-		Context("individual access", func() {
-			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-				"get-ManagedClusters": {{
-					Verbs:         []string{"get", "watch"},
-					Resources:     []string{"managedclusters"},
-					APIGroups:     []string{"projectcalico.org"},
-					ResourceNames: []string{"cluster1"},
-				}},
-			}
-			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(res).To(HaveKey(resourceManagedClusters))
-			Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1"}}, VerbGet, VerbWatch))
-		})
+		By("individual access")
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-ManagedClusters": {{
+				Verbs:         []string{"get", "watch"},
+				Resources:     []string{"managedclusters"},
+				APIGroups:     []string{"projectcalico.org"},
+				ResourceNames: []string{"cluster1"},
+			}},
+		}
+		res, err = calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(resourceManagedClusters))
+		Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1"}}, VerbGet, VerbWatch))
 	})
 
 	It("has fully gettable and watchable Tiers, but not listable", func() {
@@ -1165,41 +1159,39 @@ var _ = Describe("RBAC calculator tests", func() {
 		})
 
 		It("managed clusters", func() {
-			Context("wildcard access", func() {
-				mock.ClusterRoleBindings = []string{
-					"watch-ManagedClusters",
-				}
-				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-					"watch-ManagedClusters": {{
-						Verbs:     []string{"watch"},
-						Resources: []string{"managedclusters"},
-						APIGroups: []string{"projectcalico.org"},
-					}},
-				}
-				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(HaveKey(resourceManagedClusters))
-				Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
-			})
+			By("wildcard access")
+			mock.ClusterRoleBindings = []string{
+				"watch-ManagedClusters",
+			}
+			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+				"watch-ManagedClusters": {{
+					Verbs:     []string{"watch"},
+					Resources: []string{"managedclusters"},
+					APIGroups: []string{"projectcalico.org"},
+				}},
+			}
+			res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(HaveKey(resourceManagedClusters))
+			Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
 
-			Context("individual access", func() {
-				mock.RoleBindings = map[string][]string{
-					"tenant-A": {"watch-ManagedClusters"},
-					"tenant-B": {"watch-ManagedClusters"},
-				}
-				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-					"watch-ManagedClusters": {{
-						Verbs:         []string{"watch"},
-						Resources:     []string{"managedclusters"},
-						APIGroups:     []string{"projectcalico.org"},
-						ResourceNames: []string{"cluster1"},
-					}},
-				}
-				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(HaveKey(resourceManagedClusters))
-				Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1", Namespace: "tenant-A"}}, VerbWatch))
-			})
+			By("individual access")
+			mock.RoleBindings = map[string][]string{
+				"tenant-A": {"watch-ManagedClusters"},
+				"tenant-B": {"watch-ManagedClusters"},
+			}
+			mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+				"watch-ManagedClusters": {{
+					Verbs:         []string{"watch"},
+					Resources:     []string{"managedclusters"},
+					APIGroups:     []string{"projectcalico.org"},
+					ResourceNames: []string{"cluster1"},
+				}},
+			}
+			res, err = calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(HaveKey(resourceManagedClusters))
+			Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1", Namespace: "tenant-A"}}, VerbWatch))
 		})
 	})
 })
@@ -1263,10 +1255,5 @@ func expectPresentButEmpty(p Permissions, rvs []ResourceVerbs) {
 }
 
 func contains[T comparable](elems []T, v T) bool {
-	for _, s := range elems {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(elems, v)
 }

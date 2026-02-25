@@ -3,6 +3,8 @@
 package testutils
 
 import (
+	"maps"
+
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 )
@@ -87,9 +89,7 @@ func WithScheme(scheme string) ProcessingRequestBuilderOption {
 
 func WithRequestHeaders(headers map[string]string) ProcessingRequestBuilderOption {
 	return func(b *ProcessingRequestBuilder) {
-		for k, v := range headers {
-			b.headers[k] = v
-		}
+		maps.Copy(b.headers, headers)
 	}
 }
 
@@ -101,9 +101,7 @@ func WithRequestBody(body []byte) ProcessingRequestBuilderOption {
 
 func WithResponseHeaders(headers map[string]string) ProcessingRequestBuilderOption {
 	return func(b *ProcessingRequestBuilder) {
-		for k, v := range headers {
-			b.responseHeaders[k] = v
-		}
+		maps.Copy(b.responseHeaders, headers)
 	}
 }
 

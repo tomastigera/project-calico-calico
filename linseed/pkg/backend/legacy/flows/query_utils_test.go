@@ -3,10 +3,12 @@
 package flows_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
@@ -72,10 +74,71 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 					assert.Nil(t, bq)
 				} else {
 					assert.NotNil(t, bq)
+					// If it's a valid match (not empty/special case), check if it has the Should clauses for fallback
+					if len(tt.policyMatches) > 0 {
+						source, err := bq.Source()
+						assert.NoError(t, err)
+
+						// Verify query structure: Bool -> Should -> [Nested Bool Query]
+						sourceMap, ok := source.(map[string]any)
+						assert.True(t, ok, "Query source should be a map")
+						boolMap, ok := sourceMap["bool"].(map[string]any)
+						assert.True(t, ok, "Top level query should be a bool query")
+						shouldSlice, ok := boolMap["should"].([]any)
+						assert.True(t, ok, "Bool query should have 'should' clause")
+						assert.NotEmpty(t, shouldSlice)
+						assert.EqualValues(t, "1", boolMap["minimum_should_match"], "Top level bool query should have minimum_should_match=1")
+
+						// Check for nested bool query with expected fields
+						foundNested := false
+						for _, clause := range shouldSlice {
+							if clauseMap, ok := clause.(map[string]any); ok {
+								if subBool, ok := clauseMap["bool"].(map[string]any); ok {
+									// This sub-query should contain should clauses for polices fields
+									if subShould, ok := subBool["should"].([]any); ok {
+										foundNested = true
+										assert.EqualValues(t, "1", subBool["minimum_should_match"], "Nested bool query should have minimum_should_match=1")
+										subJSON, _ := json.Marshal(subShould)
+										assert.Contains(t, string(subJSON), "policies.all_policies")
+										assert.Contains(t, string(subJSON), "policies.enforced_policies")
+									}
+								}
+							}
+						}
+						assert.True(t, foundNested, "Did not find nested bool query with policy fields")
+					}
 				}
 			}
 		})
 	}
+}
+
+// TestPolicyMatchStagedFalseNotEmpty verifies that PolicyMatch{Staged: ptr.To(false)}
+// is not treated as an empty struct (regression test for the bug where Staged was a
+// plain bool, making {Staged: false} indistinguishable from the zero-value PolicyMatch{}).
+func TestPolicyMatchStagedFalseNotEmpty(t *testing.T) {
+	// With Staged as *bool, {Staged: ptr.To(false)} should NOT be considered empty
+	// and should build a valid query.
+	policyMatches := []v1.PolicyMatch{{Staged: ptr.To(false)}}
+	bq, err := flows.BuildAllPolicyMatchQuery(policyMatches)
+	assert.NoError(t, err)
+	assert.NotNil(t, bq, "PolicyMatch{Staged: ptr.To(false)} should not be rejected as empty")
+
+	// Also verify it works for enforced and pending query builders
+	bq, err = flows.BuildEnforcedPolicyMatchQuery(policyMatches)
+	assert.NoError(t, err)
+	assert.NotNil(t, bq, "PolicyMatch{Staged: ptr.To(false)} should not be rejected as empty for enforced query")
+
+	bq, err = flows.BuildPendingPolicyMatchQuery(policyMatches)
+	assert.NoError(t, err)
+	assert.NotNil(t, bq, "PolicyMatch{Staged: ptr.To(false)} should not be rejected as empty for pending query")
+
+	// Verify that a truly empty PolicyMatch{} is still rejected
+	emptyMatches := []v1.PolicyMatch{{}}
+	bq, err = flows.BuildAllPolicyMatchQuery(emptyMatches)
+	assert.Error(t, err)
+	assert.Nil(t, bq)
+	assert.Contains(t, err.Error(), "PolicyMatch passed to BuildPolicyMatchQuery cannot be empty")
 }
 
 func TestEnforcedPolicyMatchQueryBuilder(t *testing.T) {
@@ -247,7 +310,7 @@ func TestCompileStringMatch(t *testing.T) {
 			name: "staged kubernetes network policy with namespace",
 			policyMatch: v1.PolicyMatch{
 				Type:      "knp",
-				Staged:    true,
+				Staged:    ptr.To(true),
 				Namespace: testutils.StringPtr("ns"),
 			},
 			testResult: testResult{
@@ -310,7 +373,7 @@ func TestCompileStringMatch(t *testing.T) {
 			name: "staged admin network policy",
 			policyMatch: v1.PolicyMatch{
 				Type:   "kanp",
-				Staged: true,
+				Staged: ptr.To(true),
 			},
 			testResult: testResult{
 				error:       true,
@@ -371,7 +434,7 @@ func TestCompileStringMatch(t *testing.T) {
 			name: "staged baseline admin network policy not supported",
 			policyMatch: v1.PolicyMatch{
 				Type:   "kbanp",
-				Staged: true,
+				Staged: ptr.To(true),
 			},
 			testResult: testResult{
 				error:       true,
@@ -455,7 +518,7 @@ func TestCompileStringMatch(t *testing.T) {
 		{
 			name: "calico network policy with staged & namespace",
 			policyMatch: v1.PolicyMatch{
-				Staged:    true,
+				Staged:    ptr.To(true),
 				Namespace: testutils.StringPtr("ns"),
 			},
 			testResult: testResult{
@@ -467,7 +530,7 @@ func TestCompileStringMatch(t *testing.T) {
 		{
 			name: "calico network policy with staged & global",
 			policyMatch: v1.PolicyMatch{
-				Staged: true,
+				Staged: ptr.To(true),
 			},
 			testResult: testResult{
 				error:       false,

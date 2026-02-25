@@ -495,13 +495,13 @@ func bucketFromFlow(flow *lapi.L3Flow) *elastic.CompositeAggregationBucket {
 	bucket.AggregatedSums["sum_http_requests_denied_in"] = 0
 	bucket.AggregatedTerms = map[string]*elastic.AggregatedTerm{
 		"dest_labels": {
-			Buckets: map[interface{}]int64{},
+			Buckets: map[any]int64{},
 		},
 		"source_labels": {
-			Buckets: map[interface{}]int64{},
+			Buckets: map[any]int64{},
 		},
 		"policies": {
-			Buckets: map[interface{}]int64{},
+			Buckets: map[any]int64{},
 		},
 	}
 

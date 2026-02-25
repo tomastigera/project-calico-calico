@@ -18,8 +18,6 @@ import (
 	"reflect"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -28,19 +26,13 @@ const (
 	BFDConfigCRDName      = "bfdconfigurations.crd.projectcalico.org"
 )
 
-func NewBFDConfigClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
-	return &customK8sResourceClient{
-		clientSet:       c,
+func NewBFDConfigClient(r rest.Interface, group BackingAPIGroup) K8sResourceClient {
+	return &customResourceClient{
 		restClient:      r,
-		name:            BFDConfigCRDName,
 		resource:        BFDConfigResourceName,
-		description:     "Calico BFD Configuration",
-		k8sResourceType: reflect.TypeOf(apiv3.BFDConfiguration{}),
-		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv3.KindBFDConfiguration,
-			APIVersion: apiv3.GroupVersionCurrent,
-		},
-		k8sListType:  reflect.TypeOf(apiv3.BFDConfigurationList{}),
-		resourceKind: apiv3.KindBFDConfiguration,
+		k8sResourceType: reflect.TypeFor[apiv3.BFDConfiguration](),
+		k8sListType:     reflect.TypeFor[apiv3.BFDConfigurationList](),
+		kind:            apiv3.KindBFDConfiguration,
+		apiGroup:        group,
 	}
 }

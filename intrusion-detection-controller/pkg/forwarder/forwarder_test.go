@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	v1scheme "github.com/projectcalico/calico/libcalico-go/lib/apis/crd.projectcalico.org/v1/scheme"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -47,7 +47,7 @@ var _ = Describe("Event forwarder", func() {
 
 		// mock controller runtime client.
 		scheme := scheme.Scheme
-		err = v3.AddToScheme(scheme)
+		err = v1scheme.AddCalicoResourcesToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 

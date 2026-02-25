@@ -143,9 +143,9 @@ func TestQueryResponse(t *testing.T) {
 			subject := QueryResponse{
 				Documents: []QueryResponseDocument{
 					{
-						"simple_array": []interface{}{"val1", "val2"},
-						"mixed_array":  []interface{}{"val1", 123, true},
-						"empty_array":  []interface{}{},
+						"simple_array": []any{"val1", "val2"},
+						"mixed_array":  []any{"val1", 123, true},
+						"empty_array":  []any{},
 					},
 				},
 			}

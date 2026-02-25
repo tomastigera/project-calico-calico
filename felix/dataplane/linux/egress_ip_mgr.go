@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -459,7 +460,7 @@ func newEgressIPManagerWithShims(
 	return &mgr
 }
 
-func (m *egressIPManager) OnUpdate(msg interface{}) {
+func (m *egressIPManager) OnUpdate(msg any) {
 	switch msg := msg.(type) {
 	case *proto.IPSetDeltaUpdate:
 		m.egwTracker.OnIPSetDeltaUpdate(msg)
@@ -789,10 +790,7 @@ func (m *egressIPManager) processGatewayUpdates() error {
 					// No limit so default to using all EGWs.
 					maxNextHops = numActiveGateways
 				}
-				numDesiredGateways := maxNextHops
-				if numDesiredGateways > numActiveGateways {
-					numDesiredGateways = numActiveGateways
-				}
+				numDesiredGateways := min(maxNextHops, numActiveGateways)
 
 				workloadHasLessHopsThanDesired := route.nextHops.Len() < numDesiredGateways
 				workloadHasNonExistentHop := !gatewayIPs.ContainsAll(route.nextHops)
@@ -1646,10 +1644,7 @@ func (m *egressIPManager) determineRouteNextHops(workloadID types.WorkloadEndpoi
 		hops = append(hops, nHops...)
 	}
 	numHops := workloadNumHops(maxNextHops, activeGatewayIPs.Len())
-	index := numHops
-	if len(hops) < numHops {
-		index = len(hops)
-	}
+	index := min(len(hops), numHops)
 	return set.FromArray(hops[:index]), nil
 }
 
@@ -1940,9 +1935,7 @@ func sortIntSet(s set.Set[int]) []int {
 	for item := range s.All() {
 		sorted = append(sorted, item)
 	}
-	sort.Slice(sorted, func(p, q int) bool {
-		return sorted[p] < sorted[q]
-	})
+	slices.Sort(sorted)
 	return sorted
 }
 

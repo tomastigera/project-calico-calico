@@ -239,7 +239,7 @@ func TestNewHandler(t *testing.T) {
 					QueryParams: lapi.QueryParams{
 						MaxPageSize: 1000,
 						// Expect AfterKey to be set for a paginated request
-						AfterKey: map[string]interface{}{
+						AfterKey: map[string]any{
 							"startFrom": 1000,
 						},
 					},

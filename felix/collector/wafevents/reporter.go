@@ -120,7 +120,7 @@ func (r *WAFEventReporter) Stop() {
 	}
 }
 
-func (r *WAFEventReporter) Report(event interface{}) error {
+func (r *WAFEventReporter) Report(event any) error {
 	switch e := event.(type) {
 	case *Report:
 		log.Debugf("Reporting buffer %+v", e)

@@ -9,7 +9,7 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 )
 
-type Record map[interface{}]interface{}
+type Record map[any]any
 
 type RecordProcessor struct{}
 
@@ -44,15 +44,15 @@ func (rp *RecordProcessor) Process(data unsafe.Pointer, length int) (*bytes.Buff
 
 // prevent base64-encoding []byte values (default json.Encoder rule) by
 // converting them to strings
-func toStringSlice(slice []interface{}) []interface{} {
-	var s []interface{}
+func toStringSlice(slice []any) []any {
+	var s []any
 	for _, v := range slice {
 		switch t := v.(type) {
 		case []byte:
 			s = append(s, string(t))
-		case map[interface{}]interface{}:
+		case map[any]any:
 			s = append(s, toStringMap(t))
-		case []interface{}:
+		case []any:
 			s = append(s, toStringSlice(t))
 		default:
 			s = append(s, t)
@@ -61,8 +61,8 @@ func toStringSlice(slice []interface{}) []interface{} {
 	return s
 }
 
-func toStringMap(record Record) map[string]interface{} {
-	m := make(map[string]interface{})
+func toStringMap(record Record) map[string]any {
+	m := make(map[string]any)
 	for k, v := range record {
 		key, ok := k.(string)
 		if !ok {
@@ -71,9 +71,9 @@ func toStringMap(record Record) map[string]interface{} {
 		switch t := v.(type) {
 		case []byte:
 			m[key] = string(t)
-		case map[interface{}]interface{}:
+		case map[any]any:
 			m[key] = toStringMap(t)
-		case []interface{}:
+		case []any:
 			m[key] = toStringSlice(t)
 		default:
 			m[key] = v

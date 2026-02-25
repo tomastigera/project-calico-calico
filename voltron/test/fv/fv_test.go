@@ -20,7 +20,7 @@ import (
 
 	"github.com/elazarl/goproxy"
 	pauth "github.com/elazarl/goproxy/ext/auth"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -279,22 +279,18 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 
 			ts = newTestServer("you reached me")
 
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = ts.http.Serve(lisTs)
-			}()
+			})
 
 			lisTs2, err = net.Listen("tcp", "localhost:0")
 			Expect(err).NotTo(HaveOccurred())
 
 			ts2 = newTestServer("you reached the other me")
 
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = ts2.http.Serve(lisTs2)
-			}()
+			})
 		})
 
 		if proxyMode != proxyModeDisabled {
@@ -338,11 +334,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				}
 
 				// Start the proxy.
-				wgSrvCnlt.Add(1)
-				go func() {
-					defer wgSrvCnlt.Done()
+				wgSrvCnlt.Go(func() {
 					_ = proxyServer.ListenAndServe()
-				}()
+				})
 			})
 
 			By("should be possible to reach the proxy server", func() {
@@ -377,23 +371,17 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = voltron.ServeHTTPS(lisHTTP11, "", "")
-			}()
+			})
 
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = voltron.ServeHTTPS(lisHTTP2, "", "")
-			}()
+			})
 
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = voltron.ServeTunnelsTLS(lisTun)
-			}()
+			})
 
 			go func() {
 				_ = voltron.WatchK8s()
@@ -470,11 +458,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				client.WithHTTPProxyURL(proxyURL),
 			)
 			Expect(err).NotTo(HaveOccurred())
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = guardian.ServeTunnelHTTP()
-			}()
+			})
 		})
 
 		By("starting guardian2", func() {
@@ -496,11 +482,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 				client.WithHTTPProxyURL(proxyURL),
 			)
 			Expect(err).NotTo(HaveOccurred())
-			wgSrvCnlt.Add(1)
-			go func() {
-				defer wgSrvCnlt.Done()
+			wgSrvCnlt.Go(func() {
 				_ = guardian2.ServeTunnelHTTP()
-			}()
+			})
 		})
 
 		By("should be possible to reach the test server on http2", func() {
@@ -575,7 +559,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 		numConns := 499
 		numReqs := 30
 		done := make(chan struct{})
-		for i := 0; i < numConns; i++ {
+		for range numConns {
 			go func() {
 				defer GinkgoRecover()
 
@@ -594,7 +578,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 					},
 				}
 
-				for j := 0; j < numReqs; j++ {
+				for range numReqs {
 					resp, err = tc.doRequest(clusterID)
 					Expect(err).NotTo(HaveOccurred())
 					done <- struct{}{}

@@ -47,7 +47,7 @@ func TestPager(t *testing.T) {
 		testData := []result{
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"foo": "bar"},
+					AfterKey: map[string]any{"foo": "bar"},
 				},
 				Error: nil,
 			},
@@ -83,7 +83,7 @@ func TestPager(t *testing.T) {
 		testData := []result{
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"foo": "bar"},
+					AfterKey: map[string]any{"foo": "bar"},
 				},
 				Error: fmt.Errorf("error in first page call"),
 			},
@@ -115,19 +115,19 @@ func TestPager(t *testing.T) {
 		testData := []result{
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"foo": "bar"},
+					AfterKey: map[string]any{"foo": "bar"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"whizz": "pop"},
+					AfterKey: map[string]any{"whizz": "pop"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"ham": "salad"},
+					AfterKey: map[string]any{"ham": "salad"},
 				},
 				Error: nil,
 			},
@@ -176,19 +176,19 @@ func TestPager(t *testing.T) {
 		testData := []result{
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"foo": "bar"},
+					AfterKey: map[string]any{"foo": "bar"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"whizz": "pop"},
+					AfterKey: map[string]any{"whizz": "pop"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
-					AfterKey: map[string]interface{}{"ham": "salad"},
+					AfterKey: map[string]any{"ham": "salad"},
 				},
 				Error: fmt.Errorf("ham salad is not desirable"),
 			},
@@ -241,21 +241,21 @@ func TestPager(t *testing.T) {
 			{
 				List: &v1.List[v1.L3Flow]{
 					Items:    []v1.L3Flow{{}, {}}, // Two items
-					AfterKey: map[string]interface{}{"foo": "bar"},
+					AfterKey: map[string]any{"foo": "bar"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
 					Items:    []v1.L3Flow{{}, {}}, // Two items
-					AfterKey: map[string]interface{}{"whizz": "pop"},
+					AfterKey: map[string]any{"whizz": "pop"},
 				},
 				Error: nil,
 			},
 			{
 				List: &v1.List[v1.L3Flow]{
 					Items:    []v1.L3Flow{{}, {}}, // Two items
-					AfterKey: map[string]interface{}{"ham": "salad"},
+					AfterKey: map[string]any{"ham": "salad"},
 				},
 				Error: nil,
 			},

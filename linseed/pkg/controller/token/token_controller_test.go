@@ -365,7 +365,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
 			return !errors.IsNotFound(err)
 		}
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			require.False(t, secretCreated())
 			// Expect the secret to be empty.
 			require.NotNil(t, secret)
@@ -444,7 +444,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 
 		// The token should remain the same across multiple reconciles, since it is still valid.
 		oldSecret := *secret
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
 			require.NoError(t, err)
 			require.NotNil(t, secret)
@@ -516,7 +516,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		// Modify the token so that it's no longer valid. The controller should notice that the token is
 		// invalid and replace it.
 		invalidSecret := *secret
-		invalidSecret.Data["token"] = []byte(fmt.Sprintf("%s-modified", invalidSecret.Data["token"]))
+		invalidSecret.Data["token"] = fmt.Appendf(nil, "%s-modified", invalidSecret.Data["token"])
 		_, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Update(ctx, &invalidSecret, v1.UpdateOptions{})
 		require.NoError(t, err)
 
@@ -685,7 +685,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.Eventually(t, func() bool {
 			return callsEqual(6)
 		}, 5*time.Second, 10*time.Millisecond)
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			require.True(t, callsEqual(6))
 			time.Sleep(250 * time.Millisecond)
 		}
@@ -896,7 +896,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		secret = newSecret
 
 		// new secrets will not be copied/reconciled for the deleted cluster
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			require.False(t, secretUpdated())
 			time.Sleep(reconcilePeriod)
 		}
@@ -1013,7 +1013,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		secret = newSecret
 
 		// new secrets will not be copied/reconciled for the disconnected cluster
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			require.False(t, secretUpdated())
 			time.Sleep(reconcilePeriod)
 		}

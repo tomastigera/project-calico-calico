@@ -221,7 +221,7 @@ func sendFlowLogs(TenantID string, cli client.Client, logs []v1.FlowLog) time.Du
 
 func makeFlowLogs(BatchSize int, exampleFlows []v1.FlowLog) []v1.FlowLog {
 	logs := []v1.FlowLog{}
-	for i := 0; i < BatchSize; i++ {
+	for range BatchSize {
 		logs = append(logs, makeFlowLog(exampleFlows))
 	}
 	return logs

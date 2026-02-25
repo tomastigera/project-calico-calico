@@ -6,6 +6,7 @@ package intdataplane
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -182,7 +183,7 @@ func tproxyWithIptablesEqualIPsChecker(checker *iptablesEqualIPsChecker) TProxyO
 	}
 }
 
-func (m *tproxyManager) OnUpdate(protoBufMsg interface{}) {
+func (m *tproxyManager) OnUpdate(protoBufMsg any) {
 	if !m.enabled {
 		return
 	}
@@ -341,12 +342,7 @@ func newIptablesEqualIPsChecker(dpConfig Config, ipSetsV4, ipSetsV6 tproxyIPSets
 }
 
 func includesNet(n string, set []string) bool {
-	for _, s := range set {
-		if s == n {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(set, n)
 }
 
 func diffNets(now, before []string) (add, del []string) {

@@ -176,7 +176,7 @@ func (s *ControllerState) retrieveConfigValue(ctx context.Context, src *api.Secu
 func (s *ControllerState) extractLabels(webhook api.SecurityEventWebhook) map[string]string {
 	labels := make(map[string]string)
 	if annotation, ok := webhook.Annotations[WebhookLabelsAnnotation]; ok {
-		for _, label := range strings.Split(annotation, ",") {
+		for label := range strings.SplitSeq(annotation, ",") {
 			if keyValue := strings.SplitN(label, ":", 2); len(keyValue) == 2 {
 				labels[keyValue[0]] = keyValue[1]
 			}

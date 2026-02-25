@@ -12,10 +12,10 @@ import (
 
 type MockSets struct {
 	Name              string
-	SeqNo             interface{}
-	PrimaryTerm       interface{}
+	SeqNo             any
+	PrimaryTerm       any
 	Metas             []Meta
-	Value             interface{}
+	Value             any
 	Time              time.Time
 	Error             error
 	DeleteCalled      bool

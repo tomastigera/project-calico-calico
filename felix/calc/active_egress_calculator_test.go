@@ -5,12 +5,12 @@ package calc
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/proto"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	internalapi "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -1214,7 +1214,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		By("creating 5 WEs with profile A, 5 WEs with profile B")
 		for _, profile := range []string{"a", "b"} {
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				name := fmt.Sprintf("we%v-%v", i, profile)
 				aec.OnUpdate(api.Update{
 					KVPair: model.KVPair{
@@ -1250,7 +1250,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
 		ipSetA := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
 				Rules: []EpEgressData{{IpSetID: ipSetA}},
@@ -1280,7 +1280,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		cbs.ExpectInactive(ipSetA)
 		ipSetAPrime := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
 				Rules: []EpEgressData{{IpSetID: ipSetAPrime}},
@@ -1308,7 +1308,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect Active for that selector and EgressIPSetIDUpdate for the 5 using WEs.
 		ipSetB := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
 				Rules: []EpEgressData{{IpSetID: ipSetB}},
@@ -1329,7 +1329,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		aec.Flush()
 
 		cbs.ExpectInactive(ipSetAPrime)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
@@ -1337,7 +1337,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the endpoints using profile A")
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 			aec.OnUpdate(api.Update{
 				KVPair: model.KVPair{
@@ -1350,7 +1350,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the endpoints using profile B")
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 			aec.OnUpdate(api.Update{
 				KVPair: model.KVPair{
@@ -1365,7 +1365,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		aec.Flush()
 
 		cbs.ExpectInactive(ipSetB)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
@@ -1377,7 +1377,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		By("creating 5 WEs with profile A, 5 WEs with profile B")
 		for _, profile := range []string{"a", "b"} {
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				name := fmt.Sprintf("we%v-%v", i, profile)
 				aec.OnUpdate(api.Update{
 					KVPair: model.KVPair{
@@ -1429,7 +1429,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		ipSetIDA1 := cbs.ExpectActive()
 		ipSetIDA2 := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
@@ -1465,7 +1465,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		ipSetIDA3 := cbs.ExpectActive()
 		ipSetIDA4 := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
 				Rules: []EpEgressData{
@@ -1498,7 +1498,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		ipSetIDB1 := cbs.ExpectActive()
 		ipSetIDB2 := cbs.ExpectActive()
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, &ComputedEgressEP{
@@ -1525,7 +1525,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		cbs.ExpectInactive(ipSetIDA3)
 		cbs.ExpectInactive(ipSetIDA4)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
@@ -1533,7 +1533,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the endpoints using profile A")
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-a", i)
 			aec.OnUpdate(api.Update{
 				KVPair: model.KVPair{
@@ -1546,7 +1546,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the endpoints using profile B")
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 			aec.OnUpdate(api.Update{
 				KVPair: model.KVPair{
@@ -1562,7 +1562,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		cbs.ExpectInactive(ipSetIDB1)
 		cbs.ExpectInactive(ipSetIDB2)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			name := fmt.Sprintf("we%v-b", i)
 
 			cbs.ExpectComputedUpdate(model.WorkloadEndpointKey{WorkloadID: name}, EPCompDataKindEgressGateway, nil)
@@ -1573,9 +1573,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 	It("ignores unexpected update", func() {
 		aec.OnUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "a"},
-				Value: &libapiv3.Node{
-					Spec: libapiv3.NodeSpec{},
+				Key: model.ResourceKey{Kind: internalapi.KindNode, Name: "a"},
+				Value: &internalapi.Node{
+					Spec: internalapi.NodeSpec{},
 				},
 			},
 			UpdateType: api.UpdateTypeKVUpdated,

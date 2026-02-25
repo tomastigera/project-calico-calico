@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -222,14 +223,12 @@ func mustDetectNodeConfig(cfg *EarlyNetworkConfiguration) (nodeConfig *ConfigNod
 
 		for _, ip := range ips {
 			for _, nodeCfg := range cfg.Spec.Nodes {
-				for _, cfgAddr := range nodeCfg.InterfaceAddresses {
-					if ip == cfgAddr {
-						logrus.Infof("This node's router ID is %s", ip)
-						logrus.WithField("nodeCfg", nodeCfg).Info("Config for this node")
-						nodeConfig = &nodeCfg
-						routerID = ip
-						return
-					}
+				if slices.Contains(nodeCfg.InterfaceAddresses, ip) {
+					logrus.Infof("This node's router ID is %s", ip)
+					logrus.WithField("nodeCfg", nodeCfg).Info("Config for this node")
+					nodeConfig = &nodeCfg
+					routerID = ip
+					return
 				}
 			}
 		}

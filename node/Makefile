@@ -36,6 +36,9 @@ REMOTE_DEPS = $(LIBBPF_A) \
 	      filesystem/etc/calico/confd/conf.d \
 	      filesystem/etc/calico/confd/templates
 
+# Run these tests against the projectcalico.org/v3 API group by default.
+CALICO_API_GROUP ?= projectcalico.org/v3
+
 ###############################################################################
 # Include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -75,10 +78,6 @@ BIRD_SOURCE=filesystem/included-source/bird-$(BIRD_VERSION).tar.gz
 BIRD_DIND_IMAGE ?= calico/bird-dind:$(BIRD_VERSION)-$(ARCH)
 FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.xz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
-
-# Versions and locations of dependencies used in tests.
-TEST_CONTAINER_NAME_VER?=latest
-TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 
 TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc' ! -name '*.tmp' )
 
@@ -345,7 +344,7 @@ GINKGO = ginkgo
 UT_PACKAGES_TO_SKIP?=pkg/lifecycle/startup,pkg/allocateip,pkg/status
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r -skipPackage=$(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skip-package=$(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
 
 # download BIRD source to include in image.
 $(BIRD_SOURCE): .bird-source.created
@@ -375,7 +374,8 @@ K8ST_IMAGE_TARS=calico-node.tar \
 	node-driver-registrar.tar \
 	calicoctl.tar \
 	kube-controllers.tar \
-	operator.tar
+	operator.tar \
+	webhook.tar
 
 # Add in enterprise-only images.
 ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar egress-gateway.tar prometheus-operator.tar config-reloader.tar prometheus.tar prometheus-service.tar alertmanager.tar fluentd.tar policy-rec.tar eck.tar manager.tar voltron.tar ui-apis.tar kibana.tar elastic.tar es-gw.tar linseed.tar idc.tar webhooks-processor.tar dashboards-installer.tar es-metrics.tar manager.tar
@@ -395,12 +395,17 @@ ut fv: $(LIBBPF_A) run-k8s-apiserver
 	-v $(CERTS_PATH):/home/user/certs \
 	-e KUBECONFIG=/go/src/github.com/projectcalico/calico/hack/test/certs/kubeconfig \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+	-e CALICO_API_GROUP=$(CALICO_API_GROUP) \
 	-e GINKGO_ARGS="$(GINKGO_ARGS)" \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ./run-uts $(WHAT)'
 
 ###############################################################################
 # System tests
 ###############################################################################
+CHARTS=../bin/tigera-operator-$(GIT_VERSION).tgz \
+			 ../bin/crd.projectcalico.org.v1-$(GIT_VERSION).tgz \
+			 ../bin/projectcalico.org.v3-$(GIT_VERSION).tgz
+
 dist/calicoctl:
 	mkdir -p dist
 	make -C ../calicoctl build
@@ -429,9 +434,13 @@ test_image: .calico_test.created
 	$(DOCKER_BUILD) --build-arg ETCD_VERSION=$(ETCD_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -f calico_test/Dockerfile -t $(TEST_CONTAINER_NAME) calico_test
 	touch $@
 
-chart: ../bin/tigera-operator-$(GIT_VERSION).tgz
+chart: $(CHARTS)
 ../bin/tigera-operator-$(GIT_VERSION).tgz:
 	make -C ../ bin/tigera-operator-$(GIT_VERSION).tgz
+../bin/crd.projectcalico.org.v1-$(GIT_VERSION).tgz:
+	make -C ../ bin/crd.projectcalico.org.v1-$(GIT_VERSION).tgz
+../bin/projectcalico.org.v3-$(GIT_VERSION).tgz:
+	make -C ../ bin/projectcalico.org.v3-$(GIT_VERSION).tgz
 
 # Tag to use for images built for e2e testing. This must match the image tag used in
 # tests/k8st/infra/calico_versions.yml
@@ -607,6 +616,11 @@ goldmane.tar: ../go.mod $(shell find ../goldmane -name '*.go')
 	docker tag calico/goldmane:latest-$(ARCH) calico/goldmane:$(TEST_BUILD_TAG)
 	docker save --output $@ calico/goldmane:$(TEST_BUILD_TAG)
 
+webhook.tar: ../go.mod $(shell find ../webhooks -name '*.go') $(shell find ../libcalico-go -name '*.go')
+	make -C ../webhooks image
+	docker tag tigera/webhooks:latest-$(ARCH) tigera/webhooks:$(TEST_BUILD_TAG)
+	docker save --output $@ tigera/webhooks:$(TEST_BUILD_TAG)
+
 whisker.tar: ../go.mod $(shell find ../whisker)
 	make -C ../whisker image
 	docker tag calico/whisker:latest-$(ARCH) calico/whisker:$(TEST_BUILD_TAG)
@@ -697,7 +711,7 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
 ## on a test environment which doesn't support dual tor, and excludes egress IP tests which
 ## reconfigure the cluster configuration.
-K8ST_TO_RUN ?= -A vanilla
+K8ST_TO_RUN ?= -m "not non_vanilla"
 K8ST_REPORT_FILENAME ?= k8s-tests.xml
 
 .PHONY: k8s-test
@@ -709,8 +723,15 @@ k8s-test:
 TEST_LICENSE=$(SECRETS_PATH)/license.yaml
 
 .PHONY: kind-k8st-setup
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl $(TEST_LICENSE) ../bin/tigera-operator-$(GIT_VERSION).tgz kind-cluster-create
-	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) KIND=$(KIND) ARCH=$(ARCH) GIT_VERSION=$(GIT_VERSION) ./tests/k8st/deploy_resources_on_kind_cluster.sh
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl $(TEST_LICENSE) $(CHARTS) kind-cluster-create
+	KUBECONFIG=$(KIND_KUBECONFIG) \
+	KIND=$(KIND) \
+	ARCH=$(ARCH) \
+	GIT_VERSION=$(GIT_VERSION) \
+	CALICO_API_GROUP=$(CALICO_API_GROUP) \
+	TSEE_TEST_LICENSE=$(TEST_LICENSE) \
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
 kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
@@ -723,7 +744,7 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started.." && \
-	     cd /code/tests/k8st && nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/$(K8ST_REPORT_FILENAME)" --with-timer'
+	     cd /code/tests/k8st && PYTHONPATH=/code pytest $(K8ST_TO_RUN) -v --junit-xml="/code/report/$(K8ST_REPORT_FILENAME)"'
 
 .PHONY: kind-k8st-cleanup
 kind-k8st-cleanup: kind-cluster-destroy
@@ -742,7 +763,7 @@ external-network-setup: .calico_test.created external-network-cleanup kubectl di
 	STEPS=setup \
 	  ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
-EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --nocapture --nologcapture
+EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py
 .PHONY: external-network-run-test
 external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	@echo "Starting to run external network tests..."
@@ -754,7 +775,7 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started..." && \
-			cd /code/tests/k8st && nosetests $(EXTERNAL_NETWORK_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-enet-tests.xml" --with-timer'
+			cd /code/tests/k8st && PYTHONPATH=/code pytest $(EXTERNAL_NETWORK_ST_TO_RUN) -sv --junit-xml="/code/report/k8s-enet-tests.xml"'
 
 .PHONY: external-network-cleanup
 external-network-cleanup:

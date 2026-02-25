@@ -122,5 +122,5 @@ func (s Version) String() string {
 type Stats struct {
 	Type  StatsType
 	IPVer Version
-	Data  interface{}
+	Data  any
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -139,21 +140,15 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	var nameHelper NameHelper
 	var errCacheData, errRBACFilter, errNameHelper error
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		rbacFilter, errRBACFilter = s.backend.NewRBACFilter(ctx, rd)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		nameHelper, errNameHelper = s.backend.NewNameHelper(ctx, rd)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		cacheData, errCacheData = s.getRawDataForRequest(ctx, rd)
-	}()
+	})
 	wg.Wait()
 	if errRBACFilter != nil {
 		log.WithError(errRBACFilter).Error("Failed to load users permissions")
@@ -652,58 +647,40 @@ func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
 	}
 
 	// Run simultaneous queries to get the L3, L7 and events data.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, e.namespaces, d.timeRange, flowConfig)
-	}()
+	})
 	if s.cfg.ServiceGraphCacheFetchL7 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
-		}()
+		})
 	}
 	if s.cfg.ServiceGraphCacheFetchDNS {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
-		}()
+		})
 	}
 	if s.cfg.ServiceGraphCacheFetchEvents {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		serviceLabels, errServiceLabels = s.backend.GetServiceLabels(e.ctx, e.cluster)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		replicaSetsLabels, errReplicaSetsLabels = s.backend.GetReplicaSetLabels(e.ctx, e.cluster)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		statefulSetsLabels, errStatefulSetsLabels = s.backend.GetStatefulSetLabels(e.ctx, e.cluster)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		daemonSetsLabels, errDaemonSetsLabels = s.backend.GetDaemonSetLabels(e.ctx, e.cluster)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		podsLabels, errPodsLabels = s.backend.GetPodsLabels(e.ctx, e.cluster)
-	}()
+	})
 	wg.Wait()
 	if errL3 != nil {
 		log.WithError(errL3).Error("failed to get l3 logs")
@@ -772,9 +749,7 @@ func addValues(source map[v1.NamespacedName]LabelSelectors, newValues map[v1.Nam
 		source = make(map[v1.NamespacedName]LabelSelectors)
 	}
 
-	for k, v := range newValues {
-		source[k] = v
-	}
+	maps.Copy(source, newValues)
 
 	return source
 }

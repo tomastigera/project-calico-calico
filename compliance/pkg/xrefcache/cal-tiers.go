@@ -54,7 +54,7 @@ func (v *versionedCalicoTier) GetCalicoV3() resources.Resource {
 	return v.Tier
 }
 
-func (v *versionedCalicoTier) GetCalicoV1() interface{} {
+func (v *versionedCalicoTier) GetCalicoV1() any {
 	return v.v1
 }
 

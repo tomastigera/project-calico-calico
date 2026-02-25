@@ -363,7 +363,7 @@ func RenderTemplate(reportTemplateText string, reportData *api.ReportData) (rend
 }
 
 // yamlify prints YAML for a given struct.
-func yamlify(resource interface{}) (string, error) {
+func yamlify(resource any) (string, error) {
 	yamled, err := yaml.Marshal(resource)
 	if err != nil {
 		return "", err
@@ -373,8 +373,8 @@ func yamlify(resource interface{}) (string, error) {
 }
 
 // formatDate returns the date in the specified format
-func getFormatDateFn(format string) func(date interface{}) string {
-	return func(date interface{}) string {
+func getFormatDateFn(format string) func(date any) string {
+	return func(date any) string {
 		switch d := date.(type) {
 		case time.Time:
 			return d.Format(format)
@@ -404,8 +404,8 @@ func templateFuncs(reportData *api.ReportData) template.FuncMap {
 
 	// Add a joinN function which joins an array of strings up to a max number of elements. We utilize the
 	// sprig toStrings() method to convert the final arg to a string slice.
-	toStrings := funcs["toStrings"].(func(interface{}) []string)
-	funcs["joinN"] = func(sep string, max int, v interface{}) string {
+	toStrings := funcs["toStrings"].(func(any) []string)
+	funcs["joinN"] = func(sep string, max int, v any) string {
 		s := toStrings(v)
 		if len(s) > max {
 			s = s[:max]
@@ -587,7 +587,7 @@ func (c *csv) AddColumn(heading, value string) *csv {
 }
 
 // Render renders a csv from the heading/value/function information stored in the csv struct.
-func (c *csv) Render(data interface{}) (string, error) {
+func (c *csv) Render(data any) (string, error) {
 	var templateString string
 
 	val := reflect.ValueOf(data)

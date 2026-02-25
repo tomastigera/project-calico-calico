@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"github.com/projectcalico/calico/release/internal/imagescanner"
+	"github.com/projectcalico/calico/release/internal/outputs"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
@@ -319,11 +320,24 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				hashrel.ImageScanResultURL = url
 			}
 
+			hrOut := outputs.PublishedHashrelease{
+				Hashrelease: &hashrel.Hashrelease,
+				CIURL:       ciJobURL(c),
+			}
+
 			// Send a slack message to notify that the hashrelease has been published.
 			if c.Bool(publishHashreleaseFlag.Name) {
-				if _, err := tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c)); err != nil {
+				resp, err := tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, hrOut.CIURL)
+				if err != nil {
 					logrus.WithError(err).Warn("Failed to send hashrelease announcement to Slack")
 				}
+				hrOut.SlackResponse = resp
+			}
+
+			if p, err := hrOut.Write(baseHashreleaseOutputDir(cfg.RepoRootDir)); err != nil {
+				logrus.WithError(err).Warn("Failed to write published hashrelease output")
+			} else {
+				logrus.Infof("Published hashrelease output written to: %s", p)
 			}
 			return nil
 		},
