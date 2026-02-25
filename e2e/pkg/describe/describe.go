@@ -65,6 +65,7 @@ var features = map[string]bool{
 	"NetworkPolicy":       true,
 	"Tiered-Policy":       true,
 	"IPPool":              true,
+	"IPAM":                true,
 	"AutoHEPs":            true,
 	"Host-Protection":     true,
 	"HostPorts":           true,
@@ -76,6 +77,9 @@ var features = map[string]bool{
 	"Tiered-RBAC":         true,
 	"Dashboards":          true,
 	"AuthorizationReview": true,
+	"Pods":                true,
+	"QoS":                 true,
+	"Datapath":            true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.
