@@ -2,7 +2,7 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/fluent-bit
 
-FLUENT_BIT_VERSION = 4.2.2
+FLUENT_BIT_VERSION = 4.2.3
 
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
