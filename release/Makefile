@@ -60,7 +60,7 @@ hashrelease-svr-gc: bin/release
 
 # Run hashrelease validation (smoke tests)
 hashrelease-validate: bin/release
-	@bin/release hashrelease enterprise validate
+	@bin/release hashrelease validate
 
 ###############################################################################
 # Release

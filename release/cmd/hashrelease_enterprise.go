@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
@@ -11,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/outputs"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
+	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
@@ -388,13 +393,13 @@ func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 			&cli.StringFlag{
 				Name:  "hashrelease-metadata-file",
 				Usage: "Path to hashrelease metadata file for setting URL environment variables",
-				Value: "hashrelease-metadata-file.txt",
+				Value: filepath.Join(cfg.RepoRootDir, "release", "_output", "hashrelease", "hashrelease.yaml"),
 			},
 		},
 		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-hashrelease-validation.log")
 
-			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise")
+			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise", "smoke")
 			args := []string{
 				"--format=testname",
 				"--", "-v", "./...",

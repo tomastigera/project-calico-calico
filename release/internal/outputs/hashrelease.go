@@ -35,6 +35,19 @@ type PublishedHashrelease struct {
 	SlackResponse  *slack.MessageResponse         `yaml:"slack,omitempty"`
 }
 
+// LoadPublishedHashrelease reads a published hashrelease YAML file from the given path.
+func LoadPublishedHashrelease(path string) (*PublishedHashrelease, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading hashrelease file %s: %w", path, err)
+	}
+	var h PublishedHashrelease
+	if err := yaml.Unmarshal(data, &h); err != nil {
+		return nil, fmt.Errorf("parsing hashrelease file %s: %w", path, err)
+	}
+	return &h, nil
+}
+
 func (h *PublishedHashrelease) Write(outputDir string) (string, error) {
 	h.HashreleaseURL = h.Hashrelease.URL()
 	fqPath := filepath.Join(outputDir, hashreleaseOutputFileName)
