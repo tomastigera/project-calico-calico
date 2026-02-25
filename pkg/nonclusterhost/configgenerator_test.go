@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package nonclusterhost
 
@@ -151,6 +151,20 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 		Expect(claims.Subject).To(Equal("system:serviceaccount:calico-system:tigera-noncluster-host"))
 		Expect(claims.Audience).To(HaveLen(1))
 		Expect(claims.Audience[0]).To(Equal("tigera-manager"))
+
+		// Verify custom claims (service account name and namespace)
+		customClaims := nonClusterHostJWTClaims{}
+		_, err = jwt.ParseWithClaims(authInfo.Token, &customClaims, func(token *jwt.Token) (any, error) {
+			block, _ := pem.Decode(certsBuf.Bytes())
+			cert, err := x509.ParseCertificate(block.Bytes)
+			Expect(err).NotTo(HaveOccurred())
+			pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+			Expect(ok).To(BeTrue())
+			return pubKey, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(customClaims.ServiceAccountName).To(Equal("tigera-noncluster-host"))
+		Expect(customClaims.Namespace).To(Equal("calico-system"))
 	})
 
 	It("should generate a valid Kubeconfig for non-cluster hosts and read certificate from file", func() {

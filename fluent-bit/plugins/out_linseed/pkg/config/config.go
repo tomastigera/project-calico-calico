@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 package config
 
 import (
@@ -39,8 +39,8 @@ func NewConfig(plugin unsafe.Pointer, pluginConfigKeyFn PluginConfigKeyFunc) (*C
 	if config.Endpoint == "" {
 		config.Endpoint = pluginConfigKeyFn(plugin, "Endpoint")
 	}
-	if tlsVerity, err := strconv.ParseBool(pluginConfigKeyFn(plugin, "tls.verify")); err == nil {
-		config.InsecureSkipVerify = !tlsVerity
+	if tlsVerify, err := strconv.ParseBool(pluginConfigKeyFn(plugin, "tls.verify")); err == nil {
+		config.InsecureSkipVerify = !tlsVerify
 	}
 
 	// validate configurations
