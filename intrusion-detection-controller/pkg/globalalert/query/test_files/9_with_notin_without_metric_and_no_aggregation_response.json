@@ -204,19 +204,19 @@
       "policies": {
         "all_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
-          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+          "1|calico-system|tigera-elasticsearch/calico-system.es-gateway-access|allow|4"
         ],
         "enforced_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
-          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+          "1|calico-system|tigera-elasticsearch/calico-system.es-gateway-access|allow|4"
         ],
         "pending_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
-          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+          "1|calico-system|tigera-elasticsearch/calico-system.es-gateway-access|allow|4"
         ],
         "transit_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
-          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+          "1|calico-system|tigera-elasticsearch/calico-system.es-gateway-access|allow|4"
         ]
       },
       "bytes_in": 4949,

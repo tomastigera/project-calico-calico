@@ -41,7 +41,7 @@
               "buckets": [
                 {
                   "doc_count": 3,
-                  "key": "0|allow-tigera|kube-system/allow-tigera.apiserver-access|allow|0"
+                  "key": "0|calico-system|kube-system/calico-system.apiserver-access|allow|0"
                 }
               ],
               "doc_count_error_upper_bound": 0,
@@ -291,7 +291,7 @@
               "buckets": [
                 {
                   "doc_count": 3,
-                  "key": "0|allow-tigera|kube-system/allow-tigera.apiserver-access|allow|0"
+                  "key": "0|calico-system|kube-system/calico-system.apiserver-access|allow|0"
                 }
               ],
               "doc_count_error_upper_bound": 0,

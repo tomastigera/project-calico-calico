@@ -291,7 +291,7 @@
               "buckets": [
                 {
                   "doc_count": 2159,
-                  "key": "0|allow-tigera|tigera-elasticsearch/allow-tigera.elasticsearch-access|allow"
+                  "key": "0|calico-system|tigera-elasticsearch/calico-system.elasticsearch-access|allow"
                 }
               ]
             },

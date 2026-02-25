@@ -72,10 +72,10 @@ var (
 			Action:   "allow",
 			Reporter: "src",
 			Policies: &v1.FlowLogPolicy{
-				AllPolicies:      []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				EnforcedPolicies: []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				PendingPolicies:  []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				TransitPolicies:  []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
+				AllPolicies:      []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				EnforcedPolicies: []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				PendingPolicies:  []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				TransitPolicies:  []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
 			},
 
 			NumFlows:          1,
@@ -109,10 +109,10 @@ var (
 			Action:   "allow",
 			Reporter: "src",
 			Policies: &v1.FlowLogPolicy{
-				AllPolicies:      []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				EnforcedPolicies: []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				PendingPolicies:  []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
-				TransitPolicies:  []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"},
+				AllPolicies:      []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				EnforcedPolicies: []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				PendingPolicies:  []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
+				TransitPolicies:  []string{"0|calico-system|dest-ns/allow-svc.dest-access|allow|1"},
 			},
 
 			NumFlows:          1,

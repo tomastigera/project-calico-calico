@@ -132,10 +132,10 @@ func TestListFlows(t *testing.T) {
 			WithRandomFlowStats().WithRandomPacketStats().
 			WithReporter("src").WithAction("allowed").
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
-			WithPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
-			WithEnforcedPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
-			WithPendingPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
-			WithTransitPolicies("0|allow-tigera|np:calico-system/allow-tigera.apiserver-access|allow|1").
+			WithPolicies("0|calico-system|np:calico-system/calico-system.apiserver-access|allow|1").
+			WithEnforcedPolicies("0|calico-system|np:calico-system/calico-system.apiserver-access|allow|1").
+			WithPendingPolicies("0|calico-system|np:calico-system/calico-system.apiserver-access|allow|1").
+			WithTransitPolicies("0|calico-system|np:calico-system/calico-system.apiserver-access|allow|1").
 			WithProcessName("/usr/bin/curl")
 		expected1 := populateFlowData(t, ctx, bld.Copy(), client, cluster1Info)
 		expected2 := populateFlowData(t, ctx, bld.Copy(), client, cluster2Info)
@@ -358,13 +358,13 @@ func TestFlowMultiplePolicies(t *testing.T) {
 			WithReporter("src").WithAction("allowed").
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
 			// Add in a couple of policies, as well as the default profile hit.
-			WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithPolicy("0|calico-system|kube-system/calico-system.cluster-dns|pass|1").
 			WithPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
-			WithEnforcedPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithEnforcedPolicy("0|calico-system|kube-system/calico-system.cluster-dns|pass|1").
 			WithEnforcedPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
-			WithPendingPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithPendingPolicy("0|calico-system|kube-system/calico-system.cluster-dns|pass|1").
 			WithPendingPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0").
-			WithTransitPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+			WithTransitPolicy("0|calico-system|kube-system/calico-system.cluster-dns|pass|1").
 			WithTransitPolicy("1|__PROFILE__|pro:kns.kube-system|allow|0")
 
 		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
@@ -372,9 +372,9 @@ func TestFlowMultiplePolicies(t *testing.T) {
 		// Add in the expected policies.
 		expected.Policies = []v1.Policy{
 			{
-				Tier:      "allow-tigera",
+				Tier:      "calico-system",
 				Kind:      "NetworkPolicy",
-				Name:      "allow-tigera.cluster-dns",
+				Name:      "calico-system.cluster-dns",
 				Namespace: "kube-system",
 				Action:    "pass",
 				Count:     expected.LogStats.FlowLogCount,
@@ -763,7 +763,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -795,7 +795,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name:      testutils.StringPtr("calico-system.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -810,7 +810,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name: testutils.StringPtr("calico-system.cluster-dns"),
 					},
 				},
 			},
@@ -893,7 +893,7 @@ func TestFlowFiltering(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Staged: ptr.To(true),
-						Tier:   "allow-tigera",
+						Tier:   "calico-system",
 					},
 				},
 			},
@@ -929,7 +929,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -941,7 +941,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -996,7 +996,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1028,7 +1028,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name:      testutils.StringPtr("calico-system.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1043,7 +1043,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name: testutils.StringPtr("calico-system.cluster-dns"),
 					},
 				},
 			},
@@ -1102,7 +1102,7 @@ func TestFlowFiltering(t *testing.T) {
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
 						Staged: ptr.To(true),
-						Tier:   "allow-tigera",
+						Tier:   "calico-system",
 					},
 				},
 			},
@@ -1138,7 +1138,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				EnforcedPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1192,7 +1192,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1224,7 +1224,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name:      testutils.StringPtr("calico-system.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1239,7 +1239,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name: testutils.StringPtr("calico-system.cluster-dns"),
 					},
 				},
 			},
@@ -1298,7 +1298,7 @@ func TestFlowFiltering(t *testing.T) {
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
 						Staged: ptr.To(true),
-						Tier:   "allow-tigera",
+						Tier:   "calico-system",
 					},
 				},
 			},
@@ -1334,7 +1334,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				PendingPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1388,7 +1388,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1420,7 +1420,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name:      testutils.StringPtr("calico-system.cluster-dns"),
 						Namespace: testutils.StringPtr("kube-system"),
 					},
 				},
@@ -1435,7 +1435,7 @@ func TestFlowFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Name: testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name: testutils.StringPtr("calico-system.cluster-dns"),
 					},
 				},
 			},
@@ -1508,7 +1508,7 @@ func TestFlowFiltering(t *testing.T) {
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
 						Staged: ptr.To(true),
-						Tier:   "allow-tigera",
+						Tier:   "calico-system",
 					},
 				},
 			},
@@ -1544,7 +1544,7 @@ func TestFlowFiltering(t *testing.T) {
 			Params: v1.L3FlowParams{
 				TransitPolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -1616,7 +1616,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src,fwd").WithAction("allow").
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 				// Pass followed by a profile allow.
-				WithPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithPolicy("0|calico-system|sgnp:cluster-dns|pass|1").
 				WithPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
 				WithPolicy("2|default|knp:default/test-k8s-policy|pass|2").
 				WithPolicy("3|default|gnp:default.test-global-policy|pass|1").
@@ -1627,13 +1627,13 @@ func TestFlowFiltering(t *testing.T) {
 				WithEnforcedPolicy("2|default|gnp:default.test-global-policy|pass|1").
 				WithEnforcedPolicy("3|__PROFILE__|pro:kns.openshift-dns|allow|0").
 				WithEnforcedPolicy("4|adminnetworkpolicy|kanp:test-kanp|pass|1").
-				WithPendingPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithPendingPolicy("0|calico-system|sgnp:cluster-dns|pass|1").
 				WithPendingPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
 				WithPendingPolicy("2|default|knp:default/test-k8s-policy|pass|2").
 				WithPendingPolicy("3|default|gnp:default.test-global-policy|pass|1").
 				WithPendingPolicy("4|__PROFILE__|pro:kns.openshift-dns|allow|0").
 				WithPendingPolicy("5|adminnetworkpolicy|kanp:test-kanp|pass|1").
-				WithTransitPolicy("0|allow-tigera|sgnp:cluster-dns|pass|1").
+				WithTransitPolicy("0|calico-system|sgnp:cluster-dns|pass|1").
 				WithTransitPolicy("1|custom-tier|np:default/custom-tier.test-policy|pass|2").
 				WithTransitPolicy("2|default|knp:default/test-k8s-policy|pass|2").
 				WithTransitPolicy("3|default|gnp:default.test-global-policy|pass|1").
@@ -1659,33 +1659,33 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src,fwd").WithAction("deny").
 				WithSourceLabels("cheese=brie").
 				// Explicit allow.
-				WithPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
-				WithPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
-				WithPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithPolicy("0|calico-system|gnp:calico-system.do-nothing|pass|1").
+				WithPolicy("1|calico-system|np:kube-system/calico-system.cluster-dns|pass|1").
+				WithPolicy("2|calico-system|gnp:calico-system.cluster-dns|pass|1").
 				WithPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
 				WithPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
 				WithPolicy("5|default|gnp:default.cluster-dns|allow|1").
 				WithPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
 				WithPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
-				WithEnforcedPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
-				WithEnforcedPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
-				WithEnforcedPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithEnforcedPolicy("0|calico-system|gnp:calico-system.do-nothing|pass|1").
+				WithEnforcedPolicy("1|calico-system|np:kube-system/calico-system.cluster-dns|pass|1").
+				WithEnforcedPolicy("2|calico-system|gnp:calico-system.cluster-dns|pass|1").
 				WithEnforcedPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
 				WithEnforcedPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
 				WithEnforcedPolicy("5|default|gnp:default.cluster-dns|allow|1").
 				WithEnforcedPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
 				WithEnforcedPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
-				WithPendingPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
-				WithPendingPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
-				WithPendingPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithPendingPolicy("0|calico-system|gnp:calico-system.do-nothing|pass|1").
+				WithPendingPolicy("1|calico-system|np:kube-system/calico-system.cluster-dns|pass|1").
+				WithPendingPolicy("2|calico-system|gnp:calico-system.cluster-dns|pass|1").
 				WithPendingPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
 				WithPendingPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
 				WithPendingPolicy("5|default|gnp:default.cluster-dns|allow|1").
 				WithPendingPolicy("6|baselineadminnetworkpolicy|kbanp:test-kbanp|pass|1").
 				WithPendingPolicy("7|default|sknp:default/test-sk8s-policy|deny|2").
-				WithTransitPolicy("0|allow-tigera|gnp:allow-tigera.do-nothing|pass|1").
-				WithTransitPolicy("1|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
-				WithTransitPolicy("2|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1").
+				WithTransitPolicy("0|calico-system|gnp:calico-system.do-nothing|pass|1").
+				WithTransitPolicy("1|calico-system|np:kube-system/calico-system.cluster-dns|pass|1").
+				WithTransitPolicy("2|calico-system|gnp:calico-system.cluster-dns|pass|1").
 				WithTransitPolicy("3|custom-tier|gnp:custom-tier.cluster-dns|pass|1").
 				WithTransitPolicy("4|default|np:test-namespace/default.cluster-dns|pass|1").
 				WithTransitPolicy("5|default|gnp:default.cluster-dns|allow|1").
@@ -1759,7 +1759,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier:   "allow-tigera",
+						Tier:   "calico-system",
 						Staged: ptr.To(true),
 					},
 				},
@@ -1784,7 +1784,7 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Name:   testutils.StringPtr("allow-tigera.staged-cluster-dns"),
+						Name:   testutils.StringPtr("calico-system.staged-cluster-dns"),
 						Staged: ptr.To(true),
 					},
 				},
@@ -1822,13 +1822,13 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 			// Policy mappings, mapping modern policy strings to their legacy equivalents.
 			pols := map[string]string{
 				// GlobalNetworkPolicy
-				"0|allow-tigera|gnp:allow-tigera.cluster-dns|pass|1": "0|allow-tigera|allow-tigera.cluster-dns|pass|1",
+				"0|calico-system|gnp:calico-system.cluster-dns|pass|1": "0|calico-system|calico-system.cluster-dns|pass|1",
 
 				// NetworkPolicy
 				"1|tier|np:namespace/tier.cluster-dns|pass|1": "1|tier|namespace/tier.cluster-dns|pass|1",
 
 				// StagedGlobalNetworkPolicy
-				"2|allow-tigera|sgnp:allow-tigera.staged-cluster-dns|pass|1": "2|allow-tigera|allow-tigera.staged:staged-cluster-dns|pass|1",
+				"2|calico-system|sgnp:calico-system.staged-cluster-dns|pass|1": "2|calico-system|calico-system.staged:staged-cluster-dns|pass|1",
 
 				// StagedNetworkPolicy
 				"3|tier|snp:namespace/tier.staged-cluster-dns|pass|1": "3|tier|namespace/tier.staged:staged-cluster-dns|pass|1",

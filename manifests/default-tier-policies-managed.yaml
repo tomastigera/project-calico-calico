@@ -1,6 +1,6 @@
 # On upgrading calico Enterprise, from v3.2 or lower  to v3.3 or above.
 # Remove below kubernetes network policies from the cluster.
-# These policies have been converted to calico network policies and organized under `allow-tigera` tier.
+# These policies have been converted to calico network policies and organized under `calico-system` tier.
 ---
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1

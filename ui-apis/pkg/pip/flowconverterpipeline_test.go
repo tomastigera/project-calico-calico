@@ -46,7 +46,7 @@ func hepd(name string, port int) epData {
 
 func flow(reporter, action, protocol string, source, dest epData, policies ...string) v1.L3Flow {
 	if len(policies) == 0 {
-		defaultPolicy := "0|allow-tigera|calico-monitoring/allow-tigera.elasticsearch-access|allow"
+		defaultPolicy := "0|calico-system|calico-monitoring/calico-system.elasticsearch-access|allow"
 		policies = []string{defaultPolicy}
 	}
 

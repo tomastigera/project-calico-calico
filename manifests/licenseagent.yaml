@@ -126,11 +126,11 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.tigera-license-agent-access
+  name: calico-system.tigera-license-agent-access
   namespace: tigera-license-agent
 spec:
   order: 1
-  tier: allow-tigera
+  tier: calico-system
   selector: k8s-app == 'tigera-license-agent'
   types:
     - Ingress

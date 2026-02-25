@@ -781,6 +781,7 @@ rules:
   - apiGroups:
       - projectcalico.org
     resourceNames:
+      - calico-system.*
       - allow-tigera.*
     resources:
       - tier.networkpolicies
@@ -805,6 +806,7 @@ rules:
   - apiGroups:
       - projectcalico.org
     resourceNames:
+      - calico-system
       - allow-tigera
     resources:
       - tiers

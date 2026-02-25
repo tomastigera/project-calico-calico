@@ -207,7 +207,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -871,7 +871,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -1515,7 +1515,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -2325,7 +2325,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -3029,7 +3029,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -3561,7 +3561,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -4057,7 +4057,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -4553,7 +4553,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -5049,7 +5049,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -5545,7 +5545,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -6041,7 +6041,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -6537,7 +6537,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -7033,7 +7033,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -7529,7 +7529,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -8025,7 +8025,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -8521,7 +8521,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -9017,7 +9017,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -9513,7 +9513,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -10009,7 +10009,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -10505,7 +10505,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -11001,7 +11001,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -11497,7 +11497,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -11993,7 +11993,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -12489,7 +12489,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -12985,7 +12985,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -13481,7 +13481,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -13977,7 +13977,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -14473,7 +14473,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -14969,7 +14969,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -15465,7 +15465,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -15961,7 +15961,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -16457,7 +16457,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -16953,7 +16953,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -17449,7 +17449,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -17945,7 +17945,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -18441,7 +18441,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -18937,7 +18937,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -19433,7 +19433,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -19929,7 +19929,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -20425,7 +20425,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -20921,7 +20921,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -21417,7 +21417,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -21913,7 +21913,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -22409,7 +22409,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -22905,7 +22905,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -23401,7 +23401,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -23897,7 +23897,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -24393,7 +24393,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -24889,7 +24889,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -25385,7 +25385,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -25881,7 +25881,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -26377,7 +26377,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -26873,7 +26873,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -27369,7 +27369,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -27865,7 +27865,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -28361,7 +28361,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -28857,7 +28857,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -29353,7 +29353,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -29849,7 +29849,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -30345,7 +30345,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -30841,7 +30841,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -31337,7 +31337,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -31833,7 +31833,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -32329,7 +32329,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -32825,7 +32825,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -33366,7 +33366,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -33862,7 +33862,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -34358,7 +34358,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -34854,7 +34854,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -35350,7 +35350,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -35846,7 +35846,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -36342,7 +36342,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -36838,7 +36838,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -37334,7 +37334,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -37830,7 +37830,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -38326,7 +38326,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -38822,7 +38822,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -39318,7 +39318,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -39814,7 +39814,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -40310,7 +40310,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -40806,7 +40806,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -41302,7 +41302,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -41798,7 +41798,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -42294,7 +42294,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -42790,7 +42790,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -43286,7 +43286,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -43782,7 +43782,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -44278,7 +44278,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -44774,7 +44774,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -45270,7 +45270,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -45766,7 +45766,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -46262,7 +46262,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -46758,7 +46758,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -47254,7 +47254,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -47750,7 +47750,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -48246,7 +48246,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -48742,7 +48742,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -49432,7 +49432,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -49928,7 +49928,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -50424,7 +50424,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -50920,7 +50920,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -51416,7 +51416,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -51912,7 +51912,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -52408,7 +52408,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -52904,7 +52904,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -53400,7 +53400,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -53896,7 +53896,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -54392,7 +54392,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -54888,7 +54888,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -55384,7 +55384,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -55880,7 +55880,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -56376,7 +56376,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -56872,7 +56872,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -57368,7 +57368,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -57864,7 +57864,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -58360,7 +58360,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -58856,7 +58856,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -59352,7 +59352,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -59848,7 +59848,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -60344,7 +60344,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -60840,7 +60840,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -61336,7 +61336,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -61832,7 +61832,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -62328,7 +62328,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -62824,7 +62824,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -63320,7 +63320,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -63816,7 +63816,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -64312,7 +64312,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -64808,7 +64808,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -65304,7 +65304,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -65800,7 +65800,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -66296,7 +66296,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -66792,7 +66792,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -67288,7 +67288,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -67784,7 +67784,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -68280,7 +68280,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -68776,7 +68776,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -69272,7 +69272,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -69768,7 +69768,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -70264,7 +70264,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -70760,7 +70760,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -71256,7 +71256,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -71752,7 +71752,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -72248,7 +72248,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -72744,7 +72744,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -73240,7 +73240,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -73736,7 +73736,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -74232,7 +74232,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -74728,7 +74728,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -75224,7 +75224,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -75720,7 +75720,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -76216,7 +76216,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -76712,7 +76712,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -77208,7 +77208,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -77704,7 +77704,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -78200,7 +78200,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -78696,7 +78696,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -79192,7 +79192,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -79688,7 +79688,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -80184,7 +80184,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -80680,7 +80680,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -81176,7 +81176,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -81672,7 +81672,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -82168,7 +82168,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -82664,7 +82664,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -83160,7 +83160,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -83656,7 +83656,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -84152,7 +84152,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -84648,7 +84648,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -85144,7 +85144,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -85640,7 +85640,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -86136,7 +86136,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -86897,7 +86897,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-intrusion-detection",
           "name": "intrusion-detection-controller",
@@ -87048,7 +87048,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-kibana",
           "name": "kibana-access",
@@ -87501,7 +87501,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -87918,7 +87918,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-intrusion-detection",
           "name": "intrusion-detection-controller",
@@ -88039,7 +88039,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -88202,7 +88202,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-intrusion-detection",
           "name": "intrusion-detection-controller",
@@ -88643,7 +88643,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",
@@ -89329,7 +89329,7 @@
       },
       "policies": [
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-compliance",
           "name": "compliance-server",
@@ -89535,7 +89535,7 @@
           "rule_id": null
         },
         {
-          "tier": "allow-tigera",
+          "tier": "calico-system",
           "kind": "NetworkPolicy",
           "namespace": "tigera-elasticsearch",
           "name": "elasticsearch-access",

@@ -65,11 +65,11 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.elasticsearch-access-loader
+  name: calico-system.elasticsearch-access-loader
   namespace: calico-monitoring
 spec:
   order: 1
-  tier: allow-tigera
+  tier: calico-system
   selector: name == 'es-client-tigera-elasticsearch'
   types:
     - Ingress

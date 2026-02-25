@@ -31,7 +31,7 @@ var auditRequest = `
   "type": "ee",
   "kinds": ["networkpolicies", "globalnetworkpolicies"],
   "object_refs": [{
-        "name": "allow-tigera.es-kube-controller-access",
+        "name": "calico-system.es-kube-controller-access",
         "namespace": "calico-system"
   }],
   "verbs": ["create", "delete", "patch", "update"],
@@ -46,7 +46,7 @@ var negativePagetRequest = `
   "type": "ee",
   "kinds": ["networkpolicies", "globalnetworkpolicies"],
   "object_refs": [{
-        "name": "allow-tigera.es-kube-controller-access",
+        "name": "calico-system.es-kube-controller-access",
         "namespace": "calico-system"
   }],
   "verbs": ["create", "delete", "patch", "update"],
@@ -61,7 +61,7 @@ var paginatedAuditRequest = `
   "type": "ee",
   "kinds": ["networkpolicies", "globalnetworkpolicies"],
   "object_refs": [{
-        "name": "allow-tigera.es-kube-controller-access",
+        "name": "calico-system.es-kube-controller-access",
         "namespace": "calico-system"
   }],
   "verbs": ["create", "delete", "patch", "update"],
@@ -75,7 +75,7 @@ var missingLogType = `
   "max_page_size": 1000,
   "kinds": ["networkpolicies", "globalnetworkpolicies"],
   "object_refs": [{
-        "name": "allow-tigera.es-kube-controller-access",
+        "name": "calico-system.es-kube-controller-access",
         "namespace": "calico-system"
   }],
   "verbs": ["create", "delete", "patch", "update"],
@@ -155,7 +155,7 @@ func TestNewHandler(t *testing.T) {
 					},
 					ObjectRefs: []lapi.ObjectReference{
 						{
-							Name:      "allow-tigera.es-kube-controller-access",
+							Name:      "calico-system.es-kube-controller-access",
 							Namespace: "calico-system",
 						},
 					},
@@ -203,7 +203,7 @@ func TestNewHandler(t *testing.T) {
 					},
 					ObjectRefs: []lapi.ObjectReference{
 						{
-							Name:      "allow-tigera.es-kube-controller-access",
+							Name:      "calico-system.es-kube-controller-access",
 							Namespace: "calico-system",
 						},
 					},
@@ -256,7 +256,7 @@ func TestNewHandler(t *testing.T) {
 					},
 					ObjectRefs: []lapi.ObjectReference{
 						{
-							Name:      "allow-tigera.es-kube-controller-access",
+							Name:      "calico-system.es-kube-controller-access",
 							Namespace: "calico-system",
 						},
 					},

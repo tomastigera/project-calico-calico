@@ -455,7 +455,7 @@ func TestFlowLogFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier:      "allow-tigera",
+						Tier:      "calico-system",
 						Namespace: testutils.StringPtr("openshift-dns"),
 					},
 				},
@@ -469,9 +469,9 @@ func TestFlowLogFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier:      "allow-tigera",
+						Tier:      "calico-system",
 						Namespace: testutils.StringPtr("openshift-dns"),
-						Name:      testutils.StringPtr("allow-tigera.cluster-dns"),
+						Name:      testutils.StringPtr("calico-system.cluster-dns"),
 					},
 				},
 			},
@@ -499,7 +499,7 @@ func TestFlowLogFiltering(t *testing.T) {
 				PolicyMatches: []v1.PolicyMatch{
 					{
 						Name: testutils.StringPtr("malicious-traffic"),
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},
@@ -660,14 +660,14 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
-					WithPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
-					WithEnforcedPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithEnforcedPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
-					WithPendingPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithPendingPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
-					WithTransitPolicy("1|allow-tigera|np:openshift-dns/allow-tigera.cluster-dns|allow|1").
-					WithTransitPolicy("0|allow-tigera|np:openshift-dns/mallicious-dns|pass|1").
+					WithPolicy("1|calico-system|np:openshift-dns/calico-system.cluster-dns|allow|1").
+					WithPolicy("0|calico-system|np:openshift-dns/mallicious-dns|pass|1").
+					WithEnforcedPolicy("1|calico-system|np:openshift-dns/calico-system.cluster-dns|allow|1").
+					WithEnforcedPolicy("0|calico-system|np:openshift-dns/mallicious-dns|pass|1").
+					WithPendingPolicy("1|calico-system|np:openshift-dns/calico-system.cluster-dns|allow|1").
+					WithPendingPolicy("0|calico-system|np:openshift-dns/mallicious-dns|pass|1").
+					WithTransitPolicy("1|calico-system|np:openshift-dns/calico-system.cluster-dns|allow|1").
+					WithTransitPolicy("0|calico-system|np:openshift-dns/mallicious-dns|pass|1").
 					WithTCPLostPackets(100).
 					WithTCPMeanSendCongestionWindow(101).
 					WithTCPMinSendCongestionWindow(102).
@@ -695,7 +695,7 @@ func TestFlowLogFiltering(t *testing.T) {
 					WithRandomFlowStats().WithRandomPacketStats().
 					WithReporter("src").WithAction("allowed").
 					WithSourceLabels("cheese=brie").
-					WithPolicy("0|allow-tigera|np:kube-system/allow-tigera.cluster-dns|pass|1").
+					WithPolicy("0|calico-system|np:kube-system/calico-system.cluster-dns|pass|1").
 					WithPolicy("1|custom-tier|gnp:custom-tier.my-deployment-dns|deny|1").
 					WithHost("my-host").
 					WithTCPMaxMinRTT(300).
@@ -843,7 +843,7 @@ func TestLegacyPolicyStrings(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier:      "allow-tigera",
+						Tier:      "calico-system",
 						Namespace: testutils.StringPtr("openshift-dns"),
 					},
 				},
@@ -932,8 +932,8 @@ func TestLegacyPolicyStrings(t *testing.T) {
 
 				// Create a builder that uses legacy style policy strings.
 				leg := tmpl.Copy().
-					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").   // Tier part of the name.
-					WithPolicy("0|allow-tigera|allow-tigera.gnp|pass|1").                          // Tier not part of name.
+					WithPolicy("1|calico-system|openshift-dns/calico-system.cluster-dns|allow|1"). // Tier part of the name.
+					WithPolicy("0|calico-system|calico-system.gnp|pass|1").                        // Tier not part of name.
 					WithPendingPolicy("0|custom-tier2|custom-tier2.staged:gnp|allow|1").           // Tier part of name.
 					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy|deny|1"). // Tier not part of the name.
 					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy2|deny|1") // Only present in old flow.
@@ -943,8 +943,8 @@ func TestLegacyPolicyStrings(t *testing.T) {
 				// Template for flow #2, which is the same as flow #1 but with its policy strings
 				// in the new format.
 				bld2 := tmpl.Copy().
-					WithPolicy("1|allow-tigera|openshift-dns/allow-tigera.cluster-dns|allow|1").      // Tier part of the name.
-					WithPolicy("0|allow-tigera|gnp|pass|1").                                          // Tier not part of name.
+					WithPolicy("1|calico-system|openshift-dns/calico-system.cluster-dns|allow|1").    // Tier part of the name.
+					WithPolicy("0|calico-system|gnp|pass|1").                                         // Tier not part of name.
 					WithPendingPolicy("0|custom-tier2|custom-tier2.staged:custom-tier2.gnp|allow|1"). // Tier part of name.
 					WithPendingPolicy("1|custom-tier2|default/custom-tier2.staged:policy|deny|1")     // Tier not part of name.
 				fl2, err := bld2.Build()
@@ -1508,10 +1508,10 @@ func TestFlowLogCount(t *testing.T) {
 			Reporter:        "src",
 			Action:          "allowed",
 			Policies: &v1.FlowLogPolicy{
-				AllPolicies:      []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
-				EnforcedPolicies: []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
-				PendingPolicies:  []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
-				TransitPolicies:  []string{"1|allow-tigera|allow-tigera.cluster-dns|allow|1"},
+				AllPolicies:      []string{"1|calico-system|calico-system.cluster-dns|allow|1"},
+				EnforcedPolicies: []string{"1|calico-system|calico-system.cluster-dns|allow|1"},
+				PendingPolicies:  []string{"1|calico-system|calico-system.cluster-dns|allow|1"},
+				TransitPolicies:  []string{"1|calico-system|calico-system.cluster-dns|allow|1"},
 			},
 		}
 
@@ -1559,7 +1559,7 @@ func TestFlowLogCount(t *testing.T) {
 				},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "allow-tigera",
+						Tier: "calico-system",
 					},
 				},
 			},

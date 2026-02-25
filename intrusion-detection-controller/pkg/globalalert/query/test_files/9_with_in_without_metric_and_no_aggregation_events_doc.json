@@ -40,16 +40,16 @@
         "packets_out": 69,
         "policies": {
             "all_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|0"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|0"
             ],
             "enforced_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|0"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|0"
             ],
             "pending_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|0"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|0"
             ],
             "transit_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|0"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|0"
             ]
         },
         "process_args": [
@@ -142,16 +142,16 @@
         "packets_out": 48,
         "policies": {
             "all_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|5"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|5"
             ],
             "enforced_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|5"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|5"
             ],
             "pending_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|5"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|5"
             ],
             "transit_policies": [
-                "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|5"
+                "0|calico-system|tigera-manager/calico-system.manager-access|allow|5"
             ]
         },
         "process_args": [
