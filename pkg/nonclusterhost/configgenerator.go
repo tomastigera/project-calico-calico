@@ -201,7 +201,7 @@ func (c *ConfigGenerator) createToken(ctx context.Context) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 			// FIXME(jiawei): We intentionally left the ExpiresAt field unset so the JWT token remains long-lived now.
-			// We need to revisit this decision and defined an appropriate expiration policy once we have clearer
+			// We need to revisit this decision and define an appropriate expiration policy once we have clearer
 			// requirements from our customers.
 		},
 		ServiceAccountName: sa.Name,
