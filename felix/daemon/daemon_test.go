@@ -199,6 +199,30 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
 	})
 
+	It("Should keep all features enabled, with IPSec in allow-unsecured mode, when license is in grace period", func() {
+		removeUnlicensedFeaturesFromConfig(cfg, dlc{
+			status: lclient.InGracePeriod,
+			// All features are licensed but the license is in grace period.
+			features: map[string]bool{
+				features.IPSec:               true,
+				features.PrometheusMetrics:   true,
+				features.DropActionOverride:  true,
+				features.FileOutputFlowLogs:  true,
+				features.FileOutputL7Logs:    true,
+				features.EgressAccessControl: true,
+			},
+		})
+		// Dataplane features keep their settings in grace period.
+		Expect(cfg.IPSecMode).To(Equal("PSK"))
+		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeTrue())
+		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
+		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
+		// Logging/metrics features remain enabled in grace period (unlike Expired).
+		Expect(cfg.PrometheusReporterEnabled).To(BeTrue())
+		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+		Expect(cfg.L7LogsFileEnabled).To(BeTrue())
+	})
+
 	It("Should keep dataplane features, disable logging features, when license is expired", func() {
 		removeUnlicensedFeaturesFromConfig(cfg, dlc{
 			status: lclient.Expired,
