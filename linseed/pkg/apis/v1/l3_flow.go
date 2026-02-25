@@ -108,7 +108,9 @@ type PolicyMatch struct {
 	Type PolicyType `json:"type,omitempty" validate:"omitempty,oneof=knp kanp kbanp"`
 
 	// Staged is a pointer to a boolean that indicates matching for staged policies.
-	// nil means "don't filter on staged", false means "match non-staged (enforced)", true means "match staged".
+	// nil and false both mean "match non-staged (enforced)", true means "match staged".
+	// A pointer is used so that an explicitly-set false is distinguishable from the zero value
+	// and won't be dropped by omitempty during JSON serialization.
 	Staged *bool `json:"staged,omitempty"`
 
 	// Tier for the policy.
