@@ -37,6 +37,7 @@ RUN microdnf install -y \
     libpcap libmnl libnfnetlink libnftnl libnetfilter_conntrack \
     ipset \
     iputils \
+    nftables \    
     # Need arp
     net-tools \
     # Need kmod to ensure ip6tables-save works correctly
@@ -50,19 +51,17 @@ RUN microdnf install -y \
     # Needed for the cleanup script
     findutils
 
-# Since the ubi repos do not contain all the packages we need (they're missing conntrack-tools),
+# Since the ubi repos do not contain all the packages we need (e.g. they're missing conntrack-tools),
 # we're using AlmaLinux repos for missing packages.
 COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
 
-RUN microdnf --enablerepo=appstream install -y \
-    # Needed for conntrack
+RUN microdnf --enablerepo=appstream --enablerepo=baseos install -y \
+    # Needed for conntrack - from appstream
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
-    conntrack-tools
-
-RUN microdnf --enablerepo=baseos install -y \
+    conntrack-tools \
+    # From baseos
     iproute-tc \
-    iptables-nft \
-    nftables
+    iptables-nft
 
 COPY --from=almalinux /usr/sbin/xtables-legacy-multi /usr/sbin/xtables-legacy-multi
 
