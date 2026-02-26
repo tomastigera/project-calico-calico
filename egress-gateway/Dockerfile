@@ -63,21 +63,15 @@ RUN microdnf --enablerepo=appstream --enablerepo=baseos install -y \
     iproute-tc \
     iptables-nft
 
+RUN microdnf clean all
+
 COPY --from=almalinux /usr/sbin/xtables-legacy-multi /usr/sbin/xtables-legacy-multi
 
-# Set symbolic links for legacy iptables binaries
+# Set symbolic links for iptables-legacy binaries
 RUN set -eux; \
     for bin in iptables-legacy iptables-legacy-restore iptables-legacy-save ip6tables-legacy ip6tables-legacy-restore ip6tables-legacy-save; do \
-        ln -sf /usr/sbin/xtables-legacy-multi /usr/sbin/${bin} || true; \
+        ln -sf xtables-legacy-multi /usr/sbin/${bin} || true; \
     done
-
-# Set alternatives
-RUN alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
-    alternatives --set iptables /usr/sbin/iptables-legacy && \
-    alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1 && \
-    alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-
-RUN microdnf clean all
 
 COPY bin/egressd-${TARGETARCH} /egressd
 
