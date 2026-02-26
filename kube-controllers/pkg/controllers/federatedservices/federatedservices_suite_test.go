@@ -27,6 +27,6 @@ func TestConverter(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../report/federatedservices_suite.xml"
+	reporterConfig.JUnitReport = "report/federatedservices_suite.xml"
 	ginkgo.RunSpecs(t, "Federated Endpoints Controller Suite", suiteConfig, reporterConfig)
 }

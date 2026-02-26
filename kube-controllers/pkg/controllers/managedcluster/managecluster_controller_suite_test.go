@@ -12,6 +12,6 @@ import (
 func TestConfig(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../report/managedcluster_suite.xml"
+	reporterConfig.JUnitReport = "report/managedcluster_suite.xml"
 	ginkgo.RunSpecs(t, "Managed cluster controller Suite", suiteConfig, reporterConfig)
 }

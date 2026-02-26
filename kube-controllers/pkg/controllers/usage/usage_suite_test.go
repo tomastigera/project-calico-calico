@@ -30,6 +30,6 @@ func TestUsage(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
 	suiteConfig, reporterConfig := GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../report/usage_suite.xml"
+	reporterConfig.JUnitReport = "report/usage_suite.xml"
 	RunSpecs(t, "Usage Controller Suite", suiteConfig, reporterConfig)
 }
