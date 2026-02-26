@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Tigera, Inc. All rights reserved.
 
-package flowlogs
+package policyactivity
 
 import (
 	"bufio"

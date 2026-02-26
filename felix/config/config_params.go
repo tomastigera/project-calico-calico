@@ -545,8 +545,8 @@ type Config struct {
 	// active long-lived connections and reports the results to the policy activity log. This ensures
 	// that lastEvaluated timestamps remain fresh for policies matching established connections
 	// (which bypass BPF policy evaluation after the initial packet) and that newly added policies
-	// that match existing connections get activity entries even though BPF never evaluated them.
-	// Set to 0 to disable. [Default: 300s]
+	// and that newly added policies that match existing connections get activity entries. Set to 0 to disable.
+	// [Default: 300s]
 	PolicyActivityRefreshInterval time.Duration `config:"seconds;300"`
 
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
