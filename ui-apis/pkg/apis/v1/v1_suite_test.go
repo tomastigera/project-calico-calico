@@ -13,5 +13,7 @@ import (
 func TestMiddleware(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "ui-apis v1 API Graph Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/v1_suite.xml"
+	ginkgo.RunSpecs(t, "ui-apis v1 API Graph Suite", suiteConfig, reporterConfig)
 }

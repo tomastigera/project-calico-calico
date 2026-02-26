@@ -10,5 +10,7 @@ import (
 
 func TestLinseedOutPluginConfig(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Linseed output plugin config test suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/config_suite.xml"
+	ginkgo.RunSpecs(t, "Linseed output plugin config test suite", suiteConfig, reporterConfig)
 }

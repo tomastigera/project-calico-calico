@@ -77,9 +77,10 @@ endif
 
 ## test cloudwatch plugin initializer
 ut: eks/bin/eks-log-forwarder-startup-$(ARCH)
+	mkdir -p report
 ifeq ($(ARCH),amd64)
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) go test -C eks $(UNIT_TEST_FLAGS)'
+		sh -c '$(GIT_CONFIG_SSH) cd eks && gotestsum --junitfile ../report/tests.xml -- $(UNIT_TEST_FLAGS)'
 endif
 
 st:

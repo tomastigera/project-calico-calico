@@ -10,5 +10,7 @@ import (
 
 func TestLabelSelector(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Key Selector Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/keyselector_suite.xml"
+	ginkgo.RunSpecs(t, "Key Selector Suite", suiteConfig, reporterConfig)
 }

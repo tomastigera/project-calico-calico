@@ -10,5 +10,7 @@ import (
 
 func TestInternetHelpers(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Internet Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/internet_suite.xml"
+	ginkgo.RunSpecs(t, "Internet Suite", suiteConfig, reporterConfig)
 }

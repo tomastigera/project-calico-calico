@@ -17,3 +17,7 @@
         env_vars:
           - name: STORE_BUILD_CACHE
             value: "true"
+    epilogue:
+      always:
+        commands:
+          - 'test-results publish ./report/*.xml --name "Mock node: UT" || true'

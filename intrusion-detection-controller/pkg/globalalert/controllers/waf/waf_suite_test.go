@@ -9,5 +9,7 @@ import (
 
 func TestWafAlertGeneration(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "WAF controllers Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/waf_suite.xml"
+	ginkgo.RunSpecs(t, "WAF controllers Suite", suiteConfig, reporterConfig)
 }

@@ -20,3 +20,7 @@
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+    epilogue:
+      always:
+        commands:
+          - 'test-results publish ./report/*.xml --name "calicoq: UT" || true'

@@ -14,5 +14,7 @@ import (
 func TestGlobalAlert(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "GlobalAlert Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/service_suite.xml"
+	ginkgo.RunSpecs(t, "GlobalAlert Test Suite", suiteConfig, reporterConfig)
 }

@@ -11,5 +11,7 @@ import (
 
 func TestServer(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Access Log Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/metrics_suite.xml"
+	ginkgo.RunSpecs(t, "Access Log Suite", suiteConfig, reporterConfig)
 }

@@ -79,8 +79,9 @@ clean: stop-elastic
 ut: ut-fast
 
 ut-fast:
+	mkdir -p report
 	# We run the tests n times to try and weed out test flakes.
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... ./cmd/... -cover -count 5'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/tests.xml -- ./pkg/... ./cmd/... -cover -count 5'
 
 
 st:

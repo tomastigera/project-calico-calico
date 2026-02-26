@@ -73,6 +73,7 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 
 .PHONY: ut
 ut:
+	mkdir -p report
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo --cover -r --skip-package calicoq/*'
 
 bin/calicoctl:

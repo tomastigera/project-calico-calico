@@ -10,5 +10,7 @@ import (
 
 func TestSnapshot(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Snapshot Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/snapshot_suite.xml"
+	ginkgo.RunSpecs(t, "Snapshot Suite", suiteConfig, reporterConfig)
 }

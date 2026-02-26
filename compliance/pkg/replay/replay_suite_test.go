@@ -9,5 +9,7 @@ import (
 
 func TestReplay(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Replay Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/replay_suite.xml"
+	ginkgo.RunSpecs(t, "Replay Suite", suiteConfig, reporterConfig)
 }

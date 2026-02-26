@@ -35,7 +35,8 @@ clean:
 ###############################################################################
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/tests.xml -- ./... -cover -count 1'
 
 ###############################################################################
 # CI

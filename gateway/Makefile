@@ -87,7 +87,8 @@ clean:
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./pkg/... -cover -count 1 -tags=$(BUILD_TAGS) $(EXTRA_GOTEST_ARGS)'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/tests.xml -- ./pkg/... -cover -count 1 -tags=$(BUILD_TAGS) $(EXTRA_GOTEST_ARGS)'
 
 st:
 	@echo "No STs"

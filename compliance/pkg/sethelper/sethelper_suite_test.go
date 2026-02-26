@@ -10,5 +10,7 @@ import (
 
 func TestSetHelper(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Set helper Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/sethelper_suite.xml"
+	ginkgo.RunSpecs(t, "Set helper Suite", suiteConfig, reporterConfig)
 }

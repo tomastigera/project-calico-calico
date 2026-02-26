@@ -13,5 +13,7 @@ import (
 func TestCalicoResources(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Calico Resources Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/resources_suite.xml"
+	ginkgo.RunSpecs(t, "Calico Resources Suite", suiteConfig, reporterConfig)
 }

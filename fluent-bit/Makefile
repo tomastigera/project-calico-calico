@@ -102,6 +102,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 
 .PHONY: ut
 ut:
+	mkdir -p report
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r plugins/'
 
 .PHONY: fv

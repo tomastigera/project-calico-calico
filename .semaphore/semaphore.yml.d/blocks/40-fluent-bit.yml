@@ -16,3 +16,7 @@
       - name: "Fluent Bit: CI"
         commands:
           - make ci
+    epilogue:
+      always:
+        commands:
+          - 'test-results publish ./report/*.xml --name "Fluent-bit: UT" || true'

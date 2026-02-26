@@ -14,5 +14,7 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "federationsyncer test suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/federationsyncer_suite.xml"
+	ginkgo.RunSpecs(t, "federationsyncer test suite", suiteConfig, reporterConfig)
 }

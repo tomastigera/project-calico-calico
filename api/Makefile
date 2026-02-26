@@ -161,6 +161,7 @@ GINKGO_FOCUS?=.*
 
 .PHONY:ut
 ut: kind-cluster-create
+	mkdir -p report
 	$(DOCKER_RUN) \
 		--privileged \
 		-e KUBECONFIG=/kubeconfig.yaml \

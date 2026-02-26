@@ -70,7 +70,8 @@ st:
 
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test -coverpkg=./pkg/... -coverprofile ./cover.out ./pkg/...'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/tests.xml -- -coverpkg=./pkg/... -coverprofile ./cover.out ./pkg/...'
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go tool cover -func=./cover.out'
 	@echo 'To get more code coverage details, use: "go tool cover -html=./cover.out"'
 

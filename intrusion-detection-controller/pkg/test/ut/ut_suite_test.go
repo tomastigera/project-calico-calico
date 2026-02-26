@@ -12,5 +12,7 @@ import (
 func TestDomainNameFeedsUT(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "DomainName Thread Feeds UT")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/ut_suite.xml"
+	ginkgo.RunSpecs(t, "DomainName Thread Feeds UT", suiteConfig, reporterConfig)
 }

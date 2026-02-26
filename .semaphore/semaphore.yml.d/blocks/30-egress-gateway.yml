@@ -15,6 +15,7 @@
       always:
         commands:
           - ../.semaphore/publish-artifacts
+          - 'test-results publish ./report/*.xml --name "Egress gateway: UT" || true'
 
 - name: Egress gateway - native arm64 runner
   run:

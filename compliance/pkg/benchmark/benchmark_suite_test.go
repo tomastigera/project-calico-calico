@@ -9,5 +9,7 @@ import (
 
 func TestBenchmark(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Benchmark Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/benchmark_suite.xml"
+	ginkgo.RunSpecs(t, "Benchmark Suite", suiteConfig, reporterConfig)
 }

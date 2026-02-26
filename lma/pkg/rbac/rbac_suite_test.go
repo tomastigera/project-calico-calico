@@ -13,5 +13,7 @@ import (
 func TestPolicyRec(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Calculator Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/rbac_suite.xml"
+	ginkgo.RunSpecs(t, "RBAC Suite", suiteConfig, reporterConfig)
 }

@@ -9,5 +9,7 @@ import (
 
 func TestWorkerAbstractStruct(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Abstract Worker Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/worker_suite.xml"
+	ginkgo.RunSpecs(t, "Abstract Worker Test Suite", suiteConfig, reporterConfig)
 }

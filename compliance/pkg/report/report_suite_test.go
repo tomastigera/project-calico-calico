@@ -13,5 +13,7 @@ import (
 func TestReport(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Report Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/report_suite.xml"
+	ginkgo.RunSpecs(t, "Report Suite", suiteConfig, reporterConfig)
 }

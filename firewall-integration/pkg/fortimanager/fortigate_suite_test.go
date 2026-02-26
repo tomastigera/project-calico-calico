@@ -13,5 +13,7 @@ import (
 func TestHandler(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	testutils.HookLogrusForGinkgo()
-	ginkgo.RunSpecs(t, "FortiGate Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/fortigate_suite.xml"
+	ginkgo.RunSpecs(t, "FortiGate Test Suite", suiteConfig, reporterConfig)
 }

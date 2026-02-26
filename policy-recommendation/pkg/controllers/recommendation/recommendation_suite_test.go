@@ -13,5 +13,7 @@ import (
 func TestRecommendationController(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Recommendation Controllers Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/recommendation_suite.xml"
+	ginkgo.RunSpecs(t, "Recommendation Controllers Suite", suiteConfig, reporterConfig)
 }

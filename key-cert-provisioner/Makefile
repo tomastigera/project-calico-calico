@@ -80,6 +80,7 @@ $(SIGNER_CREATED): $(BINDIR)/test-signer-$(ARCH)
 # CI/CD
 ###############################################################################
 ut: build
+	mkdir -p report
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go test ./...'

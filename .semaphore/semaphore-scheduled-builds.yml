@@ -513,6 +513,10 @@ blocks:
         - name: "API: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "API: UT" || true'
   - name: API Server
     run:
       when: "true"
@@ -541,6 +545,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "API Server: UT" || true'
   - name: Application Layer Policy
     run:
       when: "true"
@@ -608,6 +616,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "calicoctl: UT" || true'
   - name: CNI Plugin
     run:
       when: "true"
@@ -637,6 +649,10 @@ blocks:
         - name: "CNI Plugin: build windows images"
           commands:
             - ../.semaphore/run-and-monitor ci.log make image-windows
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "CNI Plugin: UT" || true'
   - name: "CNI Plugin: Windows"
     run:
       when: "false or true"
@@ -714,6 +730,10 @@ blocks:
           env_vars:
             - name: STORE_BUILD_CACHE
               value: "true"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "confd: UT" || true'
   - name: Crypto
     run:
       when: "true"
@@ -1257,6 +1277,10 @@ blocks:
         - name: "Libraries: CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Libraries: UT" || true'
   - name: libcalico-go
     run:
       when: "true"
@@ -1287,6 +1311,10 @@ blocks:
               value: projectcalico.org/v3
             - name: GINKGO_SKIP
               value: "etcdv3 backend"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "libcalico-go: UT" || true'
   - name: "Node: Build"
     run:
       when: "true"
@@ -1421,6 +1449,10 @@ blocks:
         - name: 'Packaging (pkg): CI'
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "pkg: UT" || true'
   - name: pod2daemon
     run:
       when: "true"
@@ -1455,6 +1487,10 @@ blocks:
         - name: "Tools (hack directory): CI"
           commands:
             - ../.semaphore/run-and-monitor make-ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Tools: UT" || true'
   - name: Typha
     run:
       when: "true"
@@ -1512,6 +1548,10 @@ blocks:
           env_vars:
             - name: STORE_BUILD_CACHE
               value: "true"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Webhooks: UT" || true'
   - name: calicoq
     run:
       when: "true"
@@ -1534,6 +1574,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "calicoq: UT" || true'
   - name: Compliance
     run:
       when: "true"
@@ -1554,6 +1598,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Compliance: UT" || true'
   - name: Dashboards
     run:
       when: "true"
@@ -1574,6 +1622,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Dashboards: UT" || true'
   - name: Publish tigera/snort3 images
     run:
       when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1650,6 +1702,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Deep packet inspection: UT" || true'
   - name: Egress gateway
     run:
       when: "true"
@@ -1667,6 +1723,7 @@ blocks:
         always:
           commands:
             - ../.semaphore/publish-artifacts
+            - 'test-results publish ./report/*.xml --name "Egress gateway: UT" || true'
   - name: Egress gateway - native arm64 runner
     run:
       when: "true"
@@ -1807,6 +1864,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "ES Gateway: UT" || true'
   - name: Firewall integration
     run:
       when: "true"
@@ -1827,6 +1888,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Firewall integration: UT" || true'
   - name: Publish tigera/fluentd-base images
     run:
       when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -1899,6 +1964,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "fluentd: UT" || true'
   - name: Publish tigera/fluentd-base Windows images
     run:
       when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -1987,6 +2056,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Gateway: UT" || true'
   - name: Ingress collector
     run:
       when: "true"
@@ -2007,6 +2080,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Ingress collector: UT" || true'
   - name: Intrusion detection controller
     run:
       when: "true"
@@ -2029,6 +2106,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "IDS Controller: UT" || true'
   - name: key-cert-provisioner
     run:
       when: "true"
@@ -2055,6 +2136,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Key cert provisioner: UT" || true'
   - name: Publish tigera/kibana images
     run:
       when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -2125,6 +2210,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "L7 admission controller: UT" || true'
   - name: "L7 Collector"
     run:
       when: "true"
@@ -2148,6 +2237,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "L7 collector: UT" || true'
   - name: License Agent
     run:
       when: "true"
@@ -2168,6 +2261,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "License agent: UT" || true'
   - name: Licensing
     run:
       when: "true"
@@ -2188,6 +2285,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Licensing: UT" || true'
   - name: Linseed
     run:
       when: "true"
@@ -2208,6 +2309,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Linseed: UT" || true'
   - name: Logging/Monitoring/Alerting library (lma)
     run:
       when: "true"
@@ -2221,6 +2326,10 @@ blocks:
         - name: "lma: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "LMA: UT" || true'
   - name: Oiler
     run:
       when: "true"
@@ -2241,6 +2350,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Oiler: UT" || true'
   - name: Packet Capture
     run:
       when: "true"
@@ -2261,6 +2374,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Packetcapture: UT" || true'
   - name: Policy Recommendation
     run:
       when: "true"
@@ -2281,6 +2398,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Policy recommendation: UT" || true'
   - name: Prometheus Service
     run:
       when: "true"
@@ -2301,6 +2422,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Prometheus service: UT" || true'
   - name: Query Server
     run:
       when: "true"
@@ -2321,6 +2446,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Query server: UT" || true'
   - name: UI APIs
     run:
       when: "true"
@@ -2346,6 +2475,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "UI APIs: UT" || true'
   - name: Voltron
     run:
       when: "true"
@@ -2366,6 +2499,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Voltron: UT" || true'
   - name: "Webhooks Processor"
     run:
       when: "true"
@@ -2386,6 +2523,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Webhooks processor: UT" || true'
   - name: Fluent Bit
     run:
       when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -2404,6 +2545,10 @@ blocks:
         - name: "Fluent Bit: CI"
           commands:
             - make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Fluent-bit: UT" || true'
   - name: SELinux
     run:
       when: "true or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -2577,6 +2722,10 @@ blocks:
         - name: "Fake log generator: CI"
           commands:
             - ../../.semaphore/run-and-monitor make-ci.log make ci
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Fake log generator: UT" || true'
   - name: Mock node
     run:
       when: "true"
@@ -2596,6 +2745,10 @@ blocks:
           env_vars:
             - name: STORE_BUILD_CACHE
               value: "true"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Mock node: UT" || true'
   - name: Release tooling
     run:
       when: "true"

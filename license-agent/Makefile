@@ -62,7 +62,7 @@ ut: report-dir
 		-v $(SECRETS_PATH):/secrets \
 		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+			gotestsum --junitfile report/tests.xml -- $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: clean
 clean:

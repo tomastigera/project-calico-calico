@@ -9,5 +9,7 @@ import (
 
 func TestApi(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Api Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/api_suite.xml"
+	ginkgo.RunSpecs(t, "Api Suite", suiteConfig, reporterConfig)
 }

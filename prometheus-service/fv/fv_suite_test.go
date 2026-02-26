@@ -10,5 +10,7 @@ import (
 
 func TestFv(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Fv Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../report/fv_suite.xml"
+	ginkgo.RunSpecs(t, "Recommendation Fv Suite", suiteConfig, reporterConfig)
 }

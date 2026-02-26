@@ -10,5 +10,7 @@ import (
 
 func TestUtils(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Utils Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../report/utils_suite.xml"
+	ginkgo.RunSpecs(t, "Recommendation Utils Suite", suiteConfig, reporterConfig)
 }

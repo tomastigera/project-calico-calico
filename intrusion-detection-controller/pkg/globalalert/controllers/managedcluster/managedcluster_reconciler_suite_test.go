@@ -9,5 +9,7 @@ import (
 
 func TestManagedClusterReconciler(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Mananged Cluster Reconciler Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/managedcluster_reconciler_suite.xml"
+	ginkgo.RunSpecs(t, "Mananged Cluster Reconciler Test Suite", suiteConfig, reporterConfig)
 }
