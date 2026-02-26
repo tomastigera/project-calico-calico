@@ -1356,13 +1356,16 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expected creating the emptyLicenseKey")
 	}
 
-	// Confirm that valid, but expired licenses, are rejected
+	// Confirm that expired licenses are accepted (cluster runs in degraded mode)
 	expiredLicenseKey := utils.ExpiredTestLicense()
-	_, err = licenseKeyClient.Create(ctx, expiredLicenseKey, metav1.CreateOptions{})
-	if err == nil {
-		return fmt.Errorf("expected creating the expiredLicenseKey")
-	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
-		fmt.Printf("Incorrect error: %+v\n", err)
+	expiredLic, err := licenseKeyClient.Create(ctx, expiredLicenseKey, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("expired license should be accepted but got error: %s", err)
+	}
+	// Clean up the expired license so the valid license test below can create one
+	err = licenseKeyClient.Delete(ctx, expiredLic.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("error deleting expired license: %s", err)
 	}
 	// Valid Enterprise License with Maximum supported Nodes 100
 	enterpriseValidLicenseKey := utils.ValidEnterpriseTestLicense()

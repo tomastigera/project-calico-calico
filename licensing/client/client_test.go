@@ -398,6 +398,125 @@ func TestFeatureFlags(t *testing.T) {
 	})
 }
 
+func TestFeatureFlagsWithExpiredLicense(t *testing.T) {
+	numNodes := 5
+	// Expired license (grace period of 0, expiry in the past).
+	expiredClaims := client.LicenseClaims{
+		LicenseID:   "expired-license",
+		Nodes:       &numNodes,
+		Customer:    "ExpiredCustomer",
+		GracePeriod: 0,
+		Claims: jwt.Claims{
+			Expiry: jwt.NewNumericDate(time.Now().Add(-48 * time.Hour).UTC()),
+		},
+	}
+
+	// Expired past grace period (grace of 1 day, expiry 48h ago).
+	expiredPastGraceClaims := client.LicenseClaims{
+		LicenseID:   "expired-past-grace",
+		Nodes:       &numNodes,
+		Customer:    "ExpiredPastGraceCustomer",
+		GracePeriod: 1,
+		Claims: jwt.Claims{
+			Expiry: jwt.NewNumericDate(time.Now().Add(-48 * time.Hour).UTC()),
+		},
+	}
+
+	t.Run("expired license with 'all' features still reports features as available", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := expiredClaims
+		claims.Features = []string{features.All}
+		Expect(claims.Validate()).To(Equal(client.Expired))
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.DropActionOverride)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.EgressAccessControl)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.PrometheusMetrics)).To(BeTrue())
+	})
+
+	t.Run("expired license with specific feature reports that feature as available", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := expiredClaims
+		claims.Features = []string{features.IPSec}
+		Expect(claims.Validate()).To(Equal(client.Expired))
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeTrue())
+	})
+
+	t.Run("expired license with specific feature reports other features as unavailable", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := expiredClaims
+		claims.Features = []string{features.IPSec}
+		Expect(claims.Validate()).To(Equal(client.Expired))
+		Expect(claims.ValidateFeature(features.EgressAccessControl)).To(BeFalse())
+	})
+
+	t.Run("expired past grace period with 'all' features still reports features as available", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := expiredPastGraceClaims
+		claims.Features = []string{features.All}
+		Expect(claims.Validate()).To(Equal(client.Expired))
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeTrue())
+	})
+
+	t.Run("expired license with empty features reports all features as unavailable", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := expiredClaims
+		claims.Features = []string{}
+		Expect(claims.Validate()).To(Equal(client.Expired))
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
+	})
+
+	t.Run("nil license still reports features as unavailable", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		var claims *client.LicenseClaims
+		Expect(claims.Validate()).To(Equal(client.NoLicenseLoaded))
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
+	})
+}
+
+func TestValidateAPIUsageWithExpiredLicense(t *testing.T) {
+	numNodes := 5
+	expiredClaims := client.LicenseClaims{
+		LicenseID:   "expired-license",
+		Nodes:       &numNodes,
+		Customer:    "ExpiredCustomer",
+		GracePeriod: 0,
+		Features:    []string{"cnx", "all"},
+		Claims: jwt.Claims{
+			Expiry: jwt.NewNumericDate(time.Now().Add(-48 * time.Hour).UTC()),
+		},
+	}
+
+	t.Run("expired license allows open source APIs", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		Expect(expiredClaims.Validate()).To(Equal(client.Expired))
+		gvk := api.NewFelixConfiguration().GetObjectKind().GroupVersionKind().String()
+		Expect(expiredClaims.ValidateAPIUsage(gvk)).To(BeTrue())
+	})
+
+	t.Run("expired license allows enterprise APIs when feature is present", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		Expect(expiredClaims.Validate()).To(Equal(client.Expired))
+		gvk := api.NewManagedCluster().GetObjectKind().GroupVersionKind().String()
+		Expect(expiredClaims.ValidateAPIUsage(gvk)).To(BeTrue())
+	})
+
+	t.Run("expired license allows management APIs", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		Expect(expiredClaims.Validate()).To(Equal(client.Expired))
+		gvk := api.NewLicenseKey().GetObjectKind().GroupVersionKind().String()
+		Expect(expiredClaims.ValidateAPIUsage(gvk)).To(BeTrue())
+	})
+}
+
 func TestLicenseStatus(t *testing.T) {
 	t.Run("empty claims status is none", func(t *testing.T) {
 		RegisterTestingT(t)

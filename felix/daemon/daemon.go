@@ -1758,53 +1758,82 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 
 	if configParams.UseInternalDataplaneDriver {
 		// Check license status of various features and disable them via config if they're not allowed.
-		// Furthermore, if the features are enabled through config, raise a warning log.
+		// On expiry, dataplane features (IPSec, DropActionOverride, EgressIP) keep their settings
+		// with a warning, while logging/metrics features (Prometheus, flow logs, L7 logs) are disabled.
+		licStatus := licenseMonitor.GetLicenseStatus()
+
 		if configParams.IPSecEnabled() {
 			if !licenseMonitor.GetFeatureStatus(features.IPSec) {
-				log.Warn("Not licensed for IPsec feature. License either invalid or expired. " +
+				log.Warn("Not licensed for IPsec feature. " +
 					"Contact Tigera support or email licensing@tigera.io")
 				licenseOverrides["IPSecMode"] = "none"
-			} else if licenseMonitor.GetLicenseStatus() == lclient.InGracePeriod {
+			} else if licStatus == lclient.InGracePeriod {
 				log.Warn("License for IPsec feature is in grace period, forcing IPsec into allow-unsecured " +
+					"traffic mode. Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["IPSecAllowUnsecuredTraffic"] = "true"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for IPsec feature has expired, forcing IPsec into allow-unsecured " +
 					"traffic mode. Contact Tigera support or email licensing@tigera.io")
 				licenseOverrides["IPSecAllowUnsecuredTraffic"] = "true"
 			}
 		}
-		if configParams.PrometheusReporterEnabled &&
-			!licenseMonitor.GetFeatureStatus(features.PrometheusMetrics) {
-			log.Warn("Not licensed for Prometheus Metrics feature. License either invalid or expired. " +
-				"Contact Tigera support or email licensing@tigera.io")
 
-			// Set Prometheus metrics process and reporting configs to false.
-			licenseOverrides["PrometheusReporterEnabled"] = "false"
+		if configParams.PrometheusReporterEnabled {
+			if !licenseMonitor.GetFeatureStatus(features.PrometheusMetrics) {
+				log.Warn("Not licensed for Prometheus Metrics feature. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["PrometheusReporterEnabled"] = "false"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for Prometheus Metrics feature has expired. Metrics will be disabled. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["PrometheusReporterEnabled"] = "false"
+			}
 		}
 
-		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid then throw a warning message.
-		if configParams.DropActionOverride != "DROP" &&
-			!licenseMonitor.GetFeatureStatus(features.DropActionOverride) {
-			log.Warn("Not licensed for DropActionOverride feature. License either invalid or expired. " +
-				"Contact Tigera support or email licensing@tigera.io")
-
-			// Set DropActionOverride to "DROP".
-			licenseOverrides["DropActionOverride"] = "DROP"
+		if configParams.DropActionOverride != "DROP" {
+			if !licenseMonitor.GetFeatureStatus(features.DropActionOverride) {
+				log.Warn("Not licensed for DropActionOverride feature. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["DropActionOverride"] = "DROP"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for DropActionOverride feature has expired. Current setting will be kept. " +
+					"Contact Tigera support or email licensing@tigera.io")
+			}
 		}
 
-		if configParams.FlowLogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputFlowLogs) {
-			log.Warn("Not licensed for Flow Logs File Output feature. License either invalid or expired. " +
-				"Contact Tigera support or email licensing@tigera.io")
-			licenseOverrides["FlowLogsFileEnabled"] = "false"
+		if configParams.FlowLogsFileEnabled {
+			if !licenseMonitor.GetFeatureStatus(features.FileOutputFlowLogs) {
+				log.Warn("Not licensed for Flow Logs File Output feature. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["FlowLogsFileEnabled"] = "false"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for Flow Logs File Output feature has expired. Flow logs will be disabled. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["FlowLogsFileEnabled"] = "false"
+			}
 		}
 
-		if configParams.L7LogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputL7Logs) {
-			log.Warn("Not licensed for L7 Logs File Output feature. License either invalid or expired. " +
-				"Contact Tigera support or email licensing@tigera.io")
-			licenseOverrides["L7LogsFileEnabled"] = "false"
+		if configParams.L7LogsFileEnabled {
+			if !licenseMonitor.GetFeatureStatus(features.FileOutputL7Logs) {
+				log.Warn("Not licensed for L7 Logs File Output feature. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["L7LogsFileEnabled"] = "false"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for L7 Logs File Output feature has expired. L7 logs will be disabled. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["L7LogsFileEnabled"] = "false"
+			}
 		}
 
-		if configParams.EgressIPSupport != "Disabled" && !licenseMonitor.GetFeatureStatus(features.EgressAccessControl) {
-			log.Warn("Not licensed for Egress Access Control feature. License either invalid or expired. " +
-				"Contact Tigera support or email licensing@tigera.io")
-			licenseOverrides["EgressIPSupport"] = "Disabled"
+		if configParams.EgressIPSupport != "Disabled" {
+			if !licenseMonitor.GetFeatureStatus(features.EgressAccessControl) {
+				log.Warn("Not licensed for Egress Access Control feature. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["EgressIPSupport"] = "Disabled"
+			} else if licStatus == lclient.Expired {
+				log.Warn("License for Egress Access Control feature has expired. Egress gateway will continue running. " +
+					"Contact Tigera support or email licensing@tigera.io")
+			}
 		}
 	}
 

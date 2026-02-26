@@ -161,7 +161,7 @@ func TestRefreshLicense(t *testing.T) {
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
-		Expect(m.GetFeatureStatus("allowed")).To(BeTrue(), "expected feature to be allowed but it wasn't")
+		Expect(m.GetFeatureStatus("allowed")).To(BeTrue(), "expected feature to be allowed in grace period but it wasn't")
 		Expect(m.GetFeatureStatus("foobar")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
 	})
 	t.Run("with expired license", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestRefreshLicense(t *testing.T) {
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.Expired))
-		Expect(m.GetFeatureStatus("allowed")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
+		Expect(m.GetFeatureStatus("allowed")).To(BeTrue(), "expected feature to be allowed after expiration but it wasn't")
 		Expect(m.GetFeatureStatus("foobar")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
 	})
 }

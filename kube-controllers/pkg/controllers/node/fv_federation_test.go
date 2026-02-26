@@ -457,23 +457,13 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		watchChan := federationController.WatchStdoutFor(regexp.MustCompile("Received exit status [[:digit:]]*, restarting"))
 		federationController.Start()
 
-		By("Updating the license to an invalid license")
+		By("Updating the license to an expired license - controller should keep running")
 		infrastructure.ApplyExpiredLicense(localCalicoClient)
-		Eventually(watchChan, 10*time.Second).Should(BeClosed())
+		Eventually(watchChan, 10*time.Second).ShouldNot(BeClosed())
 
-		By("Updating back2 to have a different set of endpoints while the controller should be stopped")
-		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(ctx, makeEndpoints(eps2, "backing2", epsBacking2), metav1.UpdateOptions{})
-		Expect(err).ShouldNot(HaveOccurred())
-
-		By("Checking the federated endpoints remain unchanged")
-		Consistently(getSubsetsFn(ns1Name, "federated"), consistentlyTimeout, consistentlyPoll).Should(Equal(eSubset))
-
-		By("Adding a valid license back")
-		infrastructure.ApplyValidLicense(localCalicoClient)
-
-		By("Updating backing2 to have a different set of endpoints")
+		By("Updating backing2 to have a different set of endpoints while license is expired")
 		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(ctx, makeEndpoints(eps2, "backing2", epsBacking2), metav1.UpdateOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [2]")
 		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{ //nolint:staticcheck

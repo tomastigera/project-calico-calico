@@ -218,20 +218,12 @@ func (c *LicenseClaims) ValidateAtTime(t time.Time) LicenseStatus {
 }
 
 // ValidateFeature returns true if the feature is enabled, false if it is not.
-// False is returned if the license is invalid in any of the following ways:
-// - there isn't a license
-// - the license has expired and is no longer in its grace period.
+// False is returned if there isn't a license or the feature is not in the license.
+// Features in expired licenses are still reported as available so that dataplane
+// features continue running after expiry. Callers should check GetLicenseStatus()
+// separately when they need expiry-specific behavior (e.g. disabling logs/metrics).
 func (c *LicenseClaims) ValidateFeature(feature string) bool {
-	return c.ValidateFeatureAtTime(time.Now(), feature)
-}
-
-// ValidateFeature returns true if the feature is enabled, false if it is not.
-// False is returned if the license is invalid in any of the following ways:
-// - there isn't a license
-// - the license has expired and is no longer in its grace period.
-func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool {
-	switch c.ValidateAtTime(t) {
-	case NoLicenseLoaded, Expired:
+	if c.Validate() == NoLicenseLoaded {
 		return false
 	}
 
