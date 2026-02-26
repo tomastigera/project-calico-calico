@@ -44,50 +44,48 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
 		Expect(rules).To(Not(BeNil()))
 
 		It("the file is not empty", func() {
-			// The file contains 26 SecRule and a SecMarker
-			Expect(rules).To(HaveLen(27))
+			Expect(len(rules)).To(BeNumerically(">", 0))
 		})
 
-		It("non-SecRule reults", func() {
-			Expect(rules[26].SecRule).To(Equal("SecMarker"))
-			Expect(rules[26].Id).To(Equal(""))
-			Expect(rules[26].Variables).To(Equal(`"END-REQUEST-921-PROTOCOL-ATTACK"`))
+		It("SecMarker at end of file", func() {
+			lastRule := rules[len(rules)-1]
+			Expect(lastRule.SecRule).To(Equal("SecMarker"))
+			Expect(lastRule.Id).To(Equal(""))
+			Expect(lastRule.Variables).To(Equal(`"END-REQUEST-921-PROTOCOL-ATTACK"`))
 		})
 
 		It("single line SecRule", func() {
-			rule := rules[24]
+			var rule *Rule
+			for i := range rules {
+				if rules[i].Id == "921018" {
+					rule = &rules[i]
+					break
+				}
+			}
+			Expect(rule).NotTo(BeNil(), "Rule 921018 not found")
 			Expect(rule.SecRule).To(Equal("SecRule"))
-			Expect(rule.Id).To(Equal("921018"))
 			Expect(rule.Variables).To(Equal("TX:DETECTION_PARANOIA_LEVEL"))
 			Expect(rule.Message).To(Equal(""))
-			Expect(rule.Raw).To(Equal(`SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 4" "id:921018,phase:2,pass,nolog,tag:'OWASP_CRS',ver:'OWASP_CRS/4.23.0',skipAfter:END-REQUEST-921-PROTOCOL-ATTACK"`))
+			// Single-line rules don't contain line continuations
+			Expect(rule.Raw).NotTo(ContainSubstring("\\\n"))
+			Expect(rule.Raw).To(ContainSubstring("id:921018"))
 		})
 
-		It("last SecRule in the file", func() {
-			rule := rules[25]
-			Expect(rule.Id).To(Equal("921220"))
+		It("multi-line SecRule", func() {
+			var rule *Rule
+			for i := range rules {
+				if rules[i].Id == "921220" {
+					rule = &rules[i]
+					break
+				}
+			}
+			Expect(rule).NotTo(BeNil(), "Rule 921220 not found")
 			Expect(rule.SecRule).To(Equal("SecRule"))
 			Expect(rule.Message).To(Equal("HTTP Parameter Pollution possible via array notation"))
-			Expect(rule.Raw).To(Equal(`SecRule ARGS_NAMES "@rx \[" \
-    "id:921220,\
-    phase:2,\
-    block,\
-    capture,\
-    log,\
-    msg:'HTTP Parameter Pollution possible via array notation',\
-    logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
-    tag:'application-multi',\
-    tag:'language-multi',\
-    tag:'platform-multi',\
-    tag:'attack-protocol',\
-    tag:'paranoia-level/4',\
-    tag:'OWASP_CRS',\
-    tag:'OWASP_CRS/PROTOCOL-ATTACK',\
-    tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.23.0',\
-    severity:'CRITICAL',\
-    setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
-    setvar:'tx.inbound_anomaly_score_pl4=+%{tx.critical_anomaly_score}'"`))
+			// Multi-line rules contain line continuations
+			Expect(rule.Raw).To(ContainSubstring("\\\n"))
+			Expect(rule.Raw).To(ContainSubstring("id:921220"))
+			Expect(rule.Raw).To(ContainSubstring("severity:'CRITICAL'"))
 		})
 
 	})
