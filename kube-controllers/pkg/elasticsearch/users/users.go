@@ -476,7 +476,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 						Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 						Indices: []elasticsearch.RoleIndex{
 							{
-								Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*")},
+								Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), "calico_policy_activity.*"},
 								Privileges: []string{"create_index", "write", "manage", "read"},
 							},
 						},

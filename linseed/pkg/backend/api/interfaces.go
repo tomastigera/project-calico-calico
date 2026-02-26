@@ -128,8 +128,10 @@ type PolicyBackend interface {
 	Create(context.Context, ClusterInfo, []v1.PolicyActivity) (*v1.BulkResponse, error)
 	// List lists policy activities that match the given parameters.
 	List(context.Context, ClusterInfo, *v1.PolicyActivityParams) (*v1.List[v1.PolicyActivity], error)
-	// Aggregations aggregates on the policy activities.
+	// Aggregations is a placeholder to satisfy the generic handler.
 	Aggregations(context.Context, ClusterInfo, *v1.PolicyActivityParams) (*elastic.Aggregations, error)
+	// GetPolicyActivity returns aggregated policy activity data for the given policies.
+	GetPolicyActivity(context.Context, ClusterInfo, *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error)
 	// Close shutdowns the cache cleanup go routine.
 	Close()
 }

@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -416,6 +417,152 @@ func (b *policyBackend) Close() {
 	if b.cancelCleanup != nil {
 		b.cancelCleanup()
 	}
+}
+
+// GetPolicyActivity returns aggregated policy activity data for the given policies.
+func (b *policyBackend) GetPolicyActivity(ctx context.Context, i bapi.ClusterInfo, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
+	log := bapi.ContextLogger(i)
+
+	if err := i.Valid(); err != nil {
+		return nil, err
+	}
+	if err := req.Valid(); err != nil {
+		return nil, err
+	}
+
+	if len(req.Policies) == 0 {
+		return &v1.PolicyActivityResponse{Items: []v1.PolicyActivityResult{}}, nil
+	}
+
+	err := b.templates.Initialize(ctx, b.index, i)
+	if err != nil {
+		return nil, err
+	}
+
+	query := b.buildPolicyActivityQuery(i, req)
+
+	results, err := b.esClient.Search(b.index.Index(i)).
+		Size(10000).
+		Query(query).
+		Do(ctx)
+	if err != nil {
+		log.WithError(err).Error("Elasticsearch search failed for GetPolicyActivity")
+		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+	}
+
+	return aggregatePolicyActivity(log, req, results), nil
+}
+
+// buildPolicyActivityQuery constructs an ES bool query that matches docs for
+// any of the requested policies, filtered by generation prefix on the rule field.
+func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.PolicyActivityRequest) *elastic.BoolQuery {
+	shouldClauses := make([]elastic.Query, 0, len(req.Policies))
+	for _, p := range req.Policies {
+		policyQuery := elastic.NewBoolQuery().
+			Filter(
+				elastic.NewTermQuery("policy.kind", p.Kind),
+				elastic.NewTermQuery("policy.name", p.Name),
+				elastic.NewPrefixQuery("rule", fmt.Sprintf("%d|", p.Generation)),
+			)
+		if p.Namespace != "" {
+			policyQuery.Filter(elastic.NewTermQuery("policy.namespace", p.Namespace))
+		}
+		shouldClauses = append(shouldClauses, policyQuery)
+	}
+
+	boolQuery := elastic.NewBoolQuery().
+		Should(shouldClauses...).
+		MinimumShouldMatch("1")
+
+	if req.From != nil || req.To != nil {
+		rangeQuery := elastic.NewRangeQuery("last_evaluated")
+		if req.From != nil {
+			rangeQuery.Gte(req.From)
+		}
+		if req.To != nil {
+			rangeQuery.Lte(req.To)
+		}
+		boolQuery.Filter(rangeQuery)
+	}
+
+	if b.singleIndex {
+		boolQuery.Filter(elastic.NewTermQuery("cluster", i.Cluster))
+		if i.Tenant != "" {
+			boolQuery.Filter(elastic.NewTermQuery("tenant", i.Tenant))
+		}
+	}
+
+	return boolQuery
+}
+
+// policyKey uniquely identifies a policy by its kind, namespace, and name.
+// It is used as a map key when fetching data from Elasticsearch and performing aggregations.
+type policyKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+// policyActivityEntry accumulates per-policy activity results during aggregation.
+type policyActivityEntry struct {
+	policy        v1.PolicyInfo
+	lastEvaluated *time.Time
+	rules         []v1.PolicyActivityRuleResult
+}
+
+// aggregatePolicyActivity groups ES hits by policy, parses rule strings, computes
+// per-policy last_evaluated, and returns results in the same order as the request.
+func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, results *elastic.SearchResult) *v1.PolicyActivityResponse {
+	resultMap := make(map[policyKey]*policyActivityEntry)
+
+	for _, hit := range results.Hits.Hits {
+		var doc v1.PolicyActivity
+		if err := json.Unmarshal(hit.Source, &doc); err != nil {
+			log.WithError(err).Error("Error unmarshaling policy activity doc")
+			continue
+		}
+
+		parts := strings.Split(doc.Rule, "|")
+		if len(parts) < 3 {
+			log.WithField("rule", doc.Rule).Warn("Skipping doc with unparsable rule string")
+			continue
+		}
+
+		key := policyKey{Kind: doc.Policy.Kind, Namespace: doc.Policy.Namespace, Name: doc.Policy.Name}
+		entry, ok := resultMap[key]
+		if !ok {
+			entry = &policyActivityEntry{policy: doc.Policy}
+			resultMap[key] = entry
+		}
+
+		if entry.lastEvaluated == nil || doc.LastEvaluated.After(*entry.lastEvaluated) {
+			t := doc.LastEvaluated
+			entry.lastEvaluated = &t
+		}
+
+		entry.rules = append(entry.rules, v1.PolicyActivityRuleResult{
+			Direction:     parts[1],
+			Index:         parts[2],
+			LastEvaluated: doc.LastEvaluated,
+		})
+	}
+
+	// Build response preserving request order.
+	items := make([]v1.PolicyActivityResult, 0, len(req.Policies))
+	for _, p := range req.Policies {
+		key := policyKey{Kind: p.Kind, Namespace: p.Namespace, Name: p.Name}
+		entry, ok := resultMap[key]
+		if !ok {
+			continue
+		}
+		items = append(items, v1.PolicyActivityResult{
+			Policy:        entry.policy,
+			LastEvaluated: entry.lastEvaluated,
+			Rules:         entry.rules,
+		})
+	}
+
+	return &v1.PolicyActivityResponse{Items: items}
 }
 
 // Aggregations is a placeholder to satisfy the interface; aggregation queries are not supported for policy activity logs.

@@ -296,6 +296,280 @@ func TestBuildQuery_Complex(t *testing.T) {
 	assert.Contains(t, jsonStr, "gnp1")
 }
 
+func TestGetPolicyActivity_FullFlow(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	earlier := now.Add(-1 * time.Hour)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		bodyStr := string(body)
+
+		// Verify the query contains expected terms.
+		assert.Contains(t, bodyStr, "policy.kind")
+		assert.Contains(t, bodyStr, "NetworkPolicy")
+		assert.Contains(t, bodyStr, "policy.name")
+		assert.Contains(t, bodyStr, "allow-dns")
+		assert.Contains(t, bodyStr, "prefix")
+		assert.Contains(t, bodyStr, "3|") // generation prefix
+
+		// Return two docs for the same policy with different rules.
+		response := fmt.Sprintf(`{
+			"hits": {
+				"total": { "value": 2, "relation": "eq" },
+				"hits": [
+					{
+						"_id": "1",
+						"_source": {
+							"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+							"rule": "3|ingress|0",
+							"last_evaluated": %q
+						}
+					},
+					{
+						"_id": "2",
+						"_source": {
+							"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+							"rule": "3|egress|1",
+							"last_evaluated": %q
+						}
+					}
+				]
+			}
+		}`, now.Format(time.RFC3339Nano), earlier.Format(time.RFC3339Nano))
+		_, _ = fmt.Fprint(w, response)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 3},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+
+	item := resp.Items[0]
+	assert.Equal(t, "NetworkPolicy", item.Policy.Kind)
+	assert.Equal(t, "default", item.Policy.Namespace)
+	assert.Equal(t, "allow-dns", item.Policy.Name)
+	assert.NotNil(t, item.LastEvaluated)
+	assert.Equal(t, now, *item.LastEvaluated) // max of now and earlier
+	assert.Len(t, item.Rules, 2)
+
+	// Verify rule parsing.
+	assert.Equal(t, "ingress", item.Rules[0].Direction)
+	assert.Equal(t, "0", item.Rules[0].Index)
+	assert.Equal(t, now, item.Rules[0].LastEvaluated)
+
+	assert.Equal(t, "egress", item.Rules[1].Direction)
+	assert.Equal(t, "1", item.Rules[1].Index)
+	assert.Equal(t, earlier, item.Rules[1].LastEvaluated)
+}
+
+func TestGetPolicyActivity_EmptyPolicies(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{Policies: []v1.PolicyActivityQueryPolicy{}}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	require.NoError(t, err)
+	assert.Empty(t, resp.Items)
+}
+
+func TestGetPolicyActivity_ESError(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	_, err := b.GetPolicyActivity(context.Background(), info, req)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "elasticsearch search failed")
+}
+
+func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		response := fmt.Sprintf(`{
+			"hits": {
+				"total": { "value": 2, "relation": "eq" },
+				"hits": [
+					{
+						"_id": "1",
+						"_source": {
+							"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+							"rule": "1|ingress|0",
+							"last_evaluated": %q
+						}
+					},
+					{
+						"_id": "2",
+						"_source": {
+							"policy": {"kind": "GlobalNetworkPolicy", "namespace": "", "name": "gnp1"},
+							"rule": "2|egress|0",
+							"last_evaluated": %q
+						}
+					}
+				]
+			}
+		}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+		_, _ = fmt.Fprint(w, response)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "GlobalNetworkPolicy", Name: "gnp1", Generation: 2},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
+
+	// Verify results are in request order.
+	assert.Equal(t, "gnp1", resp.Items[0].Policy.Name)
+	assert.Equal(t, "p1", resp.Items[1].Policy.Name)
+}
+
+func TestGetPolicyActivity_SkipsUnparsableRules(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		response := fmt.Sprintf(`{
+			"hits": {
+				"total": { "value": 2, "relation": "eq" },
+				"hits": [
+					{
+						"_id": "1",
+						"_source": {
+							"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+							"rule": "bad-format",
+							"last_evaluated": %q
+						}
+					},
+					{
+						"_id": "2",
+						"_source": {
+							"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+							"rule": "1|ingress|0",
+							"last_evaluated": %q
+						}
+					}
+				]
+			}
+		}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+		_, _ = fmt.Fprint(w, response)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.Len(t, resp.Items[0].Rules, 1) // Only the valid rule
+	assert.Equal(t, "ingress", resp.Items[0].Rules[0].Direction)
+}
+
+func TestBuildPolicyActivityQuery_WithTimeRange(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil, false)
+	defer ts.Close()
+
+	from := time.Now().Add(-24 * time.Hour)
+	to := time.Now()
+
+	req := &v1.PolicyActivityRequest{
+		From: &from,
+		To:   &to,
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	q := b.buildPolicyActivityQuery(info, req)
+	src, err := q.Source()
+	require.NoError(t, err)
+
+	jsonBytes, _ := json.Marshal(src)
+	jsonStr := string(jsonBytes)
+
+	assert.Contains(t, jsonStr, "last_evaluated")
+	assert.Contains(t, jsonStr, "from")
+	assert.Contains(t, jsonStr, "to")
+}
+
+func TestBuildPolicyActivityQuery_SingleIndex(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil, true)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 5},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1", Tenant: "t1"}
+
+	q := b.buildPolicyActivityQuery(info, req)
+	src, err := q.Source()
+	require.NoError(t, err)
+
+	jsonBytes, _ := json.Marshal(src)
+	jsonStr := string(jsonBytes)
+
+	// Should include cluster and tenant filters in single-index mode.
+	assert.Contains(t, jsonStr, `"cluster"`)
+	assert.Contains(t, jsonStr, "c1")
+	assert.Contains(t, jsonStr, `"tenant"`)
+	assert.Contains(t, jsonStr, "t1")
+	// Should include generation prefix.
+	assert.Contains(t, jsonStr, "5|")
+}
+
+func TestGetPolicyActivity_InvalidCluster(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: ""} // Invalid - empty cluster
+
+	_, err := b.GetPolicyActivity(context.Background(), info, req)
+	assert.Error(t, err)
+}
+
 func TestList_UnmarshalError(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// We send valid JSON structure but the content inside _source makes Unmarshal fail
