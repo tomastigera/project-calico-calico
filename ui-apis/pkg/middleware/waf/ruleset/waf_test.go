@@ -152,7 +152,7 @@ var _ = Describe("WAF middleware tests", func() {
 				Data: `SecRule TX:/paramcounter_.*/ "@gt 1" \
     "id:921180,\
     phase:2,\
-    pass,\
+    block,\
     msg:'HTTP Parameter Pollution (%{MATCHED_VAR_NAME})',\
     logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
     tag:'application-multi',\
@@ -161,8 +161,9 @@ var _ = Describe("WAF middleware tests", func() {
     tag:'attack-protocol',\
     tag:'paranoia-level/3',\
     tag:'OWASP_CRS',\
+    tag:'OWASP_CRS/PROTOCOL-ATTACK',\
     tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.11.0',\
+    ver:'OWASP_CRS/4.23.0',\
     severity:'CRITICAL',\
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
     setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"`,
