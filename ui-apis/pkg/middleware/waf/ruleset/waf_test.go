@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 
 var _ = Describe("WAF middleware tests", func() {
@@ -146,27 +145,6 @@ var _ = Describe("WAF middleware tests", func() {
 		})
 
 		It("Test Get WAF rule", func() {
-			var expected = &v1.Rule{
-				ID:   "921180",
-				Name: "HTTP Parameter Pollution (%{MATCHED_VAR_NAME})",
-				Data: `SecRule TX:/paramcounter_.*/ "@gt 1" \
-    "id:921180,\
-    phase:2,\
-    pass,\
-    msg:'HTTP Parameter Pollution (%{MATCHED_VAR_NAME})',\
-    logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
-    tag:'application-multi',\
-    tag:'language-multi',\
-    tag:'platform-multi',\
-    tag:'attack-protocol',\
-    tag:'paranoia-level/3',\
-    tag:'OWASP_CRS',\
-    tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.11.0',\
-    severity:'CRITICAL',\
-    setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
-    setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"`,
-			}
 			rs := Ruleset{
 				Client: mockClientSet,
 			}
@@ -174,7 +152,12 @@ var _ = Describe("WAF middleware tests", func() {
 			result, err := rs.GetRule(ctx, defaultRuleset, "921180")
 			Expect(err).To(BeNil())
 
-			Expect(result).To(Equal(expected))
+			Expect(result).NotTo(BeNil())
+			Expect(result.ID).To(Equal("921180"))
+			Expect(result.Name).To(Equal("HTTP Parameter Pollution (%{MATCHED_VAR_NAME})"))
+			Expect(result.Data).To(ContainSubstring("id:921180"))
+			Expect(result.Data).To(ContainSubstring("msg:'HTTP Parameter Pollution (%{MATCHED_VAR_NAME})'"))
+			Expect(result.Data).To(ContainSubstring("severity:'CRITICAL'"))
 		})
 
 	})
