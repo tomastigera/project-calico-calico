@@ -110,7 +110,7 @@ fv: run-k8s-apiserver
 	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
 		-v $(CERTS_PATH):/home/user/certs \
 	 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) \
-		 sh -c '$(GIT_CONFIG_SSH) ginkgo -r --focus="$(FV_GINKGO_FOCUS)" $(GINKGO_ARGS)'
+		 sh -c '$(GIT_CONFIG_SSH) ginkgo --focus="$(FV_GINKGO_FOCUS)" $(GINKGO_ARGS) ./$(FV_PACKAGE)/'
 
 ###############################################################################
 # CI/CD
