@@ -22,46 +22,37 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
-	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // policyBackend implements the PolicyBackend interface for storing and querying policy activity logs.
 type policyBackend struct {
-	esClient             *elastic.Client
-	lmaclient            lmaelastic.Client
-	templates            bapi.IndexInitializer
-	deepPaginationCutOff int64
-	queryHelper          lmaindex.Helper
-	singleIndex          bool
-	index                bapi.Index
-	cancelCleanup        context.CancelFunc
+	esClient    *elastic.Client
+	lmaclient   lmaelastic.Client
+	templates   bapi.IndexInitializer
+	singleIndex bool
+	index       bapi.Index
+
+	cancelCleanup context.CancelFunc
 
 	// policyActivityCache stores the last time we processed a specific deterministic ID.
 	// This allows us to throttle writes to Elasticsearch without risking data loss.
 	policyActivityCache sync.Map
 	// dedupWindow defines how often we allow an update to pass through to ES.
 	dedupWindow time.Duration
-
-	// Migration knobs.
-	migrationMode bool
 }
 
 // NewBackend creates a new policyBackend for multi-index mode.
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, cleanupInterval, cleanupTTL time.Duration) bapi.PolicyBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, cleanupInterval, cleanupTTL time.Duration) bapi.PolicyBackend {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := &policyBackend{
-		esClient:             c.Backend(),
-		lmaclient:            c,
-		queryHelper:          lmaindex.MultiIndexPolicyActivity(),
-		templates:            cache,
-		deepPaginationCutOff: deepPaginationCutOff,
-		singleIndex:          false,
-		index:                index.PolicyActivityMultiIndex,
-		migrationMode:        migrationMode,
-		dedupWindow:          1 * time.Hour,
-		cancelCleanup:        cancel,
+		esClient:      c.Backend(),
+		lmaclient:     c,
+		templates:     cache,
+		singleIndex:   false,
+		index:         index.PolicyActivityMultiIndex,
+		dedupWindow:   1 * time.Hour,
+		cancelCleanup: cancel,
 	}
 	go b.StartCacheCleanup(ctx, cleanupInterval, cleanupTTL)
 
@@ -69,19 +60,16 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 }
 
 // NewSingleIndexBackend creates a new policyBackend for single-index mode.
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, cleanupInterval, cleanupTTL time.Duration, options ...index.Option) bapi.PolicyBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, cleanupInterval, cleanupTTL time.Duration, options ...index.Option) bapi.PolicyBackend {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := &policyBackend{
-		esClient:             c.Backend(),
-		lmaclient:            c,
-		queryHelper:          lmaindex.SingleIndexPolicyActivity(),
-		templates:            cache,
-		deepPaginationCutOff: deepPaginationCutOff,
-		singleIndex:          true,
-		index:                index.PolicyActivityIndex(options...),
-		migrationMode:        migrationMode,
-		dedupWindow:          1 * time.Hour,
-		cancelCleanup:        cancel,
+		esClient:      c.Backend(),
+		lmaclient:     c,
+		templates:     cache,
+		singleIndex:   true,
+		index:         index.PolicyActivityIndex(options...),
+		dedupWindow:   1 * time.Hour,
+		cancelCleanup: cancel,
 	}
 	go b.StartCacheCleanup(ctx, cleanupInterval, cleanupTTL)
 
@@ -238,140 +226,6 @@ func (b *policyBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		Failed:    len(resp.Failed()),
 		Errors:    v1.GetBulkErrors(resp),
 	}, nil
-}
-
-// List returns policy activity logs matching the given parameters.
-func (b *policyBackend) List(ctx context.Context, i bapi.ClusterInfo, params *v1.PolicyActivityParams) (*v1.List[v1.PolicyActivity], error) {
-	log := bapi.ContextLogger(i)
-
-	search, startFrom, err := b.getSearch(i, params)
-	if err != nil {
-		return nil, err
-	}
-
-	results, err := search.Do(ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Elasticsearch search failed for index %s with params: %+v", b.index.Alias(i), params)
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
-	}
-
-	logs := []v1.PolicyActivity{}
-	for _, h := range results.Hits.Hits {
-		l := v1.PolicyActivity{}
-		err = json.Unmarshal(h.Source, &l)
-		if err != nil {
-			log.WithError(err).Error("Error unmarshaling policy activity log")
-			continue
-		}
-		l.ID = h.Id
-		logs = append(logs, l)
-	}
-
-	afterKey, err := b.afterKey(ctx, i, params, results, log, startFrom)
-	if err != nil {
-		return nil, err
-	}
-
-	return &v1.List[v1.PolicyActivity]{
-		TotalHits: results.TotalHits(),
-		Items:     logs,
-		AfterKey:  afterKey,
-	}, nil
-}
-
-// afterKey computes the pagination key for deep pagination support.
-func (b *policyBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.PolicyActivityParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]any, error) {
-	useDeepPagination := b.migrationMode
-	if !useDeepPagination {
-		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
-	}
-	nextPointInTime, err := logtools.NextPointInTime(ctx, b.esClient, b.index.Index(i), results, log, useDeepPagination)
-	if err != nil {
-		return nil, err
-	}
-	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
-	return afterKey, nil
-}
-
-// getSearch builds the Elasticsearch search service for policy activity queries.
-func (b *policyBackend) getSearch(i bapi.ClusterInfo, opts *v1.PolicyActivityParams) (*elastic.SearchService, int, error) {
-	if err := i.Valid(); err != nil {
-		return nil, 0, err
-	}
-
-	q, err := b.buildQuery(i, opts)
-	if err != nil {
-		return nil, 0, err
-	}
-	query := b.esClient.Search(b.index.Alias(i)).
-		Size(opts.GetMaxPageSize()).
-		Query(q)
-
-	var startFrom int
-	var pitID string
-
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if len(opts.Sort) != 0 {
-		for _, s := range opts.Sort {
-			query.Sort(s.Field, !s.Descending)
-		}
-	} else {
-		query.Sort(b.queryHelper.GetTimeField(), true)
-	}
-	return query, startFrom, nil
-}
-
-// buildQuery constructs an Elasticsearch query for policy activity logs using the provided parameters.
-func (b *policyBackend) buildQuery(i bapi.ClusterInfo, opts *v1.PolicyActivityParams) (elastic.Query, error) {
-	baseQ, err := logtools.BuildQuery(b.queryHelper, i, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	boolQ := elastic.NewBoolQuery().Must(baseQ)
-
-	if opts != nil && opts.Selector != "" {
-		selQ, err := b.queryHelper.NewSelectorQuery(opts.Selector)
-		if err != nil {
-			return nil, err
-		}
-		boolQ.Filter(selQ)
-	}
-
-	if opts != nil && opts.TimeRange != nil {
-		timeQ := b.queryHelper.NewTimeRangeQuery(opts.TimeRange)
-		if timeQ != nil {
-			boolQ.Filter(timeQ)
-		}
-	}
-
-	if opts != nil {
-		if len(opts.Rules) > 0 {
-			rules := make([]any, len(opts.Rules))
-			for i, r := range opts.Rules {
-				rules[i] = r
-			}
-			boolQ.Filter(elastic.NewTermsQuery("rule", rules...))
-		}
-		if opts.Policy.Kind != "" {
-			boolQ.Filter(elastic.NewTermQuery("policy.kind", opts.Policy.Kind))
-		}
-		if opts.Policy.Namespace != "" {
-			boolQ.Filter(elastic.NewTermQuery("policy.namespace", opts.Policy.Namespace))
-		}
-		if opts.Policy.Name != "" {
-			boolQ.Filter(elastic.NewTermQuery("policy.name", opts.Policy.Name))
-		}
-		if !opts.LastEvaluated.IsZero() {
-			boolQ.Filter(elastic.NewRangeQuery("last_evaluated").Gte(opts.LastEvaluated))
-		}
-	}
-
-	return boolQ, nil
 }
 
 // StartCacheCleanup starts a background routine to remove stale entries from the local cache.
@@ -563,9 +417,4 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, r
 	}
 
 	return &v1.PolicyActivityResponse{Items: items}
-}
-
-// Aggregations is a placeholder to satisfy the interface; aggregation queries are not supported for policy activity logs.
-func (b *policyBackend) Aggregations(ctx context.Context, i bapi.ClusterInfo, p *v1.PolicyActivityParams) (*elastic.Aggregations, error) {
-	return nil, nil
 }

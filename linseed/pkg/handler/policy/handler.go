@@ -17,20 +17,18 @@ import (
 )
 
 const (
-	ReadLogPath            = "/policy_activity/logs"
-	AggsPath               = "/policy_activity/logs/aggregation"
 	WriteLogPath           = "/policy_activity/logs/bulk"
 	ReadPolicyActivityPath = "/policy_activity"
 )
 
 type policy struct {
-	logs    handler.GenericHandler[v1.PolicyActivity, v1.PolicyActivityParams, v1.PolicyActivity, v1.PolicyActivityParams]
+	logs    handler.RWHandler[v1.PolicyActivity, v1.PolicyActivityRequest, v1.PolicyActivity]
 	backend bapi.PolicyBackend
 }
 
 func New(b bapi.PolicyBackend) *policy {
 	return &policy{
-		logs:    handler.NewCompositeHandler(b.Create, b.List, b.Aggregations),
+		logs:    handler.NewRWHandler[v1.PolicyActivity, v1.PolicyActivityRequest](b.Create, nil),
 		backend: b,
 	}
 }
@@ -42,12 +40,6 @@ func (h policy) APIS() []handler.API {
 			URL:             WriteLogPath,
 			Handler:         h.logs.Create(),
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Create, Group: handler.APIGroup, Resource: "policyactivity"},
-		},
-		{
-			Method:          "POST",
-			URL:             ReadLogPath,
-			Handler:         h.logs.List(),
-			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "policyactivity"},
 		},
 		{
 			Method:          "POST",

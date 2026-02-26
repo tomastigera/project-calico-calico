@@ -89,9 +89,9 @@ func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc, singleI
 
 	var b bapi.PolicyBackend
 	if singleIndex {
-		b = NewSingleIndexBackend(lmaClient, mockInit, 1000, false, 10*time.Minute, 2*time.Hour)
+		b = NewSingleIndexBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
 	} else {
-		b = NewBackend(lmaClient, mockInit, 1000, false, 10*time.Minute, 2*time.Hour)
+		b = NewBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
 	}
 
 	pb := b.(*policyBackend)
@@ -220,80 +220,6 @@ func TestCreate_Deduplication(t *testing.T) {
 	_, err = b.Create(context.Background(), info, []v1.PolicyActivity{logItem})
 	require.NoError(t, err)
 	assert.Greater(t, esHits, 0, "Write after window expiry should hit ES")
-}
-
-func TestList_Integration(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		bodyStr := string(body)
-
-		assert.Contains(t, bodyStr, "term")
-		assert.Contains(t, bodyStr, "policy.name")
-		assert.Contains(t, bodyStr, "test-policy")
-
-		// Return Mock Hits
-		response := `{
-            "hits": {
-                "total": { "value": 1, "relation": "eq" },
-                "hits": [
-                    { "_id": "123", "_source": { "rule": "allow-all" }, "sort": [12345] }
-                ]
-            }
-        }`
-		_, _ = fmt.Fprint(w, response)
-	}
-
-	b, ts := setupBackendWithHandler(t, handler, false)
-	defer ts.Close()
-
-	params := &v1.PolicyActivityParams{
-		Policy: v1.PolicyInfo{Name: "test-policy"},
-	}
-	info := bapi.ClusterInfo{Cluster: "c1"}
-
-	list, err := b.List(context.Background(), info, params)
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), list.TotalHits)
-	assert.Equal(t, "123", list.Items[0].ID)
-}
-
-func TestList_ElasticError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
-	}
-	b, ts := setupBackendWithHandler(t, handler, false)
-	defer ts.Close()
-
-	_, err := b.List(context.Background(), bapi.ClusterInfo{Cluster: "c1"}, &v1.PolicyActivityParams{})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "elasticsearch search failed")
-}
-
-func TestBuildQuery_Complex(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, false)
-	defer ts.Close()
-
-	now := time.Now()
-	opts := &v1.PolicyActivityParams{
-		Selector:      "\"policy.namespace\" = 'frontend'",
-		Rules:         []string{"r1", "r2"},
-		Policy:        v1.PolicyInfo{Kind: "GlobalNetworkPolicy", Name: "gnp1"},
-		LastEvaluated: now,
-	}
-
-	q, err := b.buildQuery(bapi.ClusterInfo{Cluster: "c1"}, opts)
-	require.NoError(t, err)
-
-	src, err := q.Source()
-	require.NoError(t, err)
-
-	jsonBytes, _ := json.Marshal(src)
-	jsonStr := string(jsonBytes)
-
-	assert.Contains(t, jsonStr, "frontend")
-	assert.Contains(t, jsonStr, "policy.namespace")
-	assert.Contains(t, jsonStr, "r1")
-	assert.Contains(t, jsonStr, "gnp1")
 }
 
 func TestGetPolicyActivity_FullFlow(t *testing.T) {
@@ -568,27 +494,4 @@ func TestGetPolicyActivity_InvalidCluster(t *testing.T) {
 
 	_, err := b.GetPolicyActivity(context.Background(), info, req)
 	assert.Error(t, err)
-}
-
-func TestList_UnmarshalError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		// We send valid JSON structure but the content inside _source makes Unmarshal fail
-		// if we were strictly checking types, but standard json.Unmarshal usually tolerates extra fields.
-		// To force an unmarshal error on the struct, we send a type mismatch.
-		responseMismatch := `{
-			"hits": {
-				"hits": [ { "_source": "this_should_be_an_object_but_is_string" } ]
-			}
-		}`
-		_, _ = fmt.Fprint(w, responseMismatch)
-	}
-
-	b, ts := setupBackendWithHandler(t, handler, false)
-	defer ts.Close()
-
-	list, err := b.List(context.Background(), bapi.ClusterInfo{Cluster: "c1"}, &v1.PolicyActivityParams{})
-
-	// The code logs the error and continues, effectively returning empty list.
-	require.NoError(t, err) // It doesn't return error, it just skips the item.
-	assert.Equal(t, 0, len(list.Items))
 }

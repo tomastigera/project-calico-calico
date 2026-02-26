@@ -9,7 +9,6 @@ import (
 )
 
 type PolicyActivityInterface interface {
-	List(context.Context, v1.Params) (*v1.List[v1.PolicyActivity], error)
 	Create(context.Context, []v1.PolicyActivity) (*v1.BulkResponse, error)
 	GetPolicyActivity(context.Context, *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error)
 }
@@ -24,22 +23,6 @@ func newPolicyActivityLogs(c Client, cluster string) PolicyActivityInterface {
 		restClient: c.RESTClient(),
 		clusterID:  cluster,
 	}
-}
-
-func (p *PolicyActivityLogs) List(ctx context.Context, params v1.Params) (*v1.List[v1.PolicyActivity], error) {
-	l := v1.List[v1.PolicyActivity]{}
-
-	err := p.restClient.Post().
-		Path("/policy_activity/logs").
-		Params(params).
-		Cluster(p.clusterID).
-		Do(ctx).
-		Into(&l)
-	if err != nil {
-		return &l, err
-	}
-
-	return &l, nil
 }
 
 func (p *PolicyActivityLogs) Create(ctx context.Context, logs []v1.PolicyActivity) (*v1.BulkResponse, error) {
