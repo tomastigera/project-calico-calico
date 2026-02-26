@@ -15,6 +15,6 @@ func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../report/nonclusterhost_suite.xml"
+	reporterConfig.JUnitReport = "../report/nonclusterhost_suite.xml"
 	ginkgo.RunSpecs(t, "NonClusterHost Test Suite", suiteConfig, reporterConfig)
 }

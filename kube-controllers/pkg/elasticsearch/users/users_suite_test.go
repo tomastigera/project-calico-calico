@@ -12,6 +12,6 @@ import (
 func TestConfig(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "./report/elasticsearch_users_suite.xml"
+	reporterConfig.JUnitReport = "../../../report/elasticsearch_users_suite.xml"
 	ginkgo.RunSpecs(t, "Elasticsearch Users Suite", suiteConfig, reporterConfig)
 }

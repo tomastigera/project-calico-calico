@@ -35,7 +35,7 @@ func init() {
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
 	suiteConfig, reporterConfig := GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../../report/autodetection_ipv4_suite.xml"
+	reporterConfig.JUnitReport = "../../../../../report/autodetection_ipv4_suite.xml"
 	RunSpecs(t, "IPv4 pool selector Suite", suiteConfig, reporterConfig)
 }
 

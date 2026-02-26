@@ -30,6 +30,6 @@ func init() {
 func TestHashutils(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../report/felix/hashutils_suite.xml"
+	reporterConfig.JUnitReport = "../report/felix_hashutils_suite.xml"
 	ginkgo.RunSpecs(t, "UT: felix/hashutils", suiteConfig, reporterConfig)
 }

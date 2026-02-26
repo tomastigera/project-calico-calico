@@ -24,6 +24,6 @@ import (
 func TestCommands(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../report/migrate_suite.xml"
+	reporterConfig.JUnitReport = "../../../../report/migrate_suite.xml"
 	ginkgo.RunSpecs(t, "Migrate Suite", suiteConfig, reporterConfig)
 }
