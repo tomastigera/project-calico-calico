@@ -271,7 +271,7 @@ MAINLOOP:
 		// Write the status back to the API datastore, so that end users can inspect the current
 		// running config.
 		snapshot.Status = status
-		snapshot, err = client.Update(ctx, snapshot, options.SetOptions{})
+		snapshot, err = client.UpdateStatus(ctx, snapshot, options.SetOptions{})
 		if err != nil {
 			log.WithError(err).Warn(fmt.Sprintf("unable to perform status update on KubeControllersConfiguration(%s)", cfg.KubeControllersConfigName))
 			snapshot = nil
@@ -335,7 +335,7 @@ MAINLOOP:
 				// our update will trigger a watch update in an infinite loop
 				if !reflect.DeepEqual(snapshot.Status, status) {
 					snapshot.Status = status
-					snapshot, err = client.Update(ctx, snapshot, options.SetOptions{})
+					snapshot, err = client.UpdateStatus(ctx, snapshot, options.SetOptions{})
 					if err != nil {
 						// this probably means someone else is trying to write to the resource,
 						// so best to just take a breath and start over

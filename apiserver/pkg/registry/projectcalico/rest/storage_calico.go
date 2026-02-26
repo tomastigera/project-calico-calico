@@ -724,6 +724,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"kcconfig"},
 	)
 
+	kubeControllersConfigsStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("kubecontrollersconfigurations/status"), nil)
+	if err != nil {
+		return nil, err
+	}
+	kubeControllersConfigsStatusOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   kubeControllersConfigsStatusRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicokubecontrollersconfig.EmptyObject(),
+			ScopeStrategy: calicokubecontrollersconfig.NewStrategy(scheme),
+			NewListFunc:   calicokubecontrollersconfig.NewList,
+			GetAttrsFunc:  calicokubecontrollersconfig.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: kubeControllersConfigsStatusRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"kcconfig"},
+	)
+
 	managedClusterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("managedclusters"), nil)
 	if err != nil {
 		return nil, err
@@ -1130,7 +1152,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["securityeventwebhooks"] = rESTInPeace(securityeventwebhook.NewREST(scheme, *securityeventwebhookOpts))
 	storage["bfdconfigurations"] = rESTInPeace(calicobfdconfiguration.NewREST(scheme, *bfdConfigurationOpts))
 
-	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
+	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts, *kubeControllersConfigsStatusOpts)
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)

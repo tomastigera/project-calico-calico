@@ -270,7 +270,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 
 				By("Setting status1 on resource")
 				res.Status = status1
-				res, outError = c.KubeControllersConfiguration().Update(ctx, res, options.SetOptions{})
+				res, outError = c.KubeControllersConfiguration().UpdateStatus(ctx, res, options.SetOptions{})
 				Expect(outError).ToNot(HaveOccurred())
 				Expect(res).To(MatchResourceWithStatus(apiv3.KindKubeControllersConfiguration, testutils.ExpectNoNamespace, configName, spec2, status1))
 
@@ -281,7 +281,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 
 				By("Setting status2 on resource")
 				res.Status = status2
-				res, outError = c.KubeControllersConfiguration().Update(ctx, res, options.SetOptions{})
+				res, outError = c.KubeControllersConfiguration().UpdateStatus(ctx, res, options.SetOptions{})
 				Expect(outError).ToNot(HaveOccurred())
 				Expect(res).To(MatchResourceWithStatus(apiv3.KindKubeControllersConfiguration, testutils.ExpectNoNamespace, configName, spec2, status2))
 				rv1_3 := res.ResourceVersion

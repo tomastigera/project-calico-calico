@@ -194,13 +194,12 @@ func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind st
 }
 
 // UpdateStatus updates status section of a resource in the backend datastore using the UpdateStatus function defined in the backend client.
+// If the backend does not support status subresources (e.g. etcd), it falls back to a regular Update.
 func (c *resources) UpdateStatus(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
 	statusClient, ok := c.backend.(bapi.StatusClient)
 	if !ok {
-		return nil, cerrors.ErrorOperationNotSupported{
-			Operation:  "UpdateStatus",
-			Identifier: kind,
-		}
+		// Backend doesn't support status subresources (e.g. etcdv3), fall back to regular Update.
+		return updateResource(ctx, opts, kind, in, c.backend.Update)
 	}
 	return updateResource(ctx, opts, kind, in, statusClient.UpdateStatus)
 }
