@@ -3559,6 +3559,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.PolicyActivityRefreshInterval != nil {
+		in, out := &in.PolicyActivityRefreshInterval, &out.PolicyActivityRefreshInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)

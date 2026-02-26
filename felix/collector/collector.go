@@ -143,6 +143,8 @@ type Config struct {
 	FelixHostName        string
 
 	PolicyStoreManager policystore.PolicyStoreManager
+
+	PolicyActivityRefreshInterval time.Duration
 }
 
 // namespacedEpKey is an interface for keys that have namespace information.
@@ -157,30 +159,31 @@ type namespacedEpKey interface {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	dataplaneInfoReader    types.DataplaneInfoReader
-	packetInfoReader       types.PacketInfoReader
-	conntrackInfoReader    types.ConntrackInfoReader
-	processInfoCache       types.ProcessInfoCache
-	domainLookup           types.EgressDomainCache
-	luc                    *calc.LookupsCache
-	epStats                map[tuple.Tuple]*Data
-	ticker                 jitter.TickerInterface
-	tickerPolicyEval       jitter.TickerInterface
-	sigChan                chan os.Signal
-	config                 *Config
-	dumpLog                *log.Logger
-	ds                     chan *proto.DataplaneStats
-	wafEventsBatchC        chan []*proto.WAFEvent
-	wafEvents              []*proto.WAFEvent
-	metricReporters        []types.Reporter
-	dnsLogReporter         types.Reporter
-	l7LogReporter          types.Reporter
-	wafEventsReporter      types.Reporter
-	policyActivityReporter types.Reporter
-	policyStoreManager     policystore.PolicyStoreManager
-	displayDebugTraceLogs  bool
-	felixHostName          string
-	netlinkList            netlinkshim.Interface
+	dataplaneInfoReader         types.DataplaneInfoReader
+	packetInfoReader            types.PacketInfoReader
+	conntrackInfoReader         types.ConntrackInfoReader
+	processInfoCache            types.ProcessInfoCache
+	domainLookup                types.EgressDomainCache
+	luc                         *calc.LookupsCache
+	epStats                     map[tuple.Tuple]*Data
+	ticker                      jitter.TickerInterface
+	tickerPolicyEval            jitter.TickerInterface
+	tickerPolicyActivityRefresh jitter.TickerInterface
+	sigChan                     chan os.Signal
+	config                      *Config
+	dumpLog                     *log.Logger
+	ds                          chan *proto.DataplaneStats
+	wafEventsBatchC             chan []*proto.WAFEvent
+	wafEvents                   []*proto.WAFEvent
+	metricReporters             []types.Reporter
+	dnsLogReporter              types.Reporter
+	l7LogReporter               types.Reporter
+	wafEventsReporter           types.Reporter
+	policyActivityReporter      types.Reporter
+	policyStoreManager          policystore.PolicyStoreManager
+	displayDebugTraceLogs       bool
+	felixHostName               string
+	netlinkList                 netlinkshim.Interface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -211,6 +214,11 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		c.tickerPolicyEval = jitter.NewTicker(cfg.FlowLogsFlushInterval*8/10, cfg.FlowLogsFlushInterval*1/10)
 	} else {
 		log.Infof("Pending policies disabled")
+	}
+
+	if cfg.PolicyActivityRefreshInterval > 0 {
+		log.Infof("Policy activity refresh enabled with interval %v", cfg.PolicyActivityRefreshInterval)
+		c.tickerPolicyActivityRefresh = jitter.NewTicker(cfg.PolicyActivityRefreshInterval*9/10, cfg.PolicyActivityRefreshInterval*1/10)
 	}
 
 	return c
@@ -357,9 +365,10 @@ func (c *collector) SetNetlinkHandle(nl netlinkshim.Interface) {
 
 func (c *collector) startStatsCollectionAndReporting() {
 	var (
-		pktInfoC        <-chan types.PacketInfo
-		ctInfoC         <-chan []types.ConntrackInfo
-		wafEventsBatchC chan []*proto.WAFEvent
+		pktInfoC                   <-chan types.PacketInfo
+		ctInfoC                    <-chan []types.ConntrackInfo
+		wafEventsBatchC            chan []*proto.WAFEvent
+		policyActivityRefreshTickC <-chan time.Time
 	)
 
 	if c.packetInfoReader != nil {
@@ -367,6 +376,9 @@ func (c *collector) startStatsCollectionAndReporting() {
 	}
 	if c.conntrackInfoReader != nil {
 		ctInfoC = c.conntrackInfoReader.ConntrackInfoChan()
+	}
+	if c.tickerPolicyActivityRefresh != nil {
+		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
 	}
 
 	// When a collector is started, we respond to the following events:
@@ -406,6 +418,8 @@ func (c *collector) startStatsCollectionAndReporting() {
 			wafEventsBatchC = nil
 		case <-c.tickerPolicyEval.Channel():
 			c.updatePendingRuleTraces()
+		case <-policyActivityRefreshTickC:
+			c.refreshPolicyActivityForActiveConnections()
 		}
 	}
 }
@@ -1326,6 +1340,69 @@ func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *pol
 		}
 	} else {
 		log.WithField("endpoint", ep.Key()).Trace("The endpoint is not yet tracked by the PolicyStore")
+	}
+}
+
+// refreshPolicyActivityForActiveConnections iterates active connections in epStats, re-evaluates
+// current policies against each flow using checker.Evaluate(), and reports the results directly to
+// the PolicyActivityReporter. This keeps lastEvaluated timestamps fresh for policies matching
+// long-lived BPF connections (which bypass policy evaluation after the initial packet) and ensures
+// newly added policies that match existing connections get activity entries.
+func (c *collector) refreshPolicyActivityForActiveConnections() {
+	for _, data := range c.epStats {
+		if data == nil || !data.IsConnection {
+			continue
+		}
+		c.refreshPolicyActivityForEntry(data)
+	}
+}
+
+func (c *collector) refreshPolicyActivityForEntry(data *Data) {
+	flow := TupleAsFlow(data.Tuple)
+	srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
+
+	if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
+		return
+	}
+
+	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+		// Evaluate ingress if destination is a local workload endpoint.
+		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
+			if protoEp := c.lookupProtoWorkloadEndpoint(ps, data.DstEp.Key()); protoEp != nil {
+				trace := checker.Evaluate(rules.RuleDirIngress, ps, protoEp, &flow)
+				if len(trace) > 0 {
+					c.reportPolicyActivity(data, trace)
+				}
+			}
+		}
+
+		// Evaluate egress if source is a local workload endpoint.
+		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
+			if protoEp := c.lookupProtoWorkloadEndpoint(ps, data.SrcEp.Key()); protoEp != nil {
+				trace := checker.Evaluate(rules.RuleDirEgress, ps, protoEp, &flow)
+				if len(trace) > 0 {
+					c.reportPolicyActivity(data, trace)
+				}
+			}
+		}
+	})
+}
+
+// reportPolicyActivity sends a metric.Update directly to the PolicyActivityReporter with the given
+// rule IDs. This bypasses LogMetrics to avoid side effects in flow log and prometheus reporters.
+func (c *collector) reportPolicyActivity(data *Data, ruleIDs []*calc.RuleID) {
+	if c.policyActivityReporter == nil {
+		return
+	}
+	mu := metric.Update{
+		UpdateType: metric.UpdateTypeReport,
+		Tuple:      data.Tuple,
+		SrcEp:      data.SrcEp,
+		DstEp:      data.DstEp,
+		RuleIDs:    ruleIDs,
+	}
+	if err := c.policyActivityReporter.Report(mu); err != nil {
+		log.WithError(err).Debug("Failed to report policy activity refresh")
 	}
 }
 

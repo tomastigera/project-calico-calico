@@ -541,6 +541,13 @@ type Config struct {
 	PolicyActivityLogsFileDirectory     string        `config:"string;/var/log/calico/policy"`
 	PolicyActivityLogsFileMaxFiles      int           `config:"int;5"`
 	PolicyActivityLogsFileMaxFileSizeMB int           `config:"int;100"`
+	// PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against
+	// active long-lived connections and reports the results to the policy activity log. This ensures
+	// that lastEvaluated timestamps remain fresh for policies matching established connections
+	// (which bypass BPF policy evaluation after the initial packet) and that newly added policies
+	// that match existing connections get activity entries even though BPF never evaluated them.
+	// Set to 0 to disable. [Default: 300s]
+	PolicyActivityRefreshInterval time.Duration `config:"seconds;300"`
 
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
