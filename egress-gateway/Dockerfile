@@ -65,7 +65,10 @@ RUN microdnf --enablerepo=appstream --enablerepo=baseos install -y \
 
 RUN microdnf clean all
 
+# Copy in xtables-legacy binary and libs
 COPY --from=almalinux /usr/sbin/xtables-legacy-multi /usr/sbin/xtables-legacy-multi
+COPY --from=almalinux /lib64/libip4tc.so.2 /lib64/libip4tc.so.2
+COPY --from=almalinux /lib64/libip6tc.so.2 /lib64/libip6tc.so.2
 
 # Set symbolic links for iptables-legacy binaries
 RUN set -eux; \
