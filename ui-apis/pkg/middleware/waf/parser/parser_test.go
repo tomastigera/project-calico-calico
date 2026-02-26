@@ -44,34 +44,35 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
 		Expect(rules).To(Not(BeNil()))
 
 		It("the file is not empty", func() {
-			// The file contains 25 SecRule and a SecMarker
-			Expect(rules).To(HaveLen(26))
+			// The file contains 26 SecRule and a SecMarker
+			Expect(rules).To(HaveLen(27))
 		})
 
 		It("non-SecRule reults", func() {
-			Expect(rules[25].SecRule).To(Equal("SecMarker"))
-			Expect(rules[25].Id).To(Equal(""))
-			Expect(rules[25].Variables).To(Equal(`"END-REQUEST-921-PROTOCOL-ATTACK"`))
+			Expect(rules[26].SecRule).To(Equal("SecMarker"))
+			Expect(rules[26].Id).To(Equal(""))
+			Expect(rules[26].Variables).To(Equal(`"END-REQUEST-921-PROTOCOL-ATTACK"`))
 		})
 
 		It("single line SecRule", func() {
-			rule := rules[23]
+			rule := rules[24]
 			Expect(rule.SecRule).To(Equal("SecRule"))
 			Expect(rule.Id).To(Equal("921018"))
 			Expect(rule.Variables).To(Equal("TX:DETECTION_PARANOIA_LEVEL"))
 			Expect(rule.Message).To(Equal(""))
-			Expect(rule.Raw).To(Equal(`SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 4" "id:921018,phase:2,pass,nolog,tag:'OWASP_CRS',ver:'OWASP_CRS/4.11.0',skipAfter:END-REQUEST-921-PROTOCOL-ATTACK"`))
+			Expect(rule.Raw).To(Equal(`SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 4" "id:921018,phase:2,pass,nolog,tag:'OWASP_CRS',ver:'OWASP_CRS/4.23.0',skipAfter:END-REQUEST-921-PROTOCOL-ATTACK"`))
 		})
 
 		It("last SecRule in the file", func() {
-			rule := rules[24]
+			rule := rules[25]
 			Expect(rule.Id).To(Equal("921220"))
 			Expect(rule.SecRule).To(Equal("SecRule"))
 			Expect(rule.Message).To(Equal("HTTP Parameter Pollution possible via array notation"))
 			Expect(rule.Raw).To(Equal(`SecRule ARGS_NAMES "@rx \[" \
     "id:921220,\
     phase:2,\
-    pass,\
+    block,\
+    capture,\
     log,\
     msg:'HTTP Parameter Pollution possible via array notation',\
     logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
@@ -81,8 +82,9 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
     tag:'attack-protocol',\
     tag:'paranoia-level/4',\
     tag:'OWASP_CRS',\
+    tag:'OWASP_CRS/PROTOCOL-ATTACK',\
     tag:'capec/1000/152/137/15/460',\
-    ver:'OWASP_CRS/4.11.0',\
+    ver:'OWASP_CRS/4.23.0',\
     severity:'CRITICAL',\
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
     setvar:'tx.inbound_anomaly_score_pl4=+%{tx.critical_anomaly_score}'"`))
