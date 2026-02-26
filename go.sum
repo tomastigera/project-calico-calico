@@ -251,10 +251,10 @@ github.com/containernetworking/plugins v1.9.0 h1:Mg3SXBdRGkdXyFC4lcwr6u2ZB2SDeL6
 github.com/containernetworking/plugins v1.9.0/go.mod h1:JG3BxoJifxxHBhG3hFyxyhid7JgRVBu/wtooGEvWf1c=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc h1:OlJhrgI3I+FLUCTI3JJW8MoqyM78WbqJjecqMnqG+wc=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
-github.com/corazawaf/coraza-coreruleset/v4 v4.11.0 h1:847e2uM27rzOBGTTmbh/il0r4fNQ1yvVqSpoq7e9kS8=
-github.com/corazawaf/coraza-coreruleset/v4 v4.11.0/go.mod h1:yeZPZUM23HVL0jMAzLfKF3M7XjCQBXDrvcQT/gkjwhg=
-github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc h1:wiViAS9jwUNIjGhRQu1Oq1aWwC8GugfHgUIFHpCoVlI=
-github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc/go.mod h1:ErcMsoNoR4zhfNAkYY16J5fcEeyYByN6H8hG5AjKXMY=
+github.com/corazawaf/coraza-coreruleset/v4 v4.23.0 h1:e7f2tRhOBFN8YtL72wqy2cMPS6o64XyMgS81dRbw2/c=
+github.com/corazawaf/coraza-coreruleset/v4 v4.23.0/go.mod h1:tRjsdtj39+at47dLCpE8ChoDa2FK2IAwTWIpDT8Z62g=
+github.com/corazawaf/coraza-geoip v0.0.0-20260216110413-189c4045eb6c h1:AS7VFzyIz4jYn2HuVTD3hviv4IcHDsTJ/5lMxcN/Grc=
+github.com/corazawaf/coraza-geoip v0.0.0-20260216110413-189c4045eb6c/go.mod h1:ErcMsoNoR4zhfNAkYY16J5fcEeyYByN6H8hG5AjKXMY=
 github.com/corazawaf/coraza/v3 v3.3.3 h1:kqjStHAgWqwP5dh7n0vhTOF0a3t+VikNS/EaMiG0Fhk=
 github.com/corazawaf/coraza/v3 v3.3.3/go.mod h1:xSaXWOhFMSbrV8qOOfBKAyw3aOqfwaSaOy5BgSF8XlA=
 github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQGR4qjTCs1g=

@@ -35,8 +35,8 @@ require (
 	github.com/containernetworking/cni v1.3.0
 	github.com/containernetworking/plugins v1.9.0
 	// Many WAF test failures due to hard-coded rule metadata after upgrading to v4.12.0+.
-	github.com/corazawaf/coraza-coreruleset/v4 v4.11.0
-	github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc
+	github.com/corazawaf/coraza-coreruleset/v4 v4.23.0
+	github.com/corazawaf/coraza-geoip v0.0.0-20260216110413-189c4045eb6c
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc v2.4.0+incompatible

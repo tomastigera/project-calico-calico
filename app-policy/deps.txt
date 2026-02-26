@@ -28,8 +28,8 @@ github.com/cespare/xxhash/v2 v2.3.0
 github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443
 github.com/containernetworking/cni v1.3.0
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
-github.com/corazawaf/coraza-coreruleset/v4 v4.11.0
-github.com/corazawaf/coraza-geoip v0.0.0-20231109100542-e25adf8b7fdc
+github.com/corazawaf/coraza-coreruleset/v4 v4.23.0
+github.com/corazawaf/coraza-geoip v0.0.0-20260216110413-189c4045eb6c
 github.com/corazawaf/coraza/v3 v3.3.3
 github.com/corazawaf/libinjection-go v0.2.2
 github.com/coreos/go-iptables v0.8.0
