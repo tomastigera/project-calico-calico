@@ -3756,6 +3756,12 @@ func startBPFDataplaneComponents(
 			logrus.WithError(err).Panic("Failed to start kube-proxy.")
 		}
 
+		// Register KP itself as a manager, in order to collect host metadata.
+		// Kube-proxy already interfaces with the dataplane via manager callbacks to receive information
+		// that is already at-hand in those managers. But, when it comes to batching raw host information,
+		// we might-as-well just funnel it directly from the calc-graph.
+		dp.RegisterManager(kp)
+
 		bpfRTMgr.setHostIPUpdatesCallBack(kp.OnHostIPsUpdate)
 		bpfRTMgr.setRoutesCallBacks(kp.OnRouteUpdate, kp.OnRouteDelete)
 		conntrackScanner.AddUnlocked(bpfconntrack.NewStaleNATScanner(kp))
