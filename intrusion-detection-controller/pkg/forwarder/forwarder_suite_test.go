@@ -14,5 +14,7 @@ import (
 func TestEventForwarder(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Event Forwarder")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/forwarder_suite.xml"
+	ginkgo.RunSpecs(t, "Event Forwarder", suiteConfig, reporterConfig)
 }

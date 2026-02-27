@@ -109,7 +109,8 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/* internal/*'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r --keep-going pkg/* internal/*'
 
 #############################################
 # Run package level functional level tests

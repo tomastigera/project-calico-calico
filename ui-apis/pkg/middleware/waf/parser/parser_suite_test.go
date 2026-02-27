@@ -10,5 +10,7 @@ import (
 
 func TestWAFMiddleware(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "WAF Middleware test suite.")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/waf_parser_suite.xml"
+	ginkgo.RunSpecs(t, "WAF Middleware test suite.", suiteConfig, reporterConfig)
 }

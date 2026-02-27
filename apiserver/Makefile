@@ -138,6 +138,7 @@ lint-cache-dir:
 
 .PHONY: ut
 ut: lint-cache-dir run-etcd
+	mkdir -p report
 	$(DOCKER_RUN) \
 		-v $(SECRETS_PATH):/home/user/secrets \
 		-e CALICO_API_GROUP=$(CALICO_API_GROUP) \

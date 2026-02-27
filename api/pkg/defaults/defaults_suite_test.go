@@ -22,5 +22,7 @@ import (
 
 func TestDefaults(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Defaults Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/defaults_suite.xml"
+	ginkgo.RunSpecs(t, "Defaults Suite", suiteConfig, reporterConfig)
 }

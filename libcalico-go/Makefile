@@ -150,6 +150,7 @@ GINKGO_SKIP?=
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut:
+	mkdir -p report
 	$(DOCKER_RUN) --privileged $(CALICO_BUILD) \
 		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skip "\[Datastore\]" --focus="$(GINKGO_FOCUS)" $(WHAT)'
 

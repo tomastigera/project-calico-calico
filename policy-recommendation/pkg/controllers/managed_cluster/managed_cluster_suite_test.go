@@ -13,5 +13,7 @@ import (
 func TestManagedClusterController(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "ManagedCluster Controller Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/managed_cluster_suite.xml"
+	ginkgo.RunSpecs(t, "ManagedCluster Controller Suite", suiteConfig, reporterConfig)
 }

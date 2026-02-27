@@ -13,5 +13,7 @@ import (
 func TestFortimanager(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	testutils.HookLogrusForGinkgo()
-	ginkgo.RunSpecs(t, "Fortinet Controller Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/fortimanager_controller_suite.xml"
+	ginkgo.RunSpecs(t, "Fortinet Controller Test Suite", suiteConfig, reporterConfig)
 }

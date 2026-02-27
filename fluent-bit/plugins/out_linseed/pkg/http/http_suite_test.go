@@ -11,5 +11,7 @@ import (
 
 func TestLinseedOutPluginHTTP(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Linseed output plugin http test suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/http_suite.xml"
+	ginkgo.RunSpecs(t, "Linseed output plugin http test suite", suiteConfig, reporterConfig)
 }

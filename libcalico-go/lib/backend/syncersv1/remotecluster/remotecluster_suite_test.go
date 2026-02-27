@@ -27,6 +27,6 @@ func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../../report/felix_syncer_suite.xml"
+	reporterConfig.JUnitReport = "../../../../report/remotecluster_suite.xml"
 	ginkgo.RunSpecs(t, "Remote Cluster test Suite", suiteConfig, reporterConfig)
 }

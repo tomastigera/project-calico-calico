@@ -10,5 +10,7 @@ import (
 
 func TestGateway(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Gateway Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/gateway_suite.xml"
+	ginkgo.RunSpecs(t, "Gateway Suite", suiteConfig, reporterConfig)
 }

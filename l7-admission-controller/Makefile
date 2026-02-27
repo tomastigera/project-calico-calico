@@ -70,7 +70,8 @@ $(L7_ADMISSION_CONTROLLER_IMAGE_CREATED): Dockerfile bin/l7-admission-controller
 ###############################################################################
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c 'go test -v ./... -cover -count 1'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c 'gotestsum --junitfile report/tests.xml -- -v ./... -cover -count 1'
 
 ###############################################################################
 # CI

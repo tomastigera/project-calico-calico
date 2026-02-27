@@ -10,5 +10,7 @@ import (
 
 func TestFlow(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Flow Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/flow_suite.xml"
+	ginkgo.RunSpecs(t, "Flow Suite", suiteConfig, reporterConfig)
 }

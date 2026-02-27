@@ -75,6 +75,7 @@ clean:
 ###############################################################################
 .PHONY: ut
 ut: run-etcd
+	mkdir -p report
 	$(DOCKER_RUN) $(CALICO_BUILD) ./run-uts
 
 .PHONY: fv

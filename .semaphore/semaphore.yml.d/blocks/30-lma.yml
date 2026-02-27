@@ -11,3 +11,7 @@
       - name: "lma: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+    epilogue:
+      always:
+        commands:
+          - 'test-results publish ./report/*.xml --name "LMA: UT" || true'

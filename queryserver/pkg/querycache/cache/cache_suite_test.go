@@ -10,5 +10,7 @@ import (
 
 func TestCommands(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Querycache Cache Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/cache_suite.xml"
+	ginkgo.RunSpecs(t, "Querycache Cache Suite", suiteConfig, reporterConfig)
 }

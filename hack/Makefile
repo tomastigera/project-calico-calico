@@ -32,8 +32,9 @@ GINKGO_FOCUS?=.*
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut:
+	mkdir -p report
 	$(DOCKER_RUN) --privileged $(CALICO_BUILD) \
-		sh -c 'cd /go/src/$(PACKAGE_NAME) && go test ./...'
+		sh -c 'cd /go/src/$(PACKAGE_NAME) && gotestsum --junitfile report/tests.xml -- ./...'
 
 fv:
 	$(DOCKER_RUN) $(CALICO_BUILD) \

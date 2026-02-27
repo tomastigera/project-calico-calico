@@ -12,5 +12,7 @@ import (
 func TestGlobalAlert(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "maputil")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/maputil_suite.xml"
+	ginkgo.RunSpecs(t, "maputil", suiteConfig, reporterConfig)
 }

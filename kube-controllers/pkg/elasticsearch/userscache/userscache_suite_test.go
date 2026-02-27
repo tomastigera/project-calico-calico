@@ -12,6 +12,6 @@ import (
 func TestConfig(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "./report/userscache.xml"
+	reporterConfig.JUnitReport = "report/userscache.xml"
 	ginkgo.RunSpecs(t, "OIDCUserCache Suite", suiteConfig, reporterConfig)
 }

@@ -30,6 +30,6 @@ func init() {
 func TestAuthorizationReview(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../report/authorizationreview.xml"
+	reporterConfig.JUnitReport = "../../../../report/authorizationreview.xml"
 	ginkgo.RunSpecs(t, "AuthorizationReview Suite", suiteConfig, reporterConfig)
 }

@@ -76,7 +76,7 @@ $(CONTAINER_CREATED): Dockerfile $(BINARY)
 ## Run the tests in a container. Useful for CI, Mac dev
 ut:
 	mkdir -p report
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GOTEST_ARGS) ./..."
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) gotestsum --junitfile report/tests.xml -- -v $(GOTEST_ARGS) ./..."
 
 fv:
 	echo "Currently has no FV tests."

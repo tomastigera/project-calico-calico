@@ -13,5 +13,7 @@ import (
 func TestXrefCache(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Controller Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/controller_suite.xml"
+	ginkgo.RunSpecs(t, "Controller Suite", suiteConfig, reporterConfig)
 }

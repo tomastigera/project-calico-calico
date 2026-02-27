@@ -14,5 +14,7 @@ import (
 func TestConverter(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "License Controller Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "report/license_suite.xml"
+	ginkgo.RunSpecs(t, "License Controller Suite", suiteConfig, reporterConfig)
 }

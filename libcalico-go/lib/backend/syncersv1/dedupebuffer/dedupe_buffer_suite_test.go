@@ -27,6 +27,6 @@ func TestBackend(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../report/dedupe_buffer_suite.xml"
+	reporterConfig.JUnitReport = "../../../../report/dedupe_buffer_suite.xml"
 	ginkgo.RunSpecs(t, "Dedupe buffer suite", suiteConfig, reporterConfig)
 }

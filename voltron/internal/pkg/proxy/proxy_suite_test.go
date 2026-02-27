@@ -11,5 +11,7 @@ import (
 
 func TestProxy(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Proxy Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/proxy_suite.xml"
+	ginkgo.RunSpecs(t, "Proxy Suite", suiteConfig, reporterConfig)
 }

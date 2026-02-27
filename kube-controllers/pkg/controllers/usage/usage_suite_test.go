@@ -29,5 +29,7 @@ func TestUsage(t *testing.T) {
 	log.SetLogger(zap.New(zap.WriteTo(GinkgoWriter)))
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Usage Controller Suite")
+	suiteConfig, reporterConfig := GinkgoConfiguration()
+	reporterConfig.JUnitReport = "report/usage_suite.xml"
+	RunSpecs(t, "Usage Controller Suite", suiteConfig, reporterConfig)
 }

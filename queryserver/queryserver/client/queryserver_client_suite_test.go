@@ -10,5 +10,7 @@ import (
 
 func TestAuth(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "QueryServerClient Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/queryserver_client_suite.xml"
+	ginkgo.RunSpecs(t, "QueryServer Client Test Suite", suiteConfig, reporterConfig)
 }

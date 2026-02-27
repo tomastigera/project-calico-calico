@@ -10,5 +10,7 @@ import (
 
 func TestDispatcher(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Dispatcher Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/dispatcher_suite.xml"
+	ginkgo.RunSpecs(t, "Dispatcher Suite", suiteConfig, reporterConfig)
 }

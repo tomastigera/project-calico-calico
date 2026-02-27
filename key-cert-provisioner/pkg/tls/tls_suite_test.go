@@ -22,5 +22,7 @@ import (
 
 func TestTLS(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "TLS Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/tls_suite.xml"
+	ginkgo.RunSpecs(t, "TLS Suite", suiteConfig, reporterConfig)
 }

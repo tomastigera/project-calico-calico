@@ -9,5 +9,7 @@ import (
 
 func TestCommands(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Commands Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/commands_suite.xml"
+	ginkgo.RunSpecs(t, "Commands Suite", suiteConfig, reporterConfig)
 }

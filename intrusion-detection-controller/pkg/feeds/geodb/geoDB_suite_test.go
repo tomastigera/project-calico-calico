@@ -9,5 +9,7 @@ import (
 
 func TestGeoDB(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "GeoDB Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../report/geodb_suite.xml"
+	ginkgo.RunSpecs(t, "GeoDB Suite", suiteConfig, reporterConfig)
 }

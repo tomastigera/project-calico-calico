@@ -97,6 +97,7 @@ $(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile $(BINDIR)/in
 ut: run-elastic run-ut stop-elastic
 
 run-ut: mmdb-download
+	mkdir -p report
 	$(DOCKER_RUN) \
 		-v $(CURDIR)/bin/database/GeoLite2-ASN.mmdb:/etc/maxmind/GeoLite2-ASN.mmdb \
 		-v $(CURDIR)/bin/database/GeoLite2-City.mmdb:/etc/maxmind/GeoLite2-City.mmdb \

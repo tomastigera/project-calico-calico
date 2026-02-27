@@ -20,6 +20,6 @@ func init() {
 func TestConfig(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "./report/elasticsearchconfiguration_suite.xml"
+	reporterConfig.JUnitReport = "report/elasticsearchconfiguration_suite.xml"
 	ginkgo.RunSpecs(t, "Elasticsearch configuration controller Suite", suiteConfig, reporterConfig)
 }

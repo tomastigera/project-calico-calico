@@ -340,6 +340,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "Deep packet inspection: UT" || true'
   - name: Publish tigera/elasticsearch images
     run:
       when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -488,6 +492,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish ./report/*.xml --name "fluentd: UT" || true'
   - name: Publish tigera/fluentd-base Windows images
     run:
       when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"

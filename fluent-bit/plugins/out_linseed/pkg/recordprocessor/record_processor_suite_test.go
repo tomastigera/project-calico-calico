@@ -10,5 +10,7 @@ import (
 
 func TestRecordProcessor(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Linseed output plugin record processor test suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../../../report/record_processor_suite.xml"
+	ginkgo.RunSpecs(t, "Linseed output plugin record processor test suite", suiteConfig, reporterConfig)
 }

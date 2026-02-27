@@ -9,5 +9,7 @@ import (
 
 func TestIDCHealthSuite(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "IDC Health Suite Tests")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/health_suite.xml"
+	ginkgo.RunSpecs(t, "IDC Health Suite Tests", suiteConfig, reporterConfig)
 }

@@ -10,5 +10,7 @@ import (
 
 func TestLabelSelector(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "IPs Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/ips_suite.xml"
+	ginkgo.RunSpecs(t, "IPs Suite", suiteConfig, reporterConfig)
 }

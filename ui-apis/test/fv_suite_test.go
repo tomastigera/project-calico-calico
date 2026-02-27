@@ -12,5 +12,7 @@ import (
 func TestUIAPIFVs(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "ui-apis FV Test Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../report/fv_suite.xml"
+	ginkgo.RunSpecs(t, "ui-apis FV Test Suite", suiteConfig, reporterConfig)
 }

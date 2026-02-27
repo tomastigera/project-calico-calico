@@ -10,5 +10,7 @@ import (
 
 func TestResourceListing(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "List Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/list_suite.xml"
+	ginkgo.RunSpecs(t, "List Suite", suiteConfig, reporterConfig)
 }

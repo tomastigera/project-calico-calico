@@ -10,5 +10,7 @@ import (
 
 func TestLabelSelector(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Document index Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/docindex_suite.xml"
+	ginkgo.RunSpecs(t, "Document index Suite", suiteConfig, reporterConfig)
 }

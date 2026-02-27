@@ -13,5 +13,7 @@ import (
 func TestElastic(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Timestamped List Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/list_suite.xml"
+	ginkgo.RunSpecs(t, "Timestamped List Suite", suiteConfig, reporterConfig)
 }

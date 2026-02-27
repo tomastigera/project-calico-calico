@@ -29,5 +29,7 @@ func init() {
 
 func TestRules(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "RBAC Suite")
+	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
+	reporterConfig.JUnitReport = "../../report/rbac_suite.xml"
+	ginkgo.RunSpecs(t, "RBAC Suite", suiteConfig, reporterConfig)
 }
