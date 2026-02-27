@@ -71,6 +71,15 @@ func (h policy) GetPolicyActivity() http.HandlerFunc {
 			return
 		}
 
+		if err := reqParams.Valid(); err != nil {
+			logCtx.WithError(err).Error("Invalid request parameters")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusBadRequest,
+				Msg:    err.Error(),
+			}, http.StatusBadRequest)
+			return
+		}
+
 		clusterInfo := bapi.ClusterInfo{
 			Cluster: middleware.ClusterIDFromContext(req.Context()),
 			Tenant:  middleware.TenantIDFromContext(req.Context()),

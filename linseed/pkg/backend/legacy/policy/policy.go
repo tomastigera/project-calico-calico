@@ -280,9 +280,6 @@ func (b *policyBackend) GetPolicyActivity(ctx context.Context, i bapi.ClusterInf
 	if err := i.Valid(); err != nil {
 		return nil, err
 	}
-	if err := req.Valid(); err != nil {
-		return nil, err
-	}
 
 	if len(req.Policies) == 0 {
 		return &v1.PolicyActivityResponse{Items: []v1.PolicyActivityResult{}}, nil
@@ -295,7 +292,7 @@ func (b *policyBackend) GetPolicyActivity(ctx context.Context, i bapi.ClusterInf
 
 	query := b.buildPolicyActivityQuery(i, req)
 
-	results, err := b.esClient.Search(b.index.Index(i)).
+	results, err := b.esClient.Search(b.index.Alias(i)).
 		Size(10000).
 		Query(query).
 		Do(ctx)
