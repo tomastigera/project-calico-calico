@@ -273,8 +273,8 @@ func (b *policyBackend) Close() {
 	}
 }
 
-// GetPolicyActivity returns aggregated policy activity data for the given policies.
-func (b *policyBackend) GetPolicyActivity(ctx context.Context, i bapi.ClusterInfo, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
+// GetPolicyActivities returns aggregated policy activity data for the given policies.
+func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterInfo, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	if err := i.Valid(); err != nil {
@@ -297,7 +297,7 @@ func (b *policyBackend) GetPolicyActivity(ctx context.Context, i bapi.ClusterInf
 		Query(query).
 		Do(ctx)
 	if err != nil {
-		log.WithError(err).Error("Elasticsearch search failed for GetPolicyActivity")
+		log.WithError(err).Error("Elasticsearch search failed for GetPolicyActivities")
 		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
 	}
 

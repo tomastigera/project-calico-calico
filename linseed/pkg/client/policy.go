@@ -10,7 +10,7 @@ import (
 
 type PolicyActivityInterface interface {
 	Create(context.Context, []v1.PolicyActivity) (*v1.BulkResponse, error)
-	GetPolicyActivity(context.Context, *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error)
+	GetPolicyActivities(context.Context, *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error)
 }
 
 type PolicyActivityLogs struct {
@@ -54,7 +54,7 @@ func (p *PolicyActivityLogs) Create(ctx context.Context, logs []v1.PolicyActivit
 	return &resp, err
 }
 
-func (p *PolicyActivityLogs) GetPolicyActivity(ctx context.Context, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
+func (p *PolicyActivityLogs) GetPolicyActivities(ctx context.Context, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
 	resp := v1.PolicyActivityResponse{}
 	err := p.restClient.Post().
 		Path("/policyactivity").

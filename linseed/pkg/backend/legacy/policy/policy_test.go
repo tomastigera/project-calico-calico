@@ -275,7 +275,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 
@@ -304,7 +304,7 @@ func TestGetPolicyActivity_EmptyPolicies(t *testing.T) {
 	req := &v1.PolicyActivityRequest{Policies: []v1.PolicyActivityQueryPolicy{}}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
 	assert.Empty(t, resp.Items)
 }
@@ -324,7 +324,7 @@ func TestGetPolicyActivity_ESError(t *testing.T) {
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	_, err := b.GetPolicyActivity(context.Background(), info, req)
+	_, err := b.GetPolicyActivities(context.Background(), info, req)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "elasticsearch search failed")
 }
@@ -370,7 +370,7 @@ func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 2)
 
@@ -419,7 +419,7 @@ func TestGetPolicyActivity_SkipsUnparsableRules(t *testing.T) {
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	resp, err := b.GetPolicyActivity(context.Background(), info, req)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Len(t, resp.Items[0].Rules, 1) // Only the valid rule
@@ -492,6 +492,6 @@ func TestGetPolicyActivity_InvalidCluster(t *testing.T) {
 	}
 	info := bapi.ClusterInfo{Cluster: ""} // Invalid - empty cluster
 
-	_, err := b.GetPolicyActivity(context.Background(), info, req)
+	_, err := b.GetPolicyActivities(context.Background(), info, req)
 	assert.Error(t, err)
 }

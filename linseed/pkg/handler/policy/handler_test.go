@@ -28,7 +28,7 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-func TestGetPolicyActivity(t *testing.T) {
+func TestGetPolicyActivities(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
 	successResponse := &v1.PolicyActivityResponse{
@@ -145,7 +145,7 @@ func TestGetPolicyActivity(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
-			h.GetPolicyActivity().ServeHTTP(rec, req)
+			h.GetPolicyActivities().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)
@@ -163,13 +163,13 @@ func TestGetPolicyActivity(t *testing.T) {
 }
 
 // policyHandlerWithMock creates a policy handler with a mock backend.
-// The mock only expects GetPolicyActivity to be called when the handler will
+// The mock only expects GetPolicyActivities to be called when the handler will
 // reach the backend (i.e. not for malformed-JSON or invalid time range requests).
 func policyHandlerWithMock(t *testing.T, response *v1.PolicyActivityResponse, backendErr error) *policy {
 	mockBackend := api.NewMockPolicyBackend(t)
 
 	if response != nil || backendErr != nil {
-		mockBackend.On("GetPolicyActivity",
+		mockBackend.On("GetPolicyActivities",
 			mock.Anything,
 			mock.AnythingOfType("api.ClusterInfo"),
 			mock.AnythingOfType("*v1.PolicyActivityRequest"),

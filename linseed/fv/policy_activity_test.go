@@ -47,7 +47,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			},
 		}
 
-		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivity(ctx, req)
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Empty(t, resp.Items)
 	})
@@ -87,7 +87,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			},
 		}
 
-		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivity(ctx, req)
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
 
@@ -133,7 +133,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			},
 		}
 
-		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivity(ctx, req)
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, "policy-a", resp.Items[0].Policy.Name)
@@ -168,7 +168,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			},
 		}
 
-		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivity(ctx, req)
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Empty(t, resp.Items)
 	})
@@ -203,12 +203,12 @@ func TestFV_PolicyActivity(t *testing.T) {
 		}
 
 		// cluster1 should see the data.
-		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivity(ctx, req)
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
 
 		// cluster2 should see nothing.
-		resp, err = cli.PolicyActivity(cluster2).GetPolicyActivity(ctx, req)
+		resp, err = cli.PolicyActivity(cluster2).GetPolicyActivities(ctx, req)
 		require.NoError(t, err)
 		require.Empty(t, resp.Items)
 	})

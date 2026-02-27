@@ -50,12 +50,12 @@ func (_m *MockPolicyBackend) Create(_a0 context.Context, _a1 ClusterInfo, _a2 []
 	return r0, r1
 }
 
-// GetPolicyActivity provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockPolicyBackend) GetPolicyActivity(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
+// GetPolicyActivities provides a mock function with given fields: _a0, _a1, _a2
+func (_m *MockPolicyBackend) GetPolicyActivities(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetPolicyActivity")
+		panic("no return value specified for GetPolicyActivities")
 	}
 
 	var r0 *v1.PolicyActivityResponse

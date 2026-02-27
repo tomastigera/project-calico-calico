@@ -44,13 +44,13 @@ func (h policy) APIS() []handler.API {
 		{
 			Method:          "POST",
 			URL:             ReadPolicyActivityPath,
-			Handler:         h.GetPolicyActivity(),
+			Handler:         h.GetPolicyActivities(),
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "policyactivity"},
 		},
 	}
 }
 
-func (h policy) GetPolicyActivity() http.HandlerFunc {
+func (h policy) GetPolicyActivities() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logCtx := logrus.WithFields(logrus.Fields{
 			"path":   req.URL.Path,
@@ -88,7 +88,7 @@ func (h policy) GetPolicyActivity() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), v1.DefaultTimeOut)
 		defer cancel()
 
-		response, err := h.backend.GetPolicyActivity(ctx, clusterInfo, reqParams)
+		response, err := h.backend.GetPolicyActivities(ctx, clusterInfo, reqParams)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get policy activity")
 			httputils.JSONError(w, &v1.HTTPError{
