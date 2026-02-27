@@ -1250,6 +1250,22 @@ Configures the interval at which Felix exports policy activity logs.
 | `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
 | Default value (YAML) | `15s` |
 
+### `PolicyActivityRefreshInterval` (config file) / `policyActivityRefreshInterval` (YAML)
+
+Controls how often Felix re-evaluates current policies against
+active long-lived connections and reports the results to the policy activity log. This ensures
+that lastEvaluated timestamps remain fresh for policies matching established connections
+and that newly added policies that match existing connections get activity entries. Set to 0 to disable.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_PolicyActivityRefreshInterval` |
+| Encoding (env var/config file) | Seconds (floating point) |
+| Default value (above encoding) | `300` (5m0s) |
+| `FelixConfiguration` field | `policyActivityRefreshInterval` (YAML) `PolicyActivityRefreshInterval` (Go API) |
+| `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
+| Default value (YAML) | `5m0s` |
+
 ### `PolicySyncPathPrefix` (config file) / `policySyncPathPrefix` (YAML)
 
 Used to by Felix to communicate policy changes to external services,
