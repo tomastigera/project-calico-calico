@@ -44199,8 +44199,8 @@ spec:
                     [Default: 15s]
                   pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                   type: string
-                  policyActivityRefreshInterval:
-                  description: |- 
+                policyActivityRefreshInterval:
+                  description: |-
                     PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against
                     active long-lived connections and reports the results to the policy activity log. This ensures
                     that lastEvaluated timestamps remain fresh for policies matching established connections
