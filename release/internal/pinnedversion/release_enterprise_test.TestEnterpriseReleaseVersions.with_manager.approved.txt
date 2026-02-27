@@ -13,13 +13,13 @@
     coreos-alertmanager:
       version: v0.30.1
     coreos-config-reloader:
-      version: v0.88.0
+      version: v0.89.0
     coreos-dex:
       version: v2.41.1
     coreos-prometheus:
       version: v3.9.1
     coreos-prometheus-operator:
-      version: v0.88.0
+      version: v0.89.0
     eck-elasticsearch:
       version: 8.19.10
     eck-elasticsearch-operator:

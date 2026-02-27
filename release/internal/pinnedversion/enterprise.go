@@ -48,10 +48,10 @@ var onceEnterprise sync.Once
 
 var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	coreosAlertmanagerComponentName:       {Version: "v0.30.1"},
-	coreosConfigReloaderComponentName:     {Version: "v0.88.0"},
+	coreosConfigReloaderComponentName:     {Version: "v0.89.0"},
 	coreosDexComponentName:                {Version: "v2.41.1"},
 	coreosPrometheusComponentName:         {Version: "v3.9.1"},
-	coreosPrometheusOperatorComponentName: {Version: "v0.88.0"},
+	coreosPrometheusOperatorComponentName: {Version: "v0.89.0"},
 	eckElasticsearchComponentName:         {Version: "8.19.10"},
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
 	eckKibanaComponentName:                {Version: "8.19.10"},

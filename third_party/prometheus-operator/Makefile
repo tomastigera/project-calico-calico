@@ -6,7 +6,7 @@ PROMETHEUS_OPERATOR_IMAGE ?= prometheus-operator
 PROMETHEUS_CONFIG_RELOADER_IMAGE ?= prometheus-config-reloader
 BUILD_IMAGES ?= $(PROMETHEUS_OPERATOR_IMAGE) ${PROMETHEUS_CONFIG_RELOADER_IMAGE}
 
-PROMETHEUS_OPERATOR_VERSION = v0.88.0
+PROMETHEUS_OPERATOR_VERSION = v0.89.0
 
 ##############################################################################
 # Include lib.Makefile before anything else
