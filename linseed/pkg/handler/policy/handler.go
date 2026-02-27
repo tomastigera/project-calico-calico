@@ -18,7 +18,7 @@ import (
 
 const (
 	WriteLogPath           = "/policy_activity/logs/bulk"
-	ReadPolicyActivityPath = "/policy_activity"
+	ReadPolicyActivityPath = "/policyactivity"
 )
 
 type policy struct {

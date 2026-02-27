@@ -57,7 +57,7 @@ func (p *PolicyActivityLogs) Create(ctx context.Context, logs []v1.PolicyActivit
 func (p *PolicyActivityLogs) GetPolicyActivity(ctx context.Context, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
 	resp := v1.PolicyActivityResponse{}
 	err := p.restClient.Post().
-		Path("/policy_activity").
+		Path("/policyactivity").
 		Params(req).
 		Cluster(p.clusterID).
 		Do(ctx).
