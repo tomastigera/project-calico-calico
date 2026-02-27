@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ type Interface interface {
 	CalicoNodeStatusClient
 	IPAMConfigurationClient
 	BlockAffinitiesClient
+	LiveMigrationsClient
 	BFDConfigurationsClient
 
 	// Tiers returns an interface for managing tier resources.
@@ -208,6 +209,11 @@ type IPAMConfigurationClient interface {
 type BlockAffinitiesClient interface {
 	// BlockAffinities returns an interface for viewing IPAM block affinity resources.
 	BlockAffinities() BlockAffinityInterface
+}
+
+type LiveMigrationsClient interface {
+	// LiveMigrations returns an interface for managing LiveMigration resources.
+	LiveMigrations() LiveMigrationInterface
 }
 
 type BGPFilterClient interface {
