@@ -1699,8 +1699,7 @@ spec:
                     PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against
                     active long-lived connections and reports the results to the policy activity log. This ensures
                     that lastEvaluated timestamps remain fresh for policies matching established connections
-                    (which bypass BPF policy evaluation after the initial packet) and that newly added policies
-                    that match existing connections get activity entries. Set to 0 to disable.
+                    and that newly added policies that match existing connections get activity entries. Set to 0 to disable.
                     [Default: 300s]
                   pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                   type: string

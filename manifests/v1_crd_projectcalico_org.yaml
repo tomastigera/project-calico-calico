@@ -44199,6 +44199,15 @@ spec:
                     [Default: 15s]
                   pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                   type: string
+                policyActivityRefreshInterval:
+                  description: |-
+                    PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against
+                    active long-lived connections and reports the results to the policy activity log. This ensures
+                    that lastEvaluated timestamps remain fresh for policies matching established connections
+                    and that newly added policies that match existing connections get activity entries. Set to 0 to disable.
+                    [Default: 300s]
+                  pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
+                  type: string
                 policySyncPathPrefix:
                   description: |-
                     PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services,
