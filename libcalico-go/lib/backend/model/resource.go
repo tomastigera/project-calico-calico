@@ -146,6 +146,7 @@ func init() {
 	registerResourceInfo[internalapi.IPAMConfig](internalapi.KindIPAMConfig, "ipamconfigs")
 	registerResourceInfo[internalapi.BlockAffinity](internalapi.KindBlockAffinity, "blockaffinities")
 	registerResourceInfo[internalapi.IPAMBlock](internalapi.KindIPAMBlock, "ipamblocks")
+	registerResourceInfo[internalapi.LiveMigration](internalapi.KindLiveMigration, "livemigrations")
 
 	// Register Kubernetes resources.
 	registerResourceInfo[kapiv1.Service](KindKubernetesService, "kubernetesservice")

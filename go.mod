@@ -177,7 +177,7 @@ require (
 	k8s.io/component-base v0.34.4
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.34.4
-	k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
+	k8s.io/kube-openapi v0.31.0
 	k8s.io/kubectl v0.34.4
 	k8s.io/kubernetes v1.34.4
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
@@ -188,6 +188,18 @@ require (
 	sigs.k8s.io/knftables v0.0.19
 	sigs.k8s.io/network-policy-api v0.1.8-0.20260212153203-412bf65729a5
 	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/openshift/custom-resource-status v1.1.2 // indirect
+	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
+	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
+)
+
+require (
+	kubevirt.io/api v1.7.0
+	kubevirt.io/client-go v1.7.0
 )
 
 require (
@@ -291,7 +303,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -537,6 +548,9 @@ replace (
 	k8s.io/externaljwt => k8s.io/externaljwt v0.34.4
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.4
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.4
+	// kubevirt.io/client-go requires a tagged kube-openapi version that doesn't
+	// exist; pin to the pseudo-version used by the rest of our k8s dependencies.
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.4
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.4
 	k8s.io/kubectl => k8s.io/kubectl v0.34.4
@@ -545,4 +559,6 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.34.4
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.4
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.4
+
+	kubevirt.io/client-go => github.com/tigera/kubevirt-client-go v1.7.0-tigera1
 )

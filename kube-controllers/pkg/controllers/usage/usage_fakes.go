@@ -137,6 +137,10 @@ func (f fakeCalicoClient) WorkloadEndpoints() clientv3.WorkloadEndpointInterface
 	panic("implement me")
 }
 
+func (f fakeCalicoClient) LiveMigrations() clientv3.LiveMigrationInterface {
+	panic("implement me")
+}
+
 func (f fakeCalicoClient) BGPPeers() clientv3.BGPPeerInterface {
 	panic("implement me")
 }

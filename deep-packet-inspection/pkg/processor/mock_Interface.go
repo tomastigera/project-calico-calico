@@ -192,6 +192,10 @@ func (_m *MockClientInterface) WorkloadEndpoints() clientv3.WorkloadEndpointInte
 	return nil
 }
 
+func (_m *MockClientInterface) LiveMigrations() clientv3.LiveMigrationInterface {
+	return nil
+}
+
 func (_m *MockClientInterface) ExternalNetworks() clientv3.ExternalNetworkInterface {
 	return nil
 }
