@@ -541,6 +541,10 @@ type Config struct {
 	PolicyActivityLogsFileDirectory     string        `config:"string;/var/log/calico/policy"`
 	PolicyActivityLogsFileMaxFiles      int           `config:"int;5"`
 	PolicyActivityLogsFileMaxFileSizeMB int           `config:"int;100"`
+	// PolicyActivityRefreshInterval controls how often Felix re-evaluates active long-lived
+	// connections against current policies to keep lastEvaluated timestamps fresh.
+	// Not exposed as a public API; intended for internal use and testing only. [Default: 3600s]
+	PolicyActivityRefreshInterval time.Duration `config:"seconds;3600"`
 
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
