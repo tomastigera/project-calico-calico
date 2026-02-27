@@ -55,21 +55,9 @@ func main() {
 
 func generateStateFile(path string, stateTokens map[string]string) error {
 	for s, t := range stateTokens {
-		if err := writeStateFile(path+s, t); err != nil {
+		if err := os.WriteFile(path+s, []byte(t), 0o644); err != nil {
 			return err
 		}
 	}
-
 	return nil
-}
-
-func writeStateFile(name, token string) error {
-	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-
-	_, err = f.WriteString(token)
-	return err
 }

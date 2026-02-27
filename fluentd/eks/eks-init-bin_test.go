@@ -3,7 +3,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,27 +38,29 @@ func TestGenerateStateFileMultipleEntries(t *testing.T) {
 	}
 }
 
-func TestWriteStateFileTruncatesExistingContent(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "state-file")
+func TestGenerateStateFileTruncatesExistingContent(t *testing.T) {
+	testDir := t.TempDir() + "/"
+	file := "state-file"
 
 	// Write a long token first.
-	err := writeStateFile(path, "this-is-a-long-token-value")
+	err := generateStateFile(testDir, map[string]string{file: "this-is-a-long-token-value"})
 	require.NoError(t, err)
-	assert.Equal(t, "this-is-a-long-token-value", matchesToken(path))
+	assert.Equal(t, "this-is-a-long-token-value", matchesToken(testDir+file))
 
 	// Overwrite with a shorter token; old content must not remain.
-	err = writeStateFile(path, "short")
+	err = generateStateFile(testDir, map[string]string{file: "short"})
 	require.NoError(t, err)
-	assert.Equal(t, "short", matchesToken(path))
+	assert.Equal(t, "short", matchesToken(testDir+file))
 }
 
-func TestWriteStateFilePermissions(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "state-file")
+func TestGenerateStateFilePermissions(t *testing.T) {
+	testDir := t.TempDir() + "/"
+	file := "state-file"
 
-	err := writeStateFile(path, "token")
+	err := generateStateFile(testDir, map[string]string{file: "token"})
 	require.NoError(t, err)
 
-	info, err := os.Stat(path)
+	info, err := os.Stat(testDir + file)
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
 }
@@ -76,14 +77,15 @@ func TestGenerateStateFileEmptyMap(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-func TestWriteStateFileEmptyToken(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "state-file")
+func TestGenerateStateFileEmptyToken(t *testing.T) {
+	testDir := t.TempDir() + "/"
+	file := "state-file"
 
-	err := writeStateFile(path, "")
+	err := generateStateFile(testDir, map[string]string{file: ""})
 	require.NoError(t, err)
-	assert.Equal(t, "", matchesToken(path))
+	assert.Equal(t, "", matchesToken(testDir+file))
 
-	info, err := os.Stat(path)
+	info, err := os.Stat(testDir + file)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), info.Size())
 }

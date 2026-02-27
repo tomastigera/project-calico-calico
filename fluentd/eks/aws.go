@@ -44,12 +44,12 @@ func AwsGetStateFileWithToken(ctx context.Context, logs cwLogsClient, group, pre
 	}
 
 	for _, stream := range streams {
-		token, err := getToken(ctx, logs, group, *stream, startTime)
+		token, err := getToken(ctx, logs, group, stream, startTime)
 		if err != nil {
 			return nil, err
 		}
 
-		replaced := strings.ReplaceAll(*stream, rubyFileSep, rubyFileSepSub)
+		replaced := strings.ReplaceAll(stream, rubyFileSep, rubyFileSepSub)
 		stateFile := stateFilePfx + stateFileSep + replaced
 		results[stateFile] = token
 	}
@@ -58,21 +58,24 @@ func AwsGetStateFileWithToken(ctx context.Context, logs cwLogsClient, group, pre
 }
 
 // Wrapper over cloudwatchlogs description, this function returns a slice of log-stream name using log-group name and stream prefix.
-func getLogStreams(ctx context.Context, logs cwLogsClient, groupName, streamPrefix string) ([]*string, error) {
-	var streams []*string
+// It paginates through all results so that no streams are silently dropped.
+func getLogStreams(ctx context.Context, logs cwLogsClient, groupName, streamPrefix string) ([]string, error) {
+	var streams []string
 
 	// Logstream name is dynamic for each EKS deployment. We use LogStreamName prefix to gather the actual stream name.
-	resp, err := logs.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
+	paginator := cloudwatchlogs.NewDescribeLogStreamsPaginator(logs, &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName:        aws.String(groupName),
 		LogStreamNamePrefix: aws.String(streamPrefix),
 	})
-	if err != nil {
-		return streams, err
-	}
-
-	for _, stream := range resp.LogStreams {
-		if stream.LogStreamName != nil {
-			streams = append(streams, stream.LogStreamName)
+	for paginator.HasMorePages() {
+		resp, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, stream := range resp.LogStreams {
+			if stream.LogStreamName != nil {
+				streams = append(streams, *stream.LogStreamName)
+			}
 		}
 	}
 	return streams, nil

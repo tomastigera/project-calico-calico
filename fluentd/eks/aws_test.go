@@ -34,6 +34,7 @@ func TestGetLogStreams(t *testing.T) {
 		describeLogStreamsFunc: func(_ context.Context, params *cloudwatchlogs.DescribeLogStreamsInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
 			assert.Equal(t, "my-group", *params.LogGroupName)
 			assert.Equal(t, "my-prefix", *params.LogStreamNamePrefix)
+			// Single page, no NextToken.
 			return &cloudwatchlogs.DescribeLogStreamsOutput{
 				LogStreams: []types.LogStream{
 					{LogStreamName: aws.String("my-prefix-stream-1")},
@@ -46,8 +47,41 @@ func TestGetLogStreams(t *testing.T) {
 	streams, err := getLogStreams(ctx, mock, "my-group", "my-prefix")
 	require.NoError(t, err)
 	require.Len(t, streams, 2)
-	assert.Equal(t, "my-prefix-stream-1", *streams[0])
-	assert.Equal(t, "my-prefix-stream-2", *streams[1])
+	assert.Equal(t, "my-prefix-stream-1", streams[0])
+	assert.Equal(t, "my-prefix-stream-2", streams[1])
+}
+
+func TestGetLogStreamsPagination(t *testing.T) {
+	ctx := context.Background()
+
+	callCount := 0
+	mock := &mockCWLogsClient{
+		describeLogStreamsFunc: func(_ context.Context, params *cloudwatchlogs.DescribeLogStreamsInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+			callCount++
+			if callCount == 1 {
+				assert.Nil(t, params.NextToken)
+				return &cloudwatchlogs.DescribeLogStreamsOutput{
+					LogStreams: []types.LogStream{
+						{LogStreamName: aws.String("stream-1")},
+					},
+					NextToken: aws.String("page-2-token"),
+				}, nil
+			}
+			assert.Equal(t, "page-2-token", *params.NextToken)
+			return &cloudwatchlogs.DescribeLogStreamsOutput{
+				LogStreams: []types.LogStream{
+					{LogStreamName: aws.String("stream-2")},
+				},
+			}, nil
+		},
+	}
+
+	streams, err := getLogStreams(ctx, mock, "my-group", "my-prefix")
+	require.NoError(t, err)
+	require.Len(t, streams, 2)
+	assert.Equal(t, "stream-1", streams[0])
+	assert.Equal(t, "stream-2", streams[1])
+	assert.Equal(t, 2, callCount)
 }
 
 func TestGetLogStreamsError(t *testing.T) {
@@ -99,8 +133,8 @@ func TestGetLogStreamsSkipsNilNames(t *testing.T) {
 	streams, err := getLogStreams(ctx, mock, "my-group", "my-prefix")
 	require.NoError(t, err)
 	require.Len(t, streams, 2)
-	assert.Equal(t, "valid-stream", *streams[0])
-	assert.Equal(t, "another-stream", *streams[1])
+	assert.Equal(t, "valid-stream", streams[0])
+	assert.Equal(t, "another-stream", streams[1])
 }
 
 func TestGetToken(t *testing.T) {
