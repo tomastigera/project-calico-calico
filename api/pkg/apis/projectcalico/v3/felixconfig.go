@@ -1387,14 +1387,6 @@ type FelixConfigurationSpec struct {
 	// PolicyActivityLogsFileMaxFileSizeMB sets the max size in MB of policy activity log files before rotation.
 	// [Default: 100]
 	PolicyActivityLogsFileMaxFileSizeMB *int `json:"policyActivityLogsFileMaxFileSizeMB,omitempty"`
-	// PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against
-	// active long-lived connections and reports the results to the policy activity log. This ensures
-	// that lastEvaluated timestamps remain fresh for policies matching established connections
-	// and that newly added policies that match existing connections get activity entries. Set to 0 to disable.
-	// [Default: 300s]
-	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
-	PolicyActivityRefreshInterval *metav1.Duration `json:"policyActivityRefreshInterval,omitempty" configv1timescale:"seconds"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.

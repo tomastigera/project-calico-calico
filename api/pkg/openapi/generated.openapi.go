@@ -7096,12 +7096,6 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
-					"policyActivityRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PolicyActivityRefreshInterval controls how often Felix re-evaluates current policies against active long-lived connections and reports the results to the policy activity log. This ensures that lastEvaluated timestamps remain fresh for policies matching established connections and that newly added policies that match existing connections get activity entries. Set to 0 to disable. [Default: 300s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",

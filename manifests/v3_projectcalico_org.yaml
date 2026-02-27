@@ -43314,9 +43314,6 @@ spec:
                 policyActivityLogsFlushInterval:
                   pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                   type: string
-                policyActivityRefreshInterval:
-                  pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
-                  type: string
                 policySyncPathPrefix:
                   type: string
                 programClusterRoutes:

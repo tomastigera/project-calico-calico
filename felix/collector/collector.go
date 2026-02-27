@@ -50,6 +50,9 @@ const (
 	DefaultGroupIP = "0.0.0.0"
 	// perHostPolicySubscription is the subscription type for per-host-policy.
 	perHostPolicySubscription = "per-host-policies"
+	// policyActivityRefreshInterval is how often Felix re-evaluates policies
+	// for long-lived connections to keep last_evaluated timestamps current.
+	policyActivityRefreshInterval = 1 * time.Hour
 )
 
 var (
@@ -143,8 +146,6 @@ type Config struct {
 	FelixHostName        string
 
 	PolicyStoreManager policystore.PolicyStoreManager
-
-	PolicyActivityRefreshInterval time.Duration
 }
 
 // namespacedEpKey is an interface for keys that have namespace information.
@@ -226,14 +227,9 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		log.Infof("Pending policies disabled")
 	}
 
-	if cfg.PolicyActivityRefreshInterval > 0 {
-		log.Infof("Policy activity refresh enabled with interval %v", cfg.PolicyActivityRefreshInterval)
-		c.tickerPolicyActivityRefresh = jitter.NewTicker(cfg.PolicyActivityRefreshInterval*9/10, cfg.PolicyActivityRefreshInterval*1/10)
-		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
-		// The goroutine is started in startStatsCollectionAndReporting(), after
-		// SetPolicyActivityReporter() has been called, so the reporter is
-		// visible to the goroutine without any additional synchronization.
-	}
+	log.Infof("Policy activity refresh enabled with interval %v", policyActivityRefreshInterval)
+	c.tickerPolicyActivityRefresh = jitter.NewTicker(policyActivityRefreshInterval*9/10, policyActivityRefreshInterval*1/10)
+	c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
 
 	return c
 }
