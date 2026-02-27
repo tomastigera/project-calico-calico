@@ -16,7 +16,7 @@ global_job_config:
   epilogue:
     always:
       commands:
-        - ~/calico/.semaphore/end-to-end/scripts/global_epilogue.sh
+        - ~/calico-private/.semaphore/end-to-end/scripts/global_epilogue.sh
   secrets:
     - name: marvin-github-ssh-private-key
     - name: banzai-secrets
@@ -34,7 +34,7 @@ global_job_config:
     - name: INSTALLER
       value: "operator"
     - name: RUN_LOCAL_TESTS # run e2e tests from locally built binary
-      value: "true"
+      value: "false"
 
 # Dimensions
 # Provisioners: azr-aso, azr-aks
@@ -59,7 +59,7 @@ blocks:
           execution_time_limit:
             hours: 5
           commands:
-            - ~/calico/.semaphore/end-to-end/scripts/body_standard.sh
+            - ~/calico-private/.semaphore/end-to-end/scripts/body_standard.sh
           env_vars:
             - name: PROVISIONER
               value: azr-aso
@@ -76,7 +76,7 @@ blocks:
           execution_time_limit:
             hours: 5
           commands:
-            - ~/calico/.semaphore/end-to-end/scripts/body_standard.sh
+            - ~/calico-private/.semaphore/end-to-end/scripts/body_standard.sh
           env_vars:
             - name: PROVISIONER
               value: azr-aso
@@ -93,7 +93,7 @@ blocks:
           execution_time_limit:
             hours: 5
           commands:
-            - ~/calico/.semaphore/end-to-end/scripts/body_standard.sh
+            - ~/calico-private/.semaphore/end-to-end/scripts/body_standard.sh
           env_vars:
             - name: PROVISIONER
               value: azr-aks
