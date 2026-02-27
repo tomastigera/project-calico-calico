@@ -146,8 +146,6 @@ type Config struct {
 	FelixHostName        string
 
 	PolicyStoreManager policystore.PolicyStoreManager
-
-	PolicyActivityRefreshInterval time.Duration
 }
 
 // namespacedEpKey is an interface for keys that have namespace information.
@@ -229,12 +227,8 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		log.Infof("Pending policies disabled")
 	}
 
-	refreshInterval := cfg.PolicyActivityRefreshInterval
-	if refreshInterval <= 0 {
-		refreshInterval = 1 * time.Hour
-	}
-	log.Infof("Policy activity refresh enabled with interval %v", refreshInterval)
-	c.tickerPolicyActivityRefresh = jitter.NewTicker(refreshInterval*9/10, refreshInterval*1/10)
+	log.Infof("Policy activity refresh enabled with interval %v", policyActivityRefreshInterval)
+	c.tickerPolicyActivityRefresh = jitter.NewTicker(policyActivityRefreshInterval*9/10, policyActivityRefreshInterval*1/10)
 	c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
 
 	return c
