@@ -26,6 +26,7 @@ global_job_config:
       - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
       - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+      - ssh-add ~/.ssh/id_rsa
 
 blocks:
   - name: Publish cni-plugin images and multi-arch manifests
