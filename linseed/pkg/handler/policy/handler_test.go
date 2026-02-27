@@ -141,7 +141,7 @@ func TestGetPolicyActivities(t *testing.T) {
 			h := policyHandlerWithMock(t, tt.backendResponse, tt.backendError)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", ReadPolicyActivityPath, bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", ReadPath, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 

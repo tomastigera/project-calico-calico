@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	WriteLogPath           = "/policy_activity/logs/bulk"
-	ReadPolicyActivityPath = "/policyactivity"
+	WriteLogPath = "/policy_activity/logs/bulk"
+	ReadPath     = "/policyactivity"
 )
 
 type policy struct {
@@ -43,7 +43,7 @@ func (h policy) APIS() []handler.API {
 		},
 		{
 			Method:          "POST",
-			URL:             ReadPolicyActivityPath,
+			URL:             ReadPath,
 			Handler:         h.GetPolicyActivities(),
 			AuthzAttributes: &authzv1.ResourceAttributes{Verb: handler.Get, Group: handler.APIGroup, Resource: "policyactivity"},
 		},
@@ -98,7 +98,7 @@ func (h policy) GetPolicyActivities() http.HandlerFunc {
 			return
 		}
 
-		logCtx.Debugf("%s response is: %+v", ReadPolicyActivityPath, response)
+		logCtx.Debugf("%s response is: %+v", ReadPath, response)
 		httputils.Encode(w, response)
 	}
 }
