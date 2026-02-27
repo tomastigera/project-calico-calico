@@ -963,8 +963,6 @@ github.com/pquerna/cachecontrol v0.1.0 h1:yJMy84ti9h/+OEWa752kBTKv4XC30OtVVHYv/8
 github.com/pquerna/cachecontrol v0.1.0/go.mod h1:NrUG3Z7Rdu85UNR3vm7SOsl1nFIeSiQnrHV5K9mBcUI=
 github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
 github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
-github.com/projectcalico/api v0.0.0-20250916150628-d4009e4d7c50 h1:uawQ+eFENhBbwlOy0ooDwnzVWN2KP6X//GuJMXauyew=
-github.com/projectcalico/api v0.0.0-20250916150628-d4009e4d7c50/go.mod h1:bUD5LQaKzGNl93fq+RcBH4CyzfIGoeq/xIRH/IxaGwI=
 github.com/prometheus-community/elasticsearch_exporter v1.5.0 h1:1k8CK7aPMdmJ/LcFDnGPyhSRrWw6zmH2zMyaOAKlBOc=
 github.com/prometheus-community/elasticsearch_exporter v1.5.0/go.mod h1:ZITzMapK/TzzsaKOBlNCatKGcCfp/6xIQg2ucoLHA5c=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1 h1:DP+PUNVOc+Bkft8a4QunLzaZ0RspWuD3tBbcPHr2PeE=

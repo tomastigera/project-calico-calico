@@ -190,8 +190,6 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/projectcalico/api v0.0.0-20250916150628-d4009e4d7c50
-
 require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
