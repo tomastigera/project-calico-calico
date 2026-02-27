@@ -62,8 +62,9 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 	switch licClaims.Validate() {
 	case licClient.Valid, licClient.InGracePeriod, licClient.Expired:
 		aapiLicenseKey.Status = calico.LicenseKeyStatus{
-			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(licClaims.Features),
+			Expiry:      metav1.Time{Time: licClaims.Expiry.Time()},
+			GracePeriod: fmt.Sprintf("%dd", licClaims.GracePeriod),
+			MaxNodes:    *licClaims.Nodes, Package: helpers.ConvertToPackageType(licClaims.Features),
 		}
 	}
 }
@@ -79,10 +80,11 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	switch licClaims.Validate() {
 	case licClient.Valid, licClient.InGracePeriod, licClient.Expired:
 		newLicenseKey.Status = calico.LicenseKeyStatus{
-			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes,
-			Package:  helpers.ConvertToPackageType(licClaims.Features),
-			Features: helpers.ExpandFeatureNames(licClaims.Features),
+			Expiry:      metav1.Time{Time: licClaims.Expiry.Time()},
+			GracePeriod: fmt.Sprintf("%dd", licClaims.GracePeriod),
+			MaxNodes:    *licClaims.Nodes,
+			Package:     helpers.ConvertToPackageType(licClaims.Features),
+			Features:    helpers.ExpandFeatureNames(licClaims.Features),
 		}
 	}
 }
@@ -130,10 +132,11 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	}
 	newLicenseKey := obj.(*calico.LicenseKey)
 	newLicenseKey.Status = calico.LicenseKeyStatus{
-		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-		MaxNodes: *licClaims.Nodes,
-		Package:  helpers.ConvertToPackageType(licClaims.Features),
-		Features: helpers.ExpandFeatureNames(licClaims.Features),
+		Expiry:      metav1.Time{Time: licClaims.Expiry.Time()},
+		GracePeriod: fmt.Sprintf("%dd", licClaims.GracePeriod),
+		MaxNodes:    *licClaims.Nodes,
+		Package:     helpers.ConvertToPackageType(licClaims.Features),
+		Features:    helpers.ExpandFeatureNames(licClaims.Features),
 	}
 }
 
