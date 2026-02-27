@@ -34,6 +34,10 @@ func isEmpty(status v3.LicenseKeyStatus) bool {
 		return true
 	}
 
+	if status.GracePeriod == "" {
+		return true
+	}
+
 	if len(status.Features) == 0 {
 		return true
 	}

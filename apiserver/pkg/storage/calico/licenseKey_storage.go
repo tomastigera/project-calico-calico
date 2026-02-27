@@ -4,6 +4,7 @@ package calico
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -101,10 +102,11 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 	if err == nil {
 		if licClaims.Validate() != licClient.NoLicenseLoaded {
 			aapiLicenseKey.Status = v3.LicenseKeyStatus{
-				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-				MaxNodes: *licClaims.Nodes,
-				Package:  helpers.ConvertToPackageType(licClaims.Features),
-				Features: helpers.ExpandFeatureNames(licClaims.Features)}
+				Expiry:      metav1.Time{Time: licClaims.Expiry.Time()},
+				GracePeriod: fmt.Sprintf("%dd", licClaims.GracePeriod),
+				MaxNodes:    *licClaims.Nodes,
+				Package:     helpers.ConvertToPackageType(licClaims.Features),
+				Features:    helpers.ExpandFeatureNames(licClaims.Features)}
 		}
 	}
 }
