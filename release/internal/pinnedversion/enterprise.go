@@ -47,7 +47,7 @@ const (
 var onceEnterprise sync.Once
 
 var thirdPartyEnterpriseComponents = map[string]registry.Component{
-	coreosAlertmanagerComponentName:       {Version: "v0.30.1"},
+	coreosAlertmanagerComponentName:       {Version: "v0.31.1"},
 	coreosConfigReloaderComponentName:     {Version: "v0.89.0"},
 	coreosDexComponentName:                {Version: "v2.41.1"},
 	coreosPrometheusComponentName:         {Version: "v3.9.1"},

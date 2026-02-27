@@ -11,7 +11,7 @@
     calico-private:
       version: v3.22.0-1.0
     coreos-alertmanager:
-      version: v0.30.1
+      version: v0.31.1
     coreos-config-reloader:
       version: v0.89.0
     coreos-dex:

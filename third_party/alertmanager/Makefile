@@ -5,7 +5,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/alertmanager
 ALERTMANAGER_IMAGE    ?=alertmanager
 BUILD_IMAGES          ?=$(ALERTMANAGER_IMAGE) 
 
-ALERTMANAGER_VERSION = v0.30.1
+ALERTMANAGER_VERSION = v0.31.1
 
 ##############################################################################
 # Include lib.Makefile before anything else
