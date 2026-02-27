@@ -230,7 +230,9 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		log.Infof("Policy activity refresh enabled with interval %v", cfg.PolicyActivityRefreshInterval)
 		c.tickerPolicyActivityRefresh = jitter.NewTicker(cfg.PolicyActivityRefreshInterval*9/10, cfg.PolicyActivityRefreshInterval*1/10)
 		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
-		go c.loopEvaluatingPolicyActivity()
+		// The goroutine is started in startStatsCollectionAndReporting(), after
+		// SetPolicyActivityReporter() has been called, so the reporter is
+		// visible to the goroutine without any additional synchronization.
 	}
 
 	return c
@@ -391,6 +393,10 @@ func (c *collector) startStatsCollectionAndReporting() {
 	}
 	if c.tickerPolicyActivityRefresh != nil {
 		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
+		// Start the async evaluation goroutine now, after SetPolicyActivityReporter()
+		// has been called. Closing the channel on return stops the goroutine cleanly.
+		go c.loopEvaluatingPolicyActivity()
+		defer close(c.policyActivityRefreshC)
 	}
 
 	// When a collector is started, we respond to the following events:
