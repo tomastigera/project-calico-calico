@@ -4,6 +4,7 @@ package dns_test
 
 import (
 	"context"
+	"encoding/json"
 	gojson "encoding/json"
 	"fmt"
 	"net"
@@ -15,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"

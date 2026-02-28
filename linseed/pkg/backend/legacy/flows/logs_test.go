@@ -4,6 +4,7 @@ package flows_test
 
 import (
 	"context"
+	"encoding/json"
 	gojson "encoding/json"
 	"fmt"
 	"slices"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"

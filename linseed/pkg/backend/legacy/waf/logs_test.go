@@ -4,6 +4,7 @@ package waf_test
 
 import (
 	"context"
+	"encoding/json"
 	gojson "encoding/json"
 	"fmt"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"

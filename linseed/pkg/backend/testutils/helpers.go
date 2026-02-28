@@ -5,6 +5,7 @@ package testutils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )

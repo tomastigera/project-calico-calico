@@ -211,7 +211,6 @@ local:libcalico-go/lib/compliance
 local:libcalico-go/lib/errors
 local:libcalico-go/lib/hash
 local:libcalico-go/lib/jitter
-local:libcalico-go/lib/json
 local:libcalico-go/lib/logutils
 local:libcalico-go/lib/metricsserver
 local:libcalico-go/lib/names

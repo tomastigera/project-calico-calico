@@ -5,6 +5,7 @@ package v1
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	gojson "encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +21,6 @@ import (
 	"golang.org/x/net/idna"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 // DNSLogParams define querying parameters to retrieve DNS logs

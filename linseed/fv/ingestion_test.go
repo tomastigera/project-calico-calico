@@ -4,6 +4,7 @@ package fv_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/goldmane/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"

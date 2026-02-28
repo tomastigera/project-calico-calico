@@ -4,6 +4,7 @@ package l7_test
 
 import (
 	"context"
+	"encoding/json"
 	gojson "encoding/json"
 	"fmt"
 	"testing"
@@ -12,7 +13,6 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"

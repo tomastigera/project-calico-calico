@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"encoding/json"
 	gojson "encoding/json"
 	"fmt"
 	"time"
@@ -13,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/apis/audit"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 type Kind string

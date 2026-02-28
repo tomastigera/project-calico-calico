@@ -3,6 +3,7 @@ package search
 
 import (
 	"context"
+	"encoding/json"
 	gojson "encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"

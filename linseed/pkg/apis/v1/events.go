@@ -2,10 +2,9 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 // EventParams define querying parameters to retrieve events
