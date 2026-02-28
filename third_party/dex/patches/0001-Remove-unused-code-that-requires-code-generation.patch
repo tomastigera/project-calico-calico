@@ -4,16 +4,16 @@ Date: Wed, 11 Dec 2024 19:32:23 -0800
 Subject: [PATCH] Remove unused code that requires code generation
 
 ---
- cmd/dex/config.go | 11 -----------
- 1 file changed, 11 deletions(-)
+ cmd/dex/config.go | 24 ------------------------
+ 1 file changed, 24 deletions(-)
 
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index dd6d2e2a..558f3abb 100644
+index 8861dde..54339bc 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -15,11 +15,9 @@ import (
- 	"github.com/dexidp/dex/pkg/featureflags"
+@@ -16,11 +16,9 @@ import (
  	"github.com/dexidp/dex/server"
+ 	"github.com/dexidp/dex/server/signer"
  	"github.com/dexidp/dex/storage"
 -	"github.com/dexidp/dex/storage/ent"
  	"github.com/dexidp/dex/storage/etcd"
@@ -21,9 +21,9 @@ index dd6d2e2a..558f3abb 100644
  	"github.com/dexidp/dex/storage/memory"
 -	"github.com/dexidp/dex/storage/sql"
  )
- 
+
  // Config is the config format for the main application.
-@@ -267,12 +265,6 @@ var (
+@@ -279,23 +277,8 @@ var (
  	_ StorageConfig = (*etcd.Etcd)(nil)
  	_ StorageConfig = (*kubernetes.Config)(nil)
  	_ StorageConfig = (*memory.Config)(nil)
@@ -34,18 +34,29 @@ index dd6d2e2a..558f3abb 100644
 -	_ StorageConfig = (*ent.Postgres)(nil)
 -	_ StorageConfig = (*ent.MySQL)(nil)
  )
- 
- func getORMBasedSQLStorage(normal, entBased StorageConfig) func() StorageConfig {
-@@ -288,9 +280,6 @@ var storages = map[string]func() StorageConfig{
+
+-func getORMBasedSQLStorage(normal, entBased func() StorageConfig) func() StorageConfig {
+-	return func() StorageConfig {
+-		if featureflags.EntEnabled.Enabled() {
+-			return entBased()
+-		}
+-		return normal()
+-	}
+-}
+-
+ // Recursively expand environment variables in the map to avoid
+ // issues with JSON special characters and escapes
+ func expandEnvInMap(m map[string]interface{}) {
+@@ -321,9 +304,6 @@ var storages = map[string]func() StorageConfig{
  	"etcd":       func() StorageConfig { return new(etcd.Etcd) },
  	"kubernetes": func() StorageConfig { return new(kubernetes.Config) },
  	"memory":     func() StorageConfig { return new(memory.Config) },
--	"sqlite3":    getORMBasedSQLStorage(&sql.SQLite3{}, &ent.SQLite3{}),
--	"postgres":   getORMBasedSQLStorage(&sql.Postgres{}, &ent.Postgres{}),
--	"mysql":      getORMBasedSQLStorage(&sql.MySQL{}, &ent.MySQL{}),
+-	"sqlite3":    getORMBasedSQLStorage(func() StorageConfig { return new(sql.SQLite3) }, func() StorageConfig { return new(ent.SQLite3) }),
+-	"postgres":   getORMBasedSQLStorage(func() StorageConfig { return new(sql.Postgres) }, func() StorageConfig { return new(ent.Postgres) }),
+-	"mysql":      getORMBasedSQLStorage(func() StorageConfig { return new(sql.MySQL) }, func() StorageConfig { return new(ent.MySQL) }),
  }
- 
+
  // UnmarshalJSON allows Storage to implement the unmarshaler interface to
--- 
+--
 2.47.1
 

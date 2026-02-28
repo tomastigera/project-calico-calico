@@ -9,7 +9,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/dex
 DEX_IMAGE    ?= dex
 BUILD_IMAGES ?= $(DEX_IMAGE)
 
-DEX_VERSION = v2.41.1
+DEX_VERSION = v2.45.0
 
 ###############################################################################
 # Include lib.Makefile
@@ -32,8 +32,6 @@ $(DEX_DOWNLOADED):
 	mkdir -p dex
 	curl -sfL https://github.com/dexidp/dex/archive/refs/tags/$(DEX_VERSION).tar.gz | tar xz --strip-components 1 -C dex
 	patch -d dex -p1 < patches/0001-Remove-unused-code-that-requires-code-generation.patch
-	patch -d dex -p1 < patches/0002-Dex-CVE-patch.patch
-	patch -d dex -p1 < patches/0003-fix-storage-kubernetes-Only-wrap-IPv6-addresses-in-b.patch
 	touch $@
 
 .PHONY: dex/bin/dex-$(ARCH)
