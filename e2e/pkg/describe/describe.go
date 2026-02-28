@@ -84,6 +84,7 @@ var features = map[string]bool{
 	"EgressGateway":       true,
 	"Istio":               true,
 	"Flow-Logs":           true,
+	"DNS-Policy":          true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.
