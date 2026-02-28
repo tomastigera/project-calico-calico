@@ -1,6 +1,6 @@
 module github.com/tigera/api
 
-go 1.25.7
+go 1.26.1
 
 require (
 	github.com/jinzhu/copier v0.4.0
@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.39.1
 	github.com/projectcalico/api v0.0.0-20260303210141-543421943355
 	k8s.io/api v0.35.2
-	k8s.io/apiextensions-apiserver v0.0.0-00010101000000-000000000000
+	k8s.io/apiextensions-apiserver v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/apiserver v0.35.2
 	k8s.io/client-go v0.35.2

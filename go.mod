@@ -1,6 +1,6 @@
 module github.com/projectcalico/calico
 
-go 1.25.7
+go 1.26.1
 
 require (
 	cloud.google.com/go/storage v1.57.1
@@ -193,14 +193,6 @@ require (
 )
 
 require (
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/openshift/custom-resource-status v1.1.2 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
-	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
-	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
-)
-
-require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.6 // indirect
@@ -301,6 +293,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -409,6 +402,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runtime-spec v1.2.1 // indirect
 	github.com/opencontainers/selinux v1.13.0 // indirect
+	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/oschwald/maxminddb-golang/v2 v2.0.0-beta.10 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
@@ -423,6 +417,7 @@ require (
 	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
@@ -503,6 +498,8 @@ require (
 	k8s.io/metrics v0.35.2 // indirect
 	k8s.io/mount-utils v0.35.2 // indirect
 	k8s.io/pod-security-admission v0.35.2
+	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
+	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
@@ -546,7 +543,6 @@ replace (
 	k8s.io/externaljwt => k8s.io/externaljwt v0.35.2
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.35.2
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.35.2
-
 	// kubevirt.io/client-go requires a tagged kube-openapi version that doesn't
 	// exist; pin to the pseudo-version used by the rest of our k8s dependencies.
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
