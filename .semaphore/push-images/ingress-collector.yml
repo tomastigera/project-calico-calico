@@ -4,10 +4,8 @@ agent:
   machine:
     type: f1-standard-2
     os_image: ubuntu2204
-
 execution_time_limit:
   minutes: 60
-
 global_job_config:
   env_vars:
     - name: DEV_REGISTRIES
@@ -26,7 +24,7 @@ global_job_config:
       - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
       - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-
+      - ssh-add ~/.ssh/id_rsa
 blocks:
   - name: Publish ingress-collector images and multi-arch manifests
     dependencies: []
