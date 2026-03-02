@@ -292,7 +292,7 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 
 	query := b.buildPolicyActivityQuery(i, req)
 
-	results, err := b.esClient.Search(b.index.Alias(i)).
+	results, err := b.esClient.Search(b.index.Index(i)).
 		Size(10000).
 		Query(query).
 		Do(ctx)
