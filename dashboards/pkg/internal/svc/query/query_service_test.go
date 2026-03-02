@@ -11,7 +11,6 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakeprojectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/tds-apiserver/lib/httpreply"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
@@ -36,7 +35,21 @@ import (
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
+
+// mockReviewer implements authzreview.Reviewer for tests.
+type mockReviewer struct {
+	fn func(ctx context.Context, usr user.Info, cluster string, attrs []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error)
+}
+
+func (m *mockReviewer) Review(ctx context.Context, usr user.Info, cluster string, attrs []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+	return m.fn(ctx, usr, cluster, attrs)
+}
+
+func (m *mockReviewer) ReviewForLogs(ctx context.Context, usr user.Info, cluster string) ([]v3.AuthorizedResourceVerbs, error) {
+	return m.Review(ctx, usr, cluster, nil)
+}
 
 // Note: elastic.AggregationBucketHistogramItem does not have json tags to Marshal, so use local structs instead
 type bucketItem map[string]any
@@ -58,8 +71,9 @@ func newAuthContext(
 	t *testing.T,
 	logger logging.Logger,
 	namespacedRBAC bool,
+	reviewer authzreview.Reviewer,
 	resourceRules ...authzv1.ResourceRule,
-) (security.Context, *k8s.MockClientSetFactory) {
+) security.Context {
 	t.Helper()
 
 	authorizer, err := security.NewAuthorizer(
@@ -74,6 +88,7 @@ func newAuthContext(
 			AuthorizedVerbsCacheReviewsTimeout:    3 * time.Second,
 			AuthorizedVerbsCacheRevalidateTimeout: 3 * time.Second,
 		},
+		reviewer,
 	)
 	require.NoError(t, err)
 
@@ -92,25 +107,23 @@ func newAuthContext(
 		return true, selfSubjectRulesReview, nil
 	})
 
-	mockClientSetFactory := k8s.NewMockClientSetFactory(t)
-
 	return security.NewUserAuthContext(
 		context.Background(),
 		&user.DefaultInfo{Name: "fake-user"},
 		authorizer,
 		k8sClient,
 		"Bearer fake-token",
-		mockClientSetFactory,
+		k8s.NewMockClientSetFactory(t),
 		"fake-tenant",
 		nil,
-	), mockClientSetFactory
+	)
 }
 
 func TestQueryService(t *testing.T) {
 
 	logger := logging.New("TestQueryService")
 
-	ctx, _ := newAuthContext(t, logger, false,
+	ctx := newAuthContext(t, logger, false, nil,
 		newLMAResource("get", "cluster1", "cluster2", "cluster3"),
 	)
 
@@ -148,7 +161,7 @@ func TestQueryService(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx, _ := newAuthContext(t, logger, false, tc.authorizedResource)
+					ctx := newAuthContext(t, logger, false, nil, tc.authorizedResource)
 
 					_, err := subject.Query(ctx, client.QueryRequest{
 						CollectionName: "flows",
@@ -213,7 +226,7 @@ func TestQueryService(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx, _ := newAuthContext(t, logger, tc.namespacedRBAC, tc.authorizedResource)
+					ctx := newAuthContext(t, logger, tc.namespacedRBAC, nil, tc.authorizedResource)
 
 					mockClient.SetResults(lsrest.MockResult{Body: jsonMarshal(t, lsv1.List[lsv1.FlowLog]{})})
 
@@ -233,7 +246,7 @@ func TestQueryService(t *testing.T) {
 
 	t.Run("permissions", func(t *testing.T) {
 		t.Run("namespaced RBAC disabled", func(t *testing.T) {
-			ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "cluster1", "cluster2", "cluster3"))
+			ctx := newAuthContext(t, logger, false, nil, newLMAResource("get", "cluster1", "cluster2", "cluster3"))
 
 			fakeRepository := fakerepository.NewFakeRepository()
 			subject := NewQueryService(logger, fakeRepository, allCollections, managedClusterLister, testConfig)
@@ -337,35 +350,14 @@ func TestQueryService(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				resources := []string{"cluster1", "cluster2", "cluster3"}
 
-				ctx, mockClientSetFactory := newAuthContext(t, logger, true, newLMAResource("get", resources...))
+				reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, cluster string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+					if err, ok := tc.authReviewError[cluster]; ok {
+						return nil, err
+					}
+					return tc.authReviewStatusAuthorizedResourceVerbs[cluster], nil
+				}}
 
-				for _, resource := range resources {
-					fakeClient := k8sfake.NewClientset()
-					fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &fakeClient.Fake}
-					fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
-						createAction, ok := action.(k8stesting.CreateAction)
-						if !ok {
-							return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
-						}
-
-						object := createAction.GetObject().DeepCopyObject()
-						authReview, ok := object.(*v3.AuthorizationReview)
-						if !ok {
-							return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
-						}
-
-						authReview.Status.AuthorizedResourceVerbs = tc.authReviewStatusAuthorizedResourceVerbs[resource]
-
-						return true, authReview, tc.authReviewError[resource]
-					})
-
-					mockClientSet := k8s.NewMockClientSet(t)
-					mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Once()
-					mockClientSetFactory.
-						On("NewClientSetForApplication", resource).
-						Return(mockClientSet, nil).
-						Once()
-				}
+				ctx := newAuthContext(t, logger, true, reviewer, newLMAResource("get", resources...))
 
 				fakeRepository := fakerepository.NewFakeRepository()
 				subject := NewQueryService(logger, fakeRepository, allCollections, managedClusterLister, testConfig)
@@ -390,7 +382,7 @@ func TestQueryService(t *testing.T) {
 	t.Run("validation", func(t *testing.T) {
 		t.Run("cluster", func(t *testing.T) {
 			t.Run("unknown", func(t *testing.T) {
-				ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "cluster1"))
+				ctx := newAuthContext(t, logger, false, nil, newLMAResource("get", "cluster1"))
 
 				_, err := subject.Query(ctx, client.QueryRequest{
 					CollectionName: "flows",
@@ -445,7 +437,7 @@ func TestQueryService(t *testing.T) {
 
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
-						ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", tc.authorizedResources...))
+						ctx := newAuthContext(t, logger, false, nil, newLMAResource("get", tc.authorizedResources...))
 
 						if tc.expectedErr == nil {
 							mockClient.SetResults(
@@ -1755,7 +1747,7 @@ func TestQueryService_Query_ExportLimit(t *testing.T) {
 		MaxRequestFilters: 10,
 	})
 
-	ctx, _ := newAuthContext(t, logger, false, newLMAResource("get", "*"))
+	ctx := newAuthContext(t, logger, false, nil, newLMAResource("get", "*"))
 
 	// Test normal query limit
 	req := client.QueryRequest{

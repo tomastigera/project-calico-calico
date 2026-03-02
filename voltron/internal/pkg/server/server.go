@@ -96,7 +96,13 @@ type Server struct {
 	// the x-cluster-id header.
 	//
 	// this can be used to move services to the management cluster without needing any update to the client making the request.
-	tunnelTargetWhitelist      []regexp.Regexp
+	tunnelTargetWhitelist []regexp.Regexp
+
+	// tunnelExclusions overrides the tunnel whitelist for specific paths that should always be handled by the
+	// management cluster, even when x-cluster-id is set. This allows broad whitelist patterns like "^/apis/?"
+	// while still routing specific API paths to management-cluster services (e.g., ui-apis).
+	tunnelExclusions []regexp.Regexp
+
 	kubernetesAPITargets       []regexp.Regexp
 	unauthenticatedTargetPaths []string
 
@@ -458,7 +464,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
-	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && tunnelClusterID != ""
+	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && !requestPathMatches(r, s.tunnelExclusions) && tunnelClusterID != ""
 
 	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
 		// This request is to a target that can be unauthenticated

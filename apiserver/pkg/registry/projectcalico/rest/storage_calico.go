@@ -25,7 +25,6 @@ import (
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
-	calicoauthorizationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 	calicobfdconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bfdconfiguration"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgpfilter "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpfilter"
@@ -83,7 +82,6 @@ func (p RESTStorageProvider) NewV3Storage(
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 	resources *calicostorage.ManagedClusterResources,
-	calculator rbac.Calculator,
 	licenseMonitor monitor.LicenseMonitor,
 	calicoLister rbac.CalicoResourceLister,
 	watchManager *util.WatchManager,
@@ -1169,7 +1167,6 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["managedclusters/status"] = managedClusterStatusStorage
 
 	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
-	storage["authorizationreviews"] = calicoauthorizationreview.NewREST(calculator)
 
 	packetCaptureStorage, packetCaptureStatusStorage, err := calicopacketcapture.NewREST(scheme, *packetCaptureOpts)
 	if err != nil {

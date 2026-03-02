@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakeprojectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,7 +19,8 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 func TestAuthorizer(t *testing.T) {
@@ -38,7 +39,8 @@ func TestAuthorizer(t *testing.T) {
 		namespacedRBAC bool,
 		resourceRules []authzv1.ResourceRule,
 		groups []string,
-	) (Context, Authorizer, *k8s.MockClientSetFactory, *[]string) {
+		reviewer authzreview.Reviewer,
+	) (Context, Authorizer, *[]string) {
 		t.Helper()
 
 		if resourceRules == nil {
@@ -71,18 +73,19 @@ func TestAuthorizer(t *testing.T) {
 				AuthorizedVerbsCacheReviewsTimeout:    3 * time.Second,
 				AuthorizedVerbsCacheRevalidateTimeout: authorizedVerbsCacheRevalidateTimeout,
 			},
+			reviewer,
 		)
 		require.NoError(t, err)
 
-		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
+		mockClientSetFactory := lmak8s.NewMockClientSetFactory(t)
 		ctx := NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: userName}, authorizer, k8sClient, "Bearer fake-token", mockClientSetFactory, "fake-tenant", groups)
 
-		return ctx, authorizer, mockClientSetFactory, namespaceHits
+		return ctx, authorizer, namespaceHits
 	}
 
 	t.Run("authorization resource", func(t *testing.T) {
 		t.Run("any", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
+			ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, nil)
 			require.NoError(t, err)
@@ -90,7 +93,7 @@ func TestAuthorizer(t *testing.T) {
 		})
 
 		t.Run("managed cluster", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
+			ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -102,7 +105,7 @@ func TestAuthorizer(t *testing.T) {
 				resourceRules := []authzv1.ResourceRule{
 					{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"dns"}, Resources: []string{"*"}},
 				}
-				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
+				ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil, nil)
 
 				authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 				require.NoError(t, err)
@@ -117,7 +120,7 @@ func TestAuthorizer(t *testing.T) {
 				resourceRules := []authzv1.ResourceRule{
 					{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"*"}, Resources: []string{testCluster}},
 				}
-				ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
+				ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil, nil)
 
 				authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 				require.NoError(t, err)
@@ -133,7 +136,7 @@ func TestAuthorizer(t *testing.T) {
 	})
 
 	t.Run("unauthorized", func(t *testing.T) {
-		ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
+		ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil, nil)
 
 		testCases := []struct {
 			name         string
@@ -180,7 +183,7 @@ func TestAuthorizer(t *testing.T) {
 			resourceRules := []authzv1.ResourceRule{
 				{Verbs: []string{"get"}, APIGroups: []string{"lma.tigera.io"}, ResourceNames: []string{"dns"}, Resources: []string{testClusterResource}},
 			}
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil)
+			ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, resourceRules, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testClusterResource)
 			require.NoError(t, err)
@@ -194,7 +197,7 @@ func TestAuthorizer(t *testing.T) {
 
 	t.Run("namespace", func(t *testing.T) {
 		t.Run("is set", func(t *testing.T) {
-			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "fake-namespace", 1*time.Second, "fake-product-mode", false, nil, nil)
+			ctx, authorizer, namespaceHits := newAuthorizer(t, "fake-user", "fake-namespace", 1*time.Second, "fake-product-mode", false, nil, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -202,7 +205,7 @@ func TestAuthorizer(t *testing.T) {
 			require.Equal(t, []string{"fake-namespace"}, *namespaceHits)
 		})
 		t.Run("is unset", func(t *testing.T) {
-			ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil)
+			ctx, authorizer, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Second, "fake-product-mode", false, nil, nil, nil)
 
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 			require.NoError(t, err)
@@ -212,7 +215,7 @@ func TestAuthorizer(t *testing.T) {
 	})
 
 	t.Run("cache", func(t *testing.T) {
-		ctx, authorizer, _, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil)
+		ctx, authorizer, namespaceHits := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil, nil)
 
 		for range 10 {
 			authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
@@ -221,7 +224,7 @@ func TestAuthorizer(t *testing.T) {
 			require.Equal(t, 1, len(*namespaceHits))
 		}
 
-		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
+		mockClientSetFactory := lmak8s.NewMockClientSetFactory(t)
 		ctx = NewUserAuthContext(context.Background(), &user.DefaultInfo{Name: "fake-user2"}, authorizer, ctx.KubernetesClient(), "Bearer fake-token", mockClientSetFactory, "fake-tenant", nil)
 		authorized, err := authorizer.Authorize(ctx, "lma.tigera.io", []string{"dns"}, &testCluster)
 		require.NoError(t, err)
@@ -242,7 +245,7 @@ func TestAuthorizer(t *testing.T) {
 
 	t.Run("authorized resource verbs", func(t *testing.T) {
 		t.Run("namespaced RBAC feature disabled", func(t *testing.T) {
-			ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil)
+			ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", false, nil, nil, nil)
 
 			authVerbs, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1", "fake-managed-cluster2"})
 			require.NoError(t, err)
@@ -561,40 +564,15 @@ func TestAuthorizer(t *testing.T) {
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
+					reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, cluster string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+						time.Sleep(tc.authReviewDelay[cluster])
+						if err := tc.authReviewError[cluster]; err != nil {
+							return nil, err
+						}
+						return tc.authReviewStatusAuthorizedResourceVerbs[cluster], nil
+					}}
 
-					for resource, authorizedResourceVerbs := range tc.authReviewStatusAuthorizedResourceVerbs {
-
-						// Use a distinct fake.Clientset for each resource (reusing a fake.Clientset will result in the
-						// last reactor function getting called for every resource)
-						fakeClient := k8sfake.NewClientset()
-
-						fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &fakeClient.Fake}
-						fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
-							createAction, ok := action.(k8stesting.CreateAction)
-							if !ok {
-								return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
-							}
-
-							object := createAction.GetObject().DeepCopyObject()
-							authReview, ok := object.(*v3.AuthorizationReview)
-							if !ok {
-								return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
-							}
-
-							authReview.Status.AuthorizedResourceVerbs = authorizedResourceVerbs
-
-							time.Sleep(tc.authReviewDelay[resource])
-							return true, authReview, tc.authReviewError[resource]
-						})
-
-						mockClientSet := k8s.NewMockClientSet(t)
-						mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Once()
-						mockClientSetFactory.
-							On("NewClientSetForApplication", resource).
-							Return(mockClientSet, nil).
-							Once()
-					}
+					ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil, reviewer)
 
 					permissionsResult, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1", "fake-managed-cluster2", "fake-managed-cluster3"})
 					require.NoError(t, err)
@@ -629,7 +607,7 @@ func TestAuthorizer(t *testing.T) {
 
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
-						ctx, authorizer, _, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, config.ProductModeCloud, true, nil, []string{tc.groupName})
+						ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, config.ProductModeCloud, true, nil, []string{tc.groupName}, nil)
 
 						permissionsResult, err := authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1", "fake-managed-cluster2", "fake-managed-cluster3"})
 						require.NoError(t, err)
@@ -644,74 +622,57 @@ func TestAuthorizer(t *testing.T) {
 
 		t.Run("reuse stale cache item", func(t *testing.T) {
 			testCases := []struct {
-				name                     string
-				subsequentAuthReviewFunc func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error)
+				name                 string
+				subsequentReviewFunc func(cluster string) ([]v3.AuthorizedResourceVerbs, error)
 			}{
 				{
 					name: "revalidate timeout",
-					subsequentAuthReviewFunc: func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
-						authReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
+					subsequentReviewFunc: func(cluster string) ([]v3.AuthorizedResourceVerbs, error) {
+						// delay subsequent revalidation
+						time.Sleep(authorizedVerbsCacheRevalidateTimeout + 1*time.Second)
+						return []v3.AuthorizedResourceVerbs{{
 							Resource: "fake-resource",
 							APIGroup: "projectcalico.org",
 							Verbs: []v3.AuthorizedResourceVerb{{
 								Verb:           "list",
 								ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: "fake-namespace2"}},
 							}},
-						}}
-
-						// delay subsequent revalidation
-						time.Sleep(authorizedVerbsCacheRevalidateTimeout + 1*time.Second)
-						return true, authReview, nil
+						}}, nil
 					},
 				},
 				{
 					name: "revalidate error",
-					subsequentAuthReviewFunc: func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
-						// fail revalidation
-						return true, nil, fmt.Errorf("authorizationreview error")
+					subsequentReviewFunc: func(cluster string) ([]v3.AuthorizedResourceVerbs, error) {
+						return nil, fmt.Errorf("authorizationreview error")
 					},
 				},
 			}
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
-					ctx, authorizer, mockClientSetFactory, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil)
+					var mu sync.Mutex
+					firstCall := true
 
-					authReviewFunc := func(authReview *v3.AuthorizationReview) (bool, runtime.Object, error) {
-						authReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
-							Resource: "fake-resource",
-							APIGroup: "projectcalico.org",
-							Verbs: []v3.AuthorizedResourceVerb{{
-								Verb:           "list",
-								ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: "fake-namespace1"}},
-							}},
-						}}
+					reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, cluster string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+						mu.Lock()
+						isFirst := firstCall
+						firstCall = false
+						mu.Unlock()
 
-						return true, authReview, nil
-					}
-
-					fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &k8sfake.NewClientset().Fake}
-					fakeCalicoClient.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
-						createAction, ok := action.(k8stesting.CreateAction)
-						if !ok {
-							return false, nil, fmt.Errorf("reactor action failed for %v (%T)", action, action)
+						if isFirst {
+							return []v3.AuthorizedResourceVerbs{{
+								Resource: "fake-resource",
+								APIGroup: "projectcalico.org",
+								Verbs: []v3.AuthorizedResourceVerb{{
+									Verb:           "list",
+									ResourceGroups: []v3.AuthorizedResourceGroup{{Namespace: "fake-namespace1"}},
+								}},
+							}}, nil
 						}
+						return tc.subsequentReviewFunc(cluster)
+					}}
 
-						object := createAction.GetObject().DeepCopyObject()
-						authReview, ok := object.(*v3.AuthorizationReview)
-						if !ok {
-							return false, nil, fmt.Errorf("invalid reactor object, expecting *v3.AuthorizationReview but got %v (%T)", object, object)
-						}
-
-						return authReviewFunc(authReview)
-					})
-
-					mockClientSet := k8s.NewMockClientSet(t)
-					mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient).Twice()
-					mockClientSetFactory.
-						On("NewClientSetForApplication", "fake-managed-cluster1").
-						Return(mockClientSet, nil).
-						Twice()
+					ctx, authorizer, _ := newAuthorizer(t, "fake-user", "", 1*time.Hour, "fake-product-mode", true, nil, nil, reviewer)
 
 					expected := []v3.AuthorizedResourceVerbs{{
 						APIGroup: "projectcalico.org",
@@ -736,8 +697,6 @@ func TestAuthorizer(t *testing.T) {
 					})
 					require.NoError(t, err)
 					cacheEntry.expireRevalidateAt()
-
-					authReviewFunc = tc.subsequentAuthReviewFunc
 
 					authVerbs, err = authorizer.GetAuthorizedResourceVerbs(ctx, []string{"fake-managed-cluster1"})
 					require.NoError(t, err)

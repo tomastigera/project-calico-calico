@@ -168,6 +168,16 @@ func WithTunnelTargetWhitelist(tgts []regexp.Regexp) Option {
 	}
 }
 
+// WithTunnelExclusions sets paths that should never be tunneled to managed clusters, even if they
+// match the tunnel target whitelist. Requests matching these patterns are always handled by the
+// management cluster's default proxy.
+func WithTunnelExclusions(tgts []regexp.Regexp) Option {
+	return func(s *Server) error {
+		s.tunnelExclusions = tgts
+		return nil
+	}
+}
+
 // WithForwardingEnabled sets if we should allow forwarding to another server
 func WithForwardingEnabled(forwardingEnabled bool) Option {
 	return func(s *Server) error {

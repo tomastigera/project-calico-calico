@@ -15,6 +15,7 @@ import (
 
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	lmacache "github.com/projectcalico/calico/lma/pkg/cache"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 const APIGroupLMATigera = "lma.tigera.io"
@@ -36,6 +37,7 @@ type rulesAuthorizer struct {
 	cfg                          AuthorizerConfig
 	logger                       logging.Logger
 	namespace                    string
+	reviewer                     authzreview.Reviewer
 	rulesCache                   lmacache.LoadingCache[string, []authzv1.ResourceRule]
 	authorizedResourceVerbsCache lmacache.LoadingCache[string, *authorizedResourcesVerbsCacheEntry]
 }
@@ -72,12 +74,14 @@ func NewAuthorizer(
 	logger logging.Logger,
 	lmaCacheTTL time.Duration,
 	cfg AuthorizerConfig,
+	reviewer authzreview.Reviewer,
 ) (Authorizer, error) {
 
 	authorizer := &rulesAuthorizer{
 		cfg:       cfg,
 		logger:    logger,
 		namespace: "default",
+		reviewer:  reviewer,
 	}
 
 	if cfg.Namespace != "" {
@@ -299,7 +303,7 @@ func (a *rulesAuthorizer) getOrLoadAuthorizedResourceVerbs(
 ) (*authorizedResourcesVerbsCacheEntry, error) {
 	cacheItem, err := a.authorizedResourceVerbsCache.GetOrLoad(cacheKey, func() (*authorizedResourcesVerbsCacheEntry, error) {
 		// GetOrLoad ensures a single authorizedResourcesVerbsCacheEntry is shared by all goroutines using the same cacheKey
-		return newAuthorizedResourcesVerbsCacheEntry(ctx, a.logger, managedClusterName, a.cfg.AuthorizedVerbsCacheSoftTTL, a.cfg.AuthorizedVerbsCacheRevalidateTimeout)
+		return newAuthorizedResourcesVerbsCacheEntry(ctx, a.logger, managedClusterName, a.cfg.AuthorizedVerbsCacheSoftTTL, a.cfg.AuthorizedVerbsCacheRevalidateTimeout, a.reviewer)
 	})
 	if err != nil {
 		return nil, err

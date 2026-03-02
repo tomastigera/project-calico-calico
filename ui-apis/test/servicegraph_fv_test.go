@@ -55,6 +55,7 @@ import (
 	k8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	uiapisv1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/ui-apis/pkg/server"
 )
@@ -1992,6 +1993,8 @@ func createServiceGraphHandlers(
 ) (servicegraph.ServiceGraphHandler, http.Handler) {
 	authz := auth.NewRBACAuthorizer(k8sClient)
 
+	reviewer := authzreview.NewAuthzReviewer(authzreview.NewCalculator(k8sClient, calicofake.NewSimpleClientset()), clientSetFactory)
+
 	var cfg *servicegraph.Config
 	if len(suppliedCfg) > 0 {
 		cfg = suppliedCfg[0]
@@ -2004,10 +2007,11 @@ func createServiceGraphHandlers(
 		ctrlClient,
 		lsClient,
 		clientSetFactory,
+		reviewer,
 		cfg,
 	)
 
-	sgStatsHandler := servicegraph.NewServiceGraphStatsHandler(ctrlClient, lsClient, clientSetFactory, sgHandler.ServiceGraphCache(), cfg)
+	sgStatsHandler := servicegraph.NewServiceGraphStatsHandler(ctrlClient, lsClient, clientSetFactory, reviewer, sgHandler.ServiceGraphCache(), cfg)
 
 	return sgHandler, sgStatsHandler
 }

@@ -2,37 +2,37 @@ package security
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakeprojectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/tds-apiserver/lib/logging"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
-	dynamicfake "k8s.io/client-go/dynamic/fake"
-	"k8s.io/client-go/kubernetes/fake"
-	testing2 "k8s.io/client-go/testing"
 
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
+
+// mockReviewer implements authzreview.Reviewer for tests.
+type mockReviewer struct {
+	fn func(ctx context.Context, usr user.Info, cluster string, attrs []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error)
+}
+
+func (m *mockReviewer) Review(ctx context.Context, usr user.Info, cluster string, attrs []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+	return m.fn(ctx, usr, cluster, attrs)
+}
+
+func (m *mockReviewer) ReviewForLogs(ctx context.Context, usr user.Info, cluster string) ([]v3.AuthorizedResourceVerbs, error) {
+	return m.Review(ctx, usr, cluster, nil)
+}
 
 func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 
 	logger := logging.New("TestAuthorizedResourcesVerbsCacheItem")
 
-	newUserAuthContext := func() (Context, *fakeprojectcalicov3.FakeProjectcalicoV3, *k8s.MockClientSetFactory) {
-
-		scheme := runtime.NewScheme()
-		require.NoError(t, v3.AddToScheme(scheme))
-		require.NoError(t, fake.AddToScheme(scheme))
-
-		k8sClient := dynamicfake.NewSimpleDynamicClient(scheme)
-		fakeCalicoClient := &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &k8sClient.Fake}
-
+	newUserAuthContext := func() Context {
 		mockClientSetFactory := k8s.NewMockClientSetFactory(t)
 
 		ctx := NewUserAuthContext(
@@ -46,11 +46,11 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 			nil,
 		)
 
-		return ctx, fakeCalicoClient, mockClientSetFactory
+		return ctx
 	}
 
 	t.Run("does not revalidate unexpired item", func(t *testing.T) {
-		ctx, _, _ := newUserAuthContext()
+		ctx := newUserAuthContext()
 
 		revalidateAt := time.Now().Add(1 * time.Hour)
 		arbCacheEntry := authorizedResourcesVerbsCacheEntry{
@@ -64,46 +64,25 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 	})
 
 	t.Run("revalidates expired item", func(t *testing.T) {
-		ctx, fakeCalicoClient, mockClientSetFactory := newUserAuthContext()
+		ctx := newUserAuthContext()
 
-		mockClientSet := k8s.NewMockClientSet(t)
-		mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient)
-		mockClientSetFactory.
-			On("NewClientSetForApplication", "fake-resource").
-			Return(mockClientSet, nil).
-			Once()
-
-		fakeCalicoClient.PrependReactor(
-			"create",
-			"authorizationreviews",
-			func(action testing2.Action) (handled bool, ret runtime.Object, err error) {
-				createAction, ok := action.(testing2.CreateAction)
-				if !ok {
-					return true, nil, fmt.Errorf("expected CreateAction, got %T: %v", action, action)
-				}
-
-				authorizationReview, ok := createAction.GetObject().(*v3.AuthorizationReview)
-				if !ok {
-					return true, nil, fmt.Errorf("expected AuthorizationReview, got %T: %v", ret, ret)
-				}
-
-				authorizationReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
-					APIGroup: "projectcalico.org",
-					Resource: "fake-resource",
-					Verbs: []v3.AuthorizedResourceVerb{{
-						Verb: "list",
-						ResourceGroups: []v3.AuthorizedResourceGroup{{
-							Namespace: "fake-namespace",
-						}},
+		reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, _ string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+			return []v3.AuthorizedResourceVerbs{{
+				APIGroup: "projectcalico.org",
+				Resource: "fake-resource",
+				Verbs: []v3.AuthorizedResourceVerb{{
+					Verb: "list",
+					ResourceGroups: []v3.AuthorizedResourceGroup{{
+						Namespace: "fake-namespace",
 					}},
-				}}
-
-				return true, authorizationReview, nil
-			})
+				}},
+			}}, nil
+		}}
 
 		revalidateAt := time.Now().Add(-1 * time.Hour)
 		arbCacheEntry := authorizedResourcesVerbsCacheEntry{
 			revalidateAt: revalidateAt,
+			reviewer:     reviewer,
 		}
 
 		err := arbCacheEntry.Revalidate(ctx, logger, "fake-resource", 5*time.Second, 10*time.Second)
@@ -122,79 +101,48 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 	})
 
 	t.Run("return revalidation error", func(t *testing.T) {
-		ctx, fakeCalicoClient, mockClientSetFactory := newUserAuthContext()
+		ctx := newUserAuthContext()
 
-		mockClientSet := k8s.NewMockClientSet(t)
-		mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient)
-		mockClientSetFactory.
-			On("NewClientSetForApplication", "fake-resource").
-			Return(mockClientSet, nil).
-			Once()
-
-		fakeCalicoClient.PrependReactor(
-			"create",
-			"authorizationreviews",
-			func(action testing2.Action) (handled bool, ret runtime.Object, err error) {
-				return true, nil, errors.New("an expected error")
-			})
+		reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, _ string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+			return nil, fmt.Errorf("an expected error")
+		}}
 
 		revalidateAt := time.Now().Add(-1 * time.Hour)
 		arbCacheEntry := authorizedResourcesVerbsCacheEntry{
 			revalidateAt: revalidateAt,
+			reviewer:     reviewer,
 		}
 
 		err := arbCacheEntry.Revalidate(ctx, logger, "fake-resource", 5*time.Second, 10*time.Second)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "an expected error")
 	})
 
 	t.Run("performs a single successful AuthorizationReview for concurrent revalidations", func(t *testing.T) {
-		ctx, fakeCalicoClient, mockClientSetFactory := newUserAuthContext()
+		ctx := newUserAuthContext()
 
-		mockClientSet := k8s.NewMockClientSet(t)
-		mockClientSet.On("ProjectcalicoV3").Return(fakeCalicoClient)
-		mockClientSetFactory.
-			On("NewClientSetForApplication", "fake-resource").
-			Return(mockClientSet, nil).
-			Once()
+		var reviewCount atomic.Int32
+		reviewer := &mockReviewer{fn: func(_ context.Context, _ user.Info, _ string, _ []v3.AuthorizationReviewResourceAttributes) ([]v3.AuthorizedResourceVerbs, error) {
+			count := reviewCount.Add(1)
 
-		var authorizationReviews []*v3.AuthorizationReview
-		fakeCalicoClient.PrependReactor(
-			"create",
-			"authorizationreviews",
-			func(action testing2.Action) (handled bool, ret runtime.Object, err error) {
-				createAction, ok := action.(testing2.CreateAction)
-				if !ok {
-					return true, nil, fmt.Errorf("expected CreateAction, got %T: %v", action, action)
-				}
+			// Delay response so other goroutines can catch up in case there is a bug
+			time.Sleep(1 * time.Second)
 
-				authorizationReview, ok := createAction.GetObject().(*v3.AuthorizationReview)
-				if !ok {
-					return true, nil, fmt.Errorf("expected AuthorizationReview, got %T: %v", ret, ret)
-				}
-
-				authorizationReview.Status.AuthorizedResourceVerbs = []v3.AuthorizedResourceVerbs{{
-					APIGroup: "projectcalico.org",
-					Resource: "fake-resource",
-					Verbs: []v3.AuthorizedResourceVerb{{
-						Verb: "list",
-						ResourceGroups: []v3.AuthorizedResourceGroup{{
-							Namespace: fmt.Sprintf("fake-namespace%d", 1+len(authorizationReviews)),
-						}},
+			return []v3.AuthorizedResourceVerbs{{
+				APIGroup: "projectcalico.org",
+				Resource: "fake-resource",
+				Verbs: []v3.AuthorizedResourceVerb{{
+					Verb: "list",
+					ResourceGroups: []v3.AuthorizedResourceGroup{{
+						Namespace: fmt.Sprintf("fake-namespace%d", count),
 					}},
-				}}
-
-				authorizationReviews = append(authorizationReviews, authorizationReview)
-
-				// Delay response so other goroutines can catch up in case there is a bug
-				time.Sleep(1 * time.Second)
-
-				return true, authorizationReview, nil
-			})
+				}},
+			}}, nil
+		}}
 
 		revalidateAt := time.Now().Add(-1 * time.Hour)
 		arbCacheEntry := authorizedResourcesVerbsCacheEntry{
 			revalidateAt: revalidateAt,
+			reviewer:     reviewer,
 		}
 
 		ch := make(chan error, 10)
@@ -218,6 +166,6 @@ func TestAuthorizedResourcesVerbsCacheItem(t *testing.T) {
 			}}, arbCacheEntry.authorizedResourceVerbs)
 		}
 
-		require.Len(t, authorizationReviews, 1)
+		require.Equal(t, int32(1), reviewCount.Load())
 	})
 }

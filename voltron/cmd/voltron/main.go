@@ -131,6 +131,16 @@ func main() {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
 
+		// Paths that match the tunnel whitelist but should still be handled by the management
+		// cluster. AuthorizationReviews are handled by ui-apis, which performs the managed
+		// cluster RBAC calculation itself.
+		tunnelExclusions, err := regex.CompileRegexStrings([]string{
+			`^/apis/projectcalico.org/v3/authorizationreviews$`,
+		})
+		if err != nil {
+			log.WithError(err).Fatalf("Failed to parse tunnel exclusions.")
+		}
+
 		kibanaURL, err := url.Parse(cfg.KibanaEndpoint)
 		if err != nil {
 			log.WithError(err).Fatalf("failed to parse Kibana endpoint %s", cfg.KibanaEndpoint)
@@ -192,6 +202,7 @@ func main() {
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+			server.WithTunnelExclusions(tunnelExclusions),
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(
 				cfg.CheckManagedClusterAuthorizationBeforeProxy,
@@ -244,6 +255,15 @@ func main() {
 			Path:         "/api/",
 			Dest:         cfg.K8sEndpoint,
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		{
+			// Route the legacy CRD-style AuthorizationReview path to ui-apis,
+			// which now serves this endpoint directly instead of the API server.
+			Path:             "/apis/projectcalico.org/v3/authorizationreviews",
+			Dest:             cfg.ElasticEndpoint,
+			PathRegexp:       []byte("^/apis/projectcalico.org/v3/authorizationreviews$"),
+			PathReplace:      []byte("/authorizationreviews"),
+			AllowInsecureTLS: true,
 		},
 		{
 			Path:         "/apis/",

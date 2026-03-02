@@ -10,10 +10,9 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 const (
@@ -165,23 +164,21 @@ type Authorizer interface {
 }
 
 type authorizer struct {
-	clientSetFactory k8s.ClientSetFactory
+	reviewer authzreview.Reviewer
 }
 
-func NewAuthorizer(clsfactory k8s.ClientSetFactory) Authorizer {
+func NewAuthorizer(reviewer authzreview.Reviewer) Authorizer {
 	return &authorizer{
-		clientSetFactory: clsfactory,
+		reviewer: reviewer,
 	}
 }
 
-// PerformUserAuthorizationReview, creates an authorizationreview for the passed in authreviewattributes and
-// build permission based on the results.
-//
-// returns permission, error
+// PerformUserAuthorizationReview calculates RBAC permissions for the authenticated user
+// using the Reviewer directly, avoiding the extra hop to ui-apis.
 func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 	authReviewattributes []v3.AuthorizationReviewResourceAttributes) (Permission, error) {
 
-	user, ok := request.UserFrom(ctx)
+	usr, ok := request.UserFrom(ctx)
 	if !ok {
 		// There should be user info in the request context. If not this is server error since an earlier handler
 		// should have authenticated.
@@ -192,27 +189,16 @@ func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 		}
 	}
 
-	// since each cluster has its own queryserver, we do not need to pass clusterID to get the clientSet.
-	cs, err := authz.clientSetFactory.NewClientSetForApplication("")
+	verbs, err := authz.reviewer.Review(ctx, usr, "", authReviewattributes)
 	if err != nil {
-		return nil, err
-	}
-
-	// we cannot use the current context to PerformAuthorizationReviewContext because it contains the userInfo and queryserver
-	// does not have impersonate rbac to execute calls on behalf of users. However, we still need to run AuthorizationReview
-	// for the user. Thus, we use PerformAuthroizationReviewWithUser which is using the background context to execute the request
-	// and allows us to pass in user info to be used in the authorization.
-	authorizedResourceVerbs, err := auth.PerformAuthorizationReviewWithUser(user, cs, authReviewattributes)
-
-	if err != nil {
-		log.WithError(err).Error("Unable to perform authorization review.")
+		log.WithError(err).Error("Unable to calculate permissions.")
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
-			Msg:    "Unable to perform authorization review",
+			Msg:    "Unable to calculate permissions",
 		}
 	}
 
-	return convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs)
+	return convertAuthorizationReviewStatusToPermissions(verbs)
 }
 
 // function convertAuthorizationReviewStatusToPermissions converts AuthorizedResourceVerbs to Permission (map of resource groups / name -> verb -> authorizedResourceGroup) for

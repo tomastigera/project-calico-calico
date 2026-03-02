@@ -9,9 +9,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 // Sanity check the satisfies the interface.
@@ -24,7 +23,7 @@ type Authorizer interface {
 
 // realAuthorizer implements the real backend for stats queries.
 type realAuthorizer struct {
-	clientSetFactory k8s.ClientSetFactory
+	reviewer authzreview.Reviewer
 }
 
 // PerformUserAuthorizationReview performs a user authorization check.
@@ -40,7 +39,5 @@ func (r *realAuthorizer) PerformUserAuthorizationReview(ctx context.Context, rd 
 			Msg:    "No user information on request",
 		}
 	}
-	return auth.PerformUserAuthorizationReviewForLogs(
-		ctx, r.clientSetFactory, user, rd.AggregationRequest.Cluster,
-	)
+	return r.reviewer.ReviewForLogs(ctx, user, rd.AggregationRequest.Cluster)
 }

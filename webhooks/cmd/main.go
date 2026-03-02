@@ -38,7 +38,6 @@ import (
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/webhooks/pkg/auditlogs"
-	"github.com/projectcalico/calico/webhooks/pkg/authorizationreview"
 	"github.com/projectcalico/calico/webhooks/pkg/managedcluster"
 	"github.com/projectcalico/calico/webhooks/pkg/rbac"
 	"github.com/projectcalico/calico/webhooks/pkg/utils"
@@ -142,8 +141,6 @@ func serveWebhookTLS(cmd *cobra.Command, args []string) {
 func registerHooks(ctx context.Context, cs kubernetes.Interface, calico clientset.Interface) {
 	rbac.RegisterHook(cs, utils.HandleFn(handleFn))
 	auditlogs.RegisterHook(auditLogPath, utils.HandleFn(handleFn))
-	authorizationreview.RegisterHook(cs, calico, utils.HandleFn(handleFn))
-	authorizationreview.StartCleanupController(ctx, calico)
 	managedcluster.RegisterHook(cs, mcmAddr, mcmCAType, mcmSecret, multiTenant, utils.HandleFn(handleFn))
 	managedcluster.StartCleanupController(ctx, calico)
 

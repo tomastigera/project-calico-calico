@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 
@@ -29,12 +30,14 @@ func NewServiceGraphHandler(
 	client ctrlclient.WithWatch,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
+	reviewer authzreview.Reviewer,
 	cfg *Config,
 ) ServiceGraphHandler {
 	return NewServiceGraphHandlerWithBackend(
 		client,
 		&realServiceGraphBackend{
 			authz:            authz,
+			reviewer:         reviewer,
 			linseed:          linseed,
 			clientSetFactory: clientSetFactory,
 			config:           cfg,

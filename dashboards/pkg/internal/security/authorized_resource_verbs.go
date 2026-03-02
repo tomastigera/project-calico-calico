@@ -8,12 +8,28 @@ import (
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"github.com/tigera/tds-apiserver/lib/slices"
 
-	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
+
+// dashboardReviewAttrs is the set of resource attributes the dashboard needs authorization for.
+var dashboardReviewAttrs = []v3.AuthorizationReviewResourceAttributes{
+	{
+		APIGroup:  "projectcalico.org",
+		Resources: []string{"hostendpoints", "networksets", "globalnetworksets"},
+		Verbs:     []string{"list"},
+	}, {
+		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	},
+}
 
 // authorizedResourcesVerbsCacheEntry A cache entry containing v3.AuthorizedResourceVerbs associated by cache key with
 // a user and a resource (managed cluster name)
 type authorizedResourcesVerbsCacheEntry struct {
+	// reviewer performs an authorization review for a user on a given cluster.
+	reviewer authzreview.Reviewer
+
 	// authorizedResourceVerbs contains a slice of AuthorizedResourceVerbs from AuthorizationReview status
 	authorizedResourceVerbs []v3.AuthorizedResourceVerbs
 
@@ -27,8 +43,8 @@ type authorizedResourcesVerbsCacheEntry struct {
 	m sync.Mutex
 }
 
-func newAuthorizedResourcesVerbsCacheEntry(ctx Context, logger logging.Logger, resource string, revalidateTTL, revalidateTimeout time.Duration) (*authorizedResourcesVerbsCacheEntry, error) {
-	a := &authorizedResourcesVerbsCacheEntry{}
+func newAuthorizedResourcesVerbsCacheEntry(ctx Context, logger logging.Logger, resource string, revalidateTTL, revalidateTimeout time.Duration, reviewer authzreview.Reviewer) (*authorizedResourcesVerbsCacheEntry, error) {
+	a := &authorizedResourcesVerbsCacheEntry{reviewer: reviewer}
 	if err := a.Revalidate(ctx, logger, resource, revalidateTTL, revalidateTimeout); err != nil {
 		return nil, err
 	}
@@ -54,7 +70,7 @@ func (a *authorizedResourcesVerbsCacheEntry) Revalidate(ctx Context, logger logg
 		if cacheItem.isStale(revalidateTTL) {
 			revalidateStart := time.Now()
 			var authorizedResourceVerbs []v3.AuthorizedResourceVerbs
-			authorizedResourceVerbs, err = getAuthorizedResourceVerbs(ctx, resource)
+			authorizedResourceVerbs, err = cacheItem.reviewer.Review(ctx, ctx.UserInfo(), resource, dashboardReviewAttrs)
 			logger.DebugC(ctx, "AuthorizationReview cache entry revalidated",
 				logging.Any("authorizedResourceVerbs", authorizedResourceVerbs),
 				logging.Error(err),
@@ -107,28 +123,4 @@ func (a *authorizedResourcesVerbsCacheEntry) expireRevalidateAt() {
 	defer a.rwMutex.Unlock()
 
 	a.revalidateAt = time.Time{}
-}
-
-// getAuthorizedResourceVerbs perform AuthorizationReview on a resource
-func getAuthorizedResourceVerbs(ctx Context, resource string) ([]v3.AuthorizedResourceVerbs, error) {
-	clientSet, err := ctx.ClientSetFactory().NewClientSetForApplication(resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return auth.PerformAuthorizationReviewWithContext(
-		ctx,
-		clientSet,
-		[]v3.AuthorizationReviewResourceAttributes{
-			{
-				APIGroup:  "projectcalico.org",
-				Resources: []string{"hostendpoints", "networksets", "globalnetworksets"},
-				Verbs:     []string{"list"},
-			}, {
-				APIGroup:  "",
-				Resources: []string{"pods"},
-				Verbs:     []string{"list"},
-			},
-		},
-	)
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
 	queryserverclient "github.com/projectcalico/calico/queryserver/queryserver/client"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 	"github.com/projectcalico/calico/ui-apis/pkg/handler"
 	"github.com/projectcalico/calico/ui-apis/pkg/kibana"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
@@ -70,10 +72,21 @@ func Start(cfg *Config) error {
 	if err != nil {
 		logrus.Fatal("Unable to create client config", err)
 	}
+	// Increase from the default QPS=5/Burst=10 to avoid client-side throttling
+	// when the RBAC calculator lists RBAC resources across many namespaces.
+	restConfig.QPS = 100
+	restConfig.Burst = 200
 	k8sCli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		logrus.Fatal("Unable to create kubernetes interface", err)
 	}
+
+	calicoCli, err := clientset.NewForConfig(restConfig)
+	if err != nil {
+		logrus.Fatal("Unable to create calico clientset", err)
+	}
+
+	rbacCalculator := authzreview.NewCalculator(k8sCli, calicoCli)
 
 	var options []lmaauth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
@@ -164,6 +177,9 @@ func Start(cfg *Config) error {
 	// Create a PIP backend.
 	pipBackend := pip.New(pipcfg.MustLoadConfig(), &clusterAwareLister{k8sClientFactory}, linseed)
 
+	// Create the Reviewer that wraps the RBAC calculator and the ClientSetFactory for managed clusters.
+	reviewer := authzreview.NewAuthzReviewer(rbacCalculator, k8sClientSetFactory)
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	// Create an AuthorizationReview to perform RBAC checks for the user making the request.
@@ -172,7 +188,7 @@ func Start(cfg *Config) error {
 	// required by Guardian in the managed cluster. OSS clusters also do not have the AuthorizationReview API.
 	var authzReview middleware.AuthorizationReview
 	if cfg.Impersonate {
-		authzReview = middleware.NewAuthorizationReview(k8sClientSetFactory)
+		authzReview = middleware.NewAuthorizationReview(reviewer)
 	}
 
 	// Service graph has additional RBAC control built in since it accesses multiple different tables. However, the
@@ -209,6 +225,7 @@ func Start(cfg *Config) error {
 		client,
 		linseed,
 		k8sClientSetFactory,
+		reviewer,
 		sgConfig,
 	)
 	sm.Handle("/serviceGraph",
@@ -226,6 +243,7 @@ func Start(cfg *Config) error {
 						client,
 						linseed,
 						k8sClientSetFactory,
+						reviewer,
 						serviceGraphHandler.ServiceGraphCache(),
 						sgConfig,
 					)))))
@@ -245,7 +263,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeFlows)))))
+					aggregation.NewHandler(linseed, reviewer, aggregation.TypeFlows)))))
 
 	sm.Handle("/flowLogs/search",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
@@ -278,7 +296,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeDNS)))))
+					aggregation.NewHandler(linseed, reviewer, aggregation.TypeDNS)))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -293,7 +311,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeL7)))))
+					aggregation.NewHandler(linseed, reviewer, aggregation.TypeL7)))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -418,6 +436,10 @@ func Start(cfg *Config) error {
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
+
+	sm.Handle("/authorizationreviews",
+		middleware.AuthenticateRequest(authn,
+			middleware.NewAuthorizationReviewHandler(reviewer)))
 
 	if cfg.GoldmaneEnabled && cfg.VoltronURL != "" {
 		creds, err := credentials.NewClientTLSFromFile(cfg.VoltronCAPath, "")

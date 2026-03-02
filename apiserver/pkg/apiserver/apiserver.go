@@ -3,30 +3,22 @@
 package apiserver
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/compatibility"
 
-	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicorest "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/rest"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
 	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
@@ -80,7 +72,6 @@ type Config struct {
 // ProjectCalicoServer contains state for a Kubernetes cluster master/api server.
 type ProjectCalicoServer struct {
 	GenericAPIServer      *genericapiserver.GenericAPIServer
-	RBACCalculator        rbac.Calculator
 	CalicoResourceLister  CalicoResourceLister
 	WatchManager          *util.WatchManager
 	LicenseMonitor        monitor.LicenseMonitor
@@ -147,18 +138,11 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	// in case of on update that the watch necessitates recreation of the watch.
 	watchManager := util.NewWatchManager(cc)
 
-	// Create the RBAC calculator,
-	calculator, err := c.NewRBACCalculator(calicoLister)
-	if err != nil {
-		return nil, err
-	}
-
 	// Create the license monitor.
 	licenseMonitor := monitor.New(cc)
 
 	s := &ProjectCalicoServer{
 		GenericAPIServer:      genericServer,
-		RBACCalculator:        calculator,
 		CalicoResourceLister:  calicoLister,
 		LicenseMonitor:        licenseMonitor,
 		WatchManager:          watchManager,
@@ -166,7 +150,7 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(
-		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseMonitor, calicoLister, watchManager,
+		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, licenseMonitor, calicoLister, watchManager,
 	)
 	if err != nil {
 		return nil, err
@@ -177,66 +161,6 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	return s, nil
-}
-
-func (c completedConfig) NewRBACCalculator(calicoLister CalicoResourceLister) (rbac.Calculator, error) {
-	resourceLister := discovery.NewDiscoveryClientForConfigOrDie(c.ExtraConfig.KubernetesAPIServerConfig)
-	namespaceLister := &k8sNamespaceLister{c.GenericConfig.SharedInformerFactory.Core().V1().Namespaces().Lister()}
-	roleGetter := &k8sRoleGetter{c.GenericConfig.SharedInformerFactory.Rbac().V1().Roles().Lister()}
-	roleBindingLister := &k8sRoleBindingLister{c.GenericConfig.SharedInformerFactory.Rbac().V1().RoleBindings().Lister()}
-	clusterRoleGetter := &k8sClusterRoleGetter{c.GenericConfig.SharedInformerFactory.Rbac().V1().ClusterRoles().Lister()}
-	clusterRoleBindingLister := &k8sClusterRoleBindingLister{c.GenericConfig.SharedInformerFactory.Rbac().V1().ClusterRoleBindings().Lister()}
-
-	// Create the rbac calculator
-	return rbac.NewCalculator(
-		resourceLister, clusterRoleGetter, clusterRoleBindingLister, roleGetter, roleBindingLister,
-		namespaceLister, calicoLister, c.ExtraConfig.MinResourceRefreshInterval,
-	), nil
-}
-
-// k8sRoleGetter implements the RoleGetter interface returning matching Role.
-type k8sRoleGetter struct {
-	Lister rbacv1listers.RoleLister
-}
-
-func (r *k8sRoleGetter) GetRole(ctx context.Context, namespace, name string) (*rbacv1.Role, error) {
-	return r.Lister.Roles(namespace).Get(name)
-}
-
-// k8sRoleBindingLister implements the RoleBindingLister interface returning RoleBindings.
-type k8sRoleBindingLister struct {
-	lister rbacv1listers.RoleBindingLister
-}
-
-func (r *k8sRoleBindingLister) ListRoleBindings(ctx context.Context, namespace string) ([]*rbacv1.RoleBinding, error) {
-	return r.lister.RoleBindings(namespace).List(labels.Everything())
-}
-
-// k8sClusterRoleGetter implements the ClusterRoleGetter interface returning matching ClusterRole.
-type k8sClusterRoleGetter struct {
-	lister rbacv1listers.ClusterRoleLister
-}
-
-func (r *k8sClusterRoleGetter) GetClusterRole(ctx context.Context, name string) (*rbacv1.ClusterRole, error) {
-	return r.lister.Get(name)
-}
-
-// k8sClusterRoleBindingLister implements the ClusterRoleBindingLister interface.
-type k8sClusterRoleBindingLister struct {
-	lister rbacv1listers.ClusterRoleBindingLister
-}
-
-func (r *k8sClusterRoleBindingLister) ListClusterRoleBindings(ctx context.Context) ([]*rbacv1.ClusterRoleBinding, error) {
-	return r.lister.List(labels.Everything())
-}
-
-// k8sNamespaceLister implements the NamespaceLister interface returning Namespaces.
-type k8sNamespaceLister struct {
-	lister corev1listers.NamespaceLister
-}
-
-func (n *k8sNamespaceLister) ListNamespaces() ([]*corev1.Namespace, error) {
-	return n.lister.List(labels.Everything())
 }
 
 func NewCalicoResourceLister(cc api.Client) CalicoResourceLister {

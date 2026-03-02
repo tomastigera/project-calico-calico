@@ -10,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/tds-apiserver/lib/logging"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -19,6 +20,8 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/config"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/server"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 var (
@@ -88,6 +91,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create a Calico clientset for the RBAC calculator.
+	calicoClient, err := clientset.NewForConfig(k8sRestConfig)
+	if err != nil {
+		logger.Error("failed to create calico clientset", logging.Error(err))
+		os.Exit(1)
+	}
+
+	// Create an RBAC Reviewer for performing authorization reviews directly as a library call,
+	// avoiding the extra hop to ui-apis.
+	calculator := authzreview.NewCalculator(k8sClient, calicoClient)
+	csFactory := lmak8s.NewClientSetFactoryWithConfig(k8sRestConfig, cfg.MultiClusterForwardingCA, cfg.MultiClusterForwardingEndpoint)
+	reviewer := authzreview.NewAuthzReviewer(calculator, csFactory)
+
 	authorizer, err := security.NewAuthorizer(
 		ctx,
 		logger,
@@ -101,6 +117,7 @@ func main() {
 			AuthorizedVerbsCacheReviewsTimeout:    cfg.AuthorizedVerbsCacheReviewsTimeout,
 			AuthorizedVerbsCacheRevalidateTimeout: cfg.AuthorizedVerbsCacheRevalidateTimeout,
 		},
+		reviewer,
 	)
 	if err != nil {
 		logger.Error("failed to create authorizer", logging.Error(err))

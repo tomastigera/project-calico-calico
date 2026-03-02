@@ -8,17 +8,18 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/queryserver/pkg/clientmgr"
 	authjwt "github.com/projectcalico/calico/queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/queryserver/queryserver/config"
 	handler "github.com/projectcalico/calico/queryserver/queryserver/handlers/auth"
 	"github.com/projectcalico/calico/queryserver/queryserver/server"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 // Client Config from environment option.
@@ -84,9 +85,17 @@ func main() {
 	}
 	authnHandler := handler.NewAuthHandler(authJWT)
 
-	// Define a new authorization handler
-	k8sClientSet := k8s.NewClientSetFactory("", "")
-	authzHandler := authjwt.NewAuthorizer(k8sClientSet)
+	// Create a Calico clientset for the RBAC calculator.
+	calicoClient, err := clientset.NewForConfig(restCfg)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create Calico clientset")
+	}
+
+	// Create an RBAC Reviewer that evaluates permissions directly, avoiding
+	// the extra hop to ui-apis. No ClientSetFactory needed since queryserver
+	// only reviews the local cluster.
+	reviewer := authzreview.NewAuthzReviewer(authzreview.NewCalculator(k8sClient, calicoClient), nil)
+	authzHandler := authjwt.NewAuthorizer(reviewer)
 
 	// Start the server.
 	srv := server.NewServer(k8sClient, cfg, serverCfg, authnHandler, authzHandler)

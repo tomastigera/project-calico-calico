@@ -24,11 +24,11 @@ import (
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/pkg/managedcluster"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 
@@ -36,6 +36,7 @@ func NewServiceGraphStatsHandler(
 	client ctrlclient.WithWatch,
 	linseed lsclient.Client,
 	clientSetFactory k8s.ClientSetFactory,
+	reviewer authzreview.Reviewer,
 	cache ServiceGraphCache,
 	config *Config,
 ) http.Handler {
@@ -45,6 +46,7 @@ func NewServiceGraphStatsHandler(
 		ctrlClient:         client,
 		linseed:            linseed,
 		clientSetFactory:   clientSetFactory,
+		reviewer:           reviewer,
 		serviceGraphCache:  cache,
 		emptyServiceGroups: emptyServiceGroups,
 		config:             config,
@@ -58,6 +60,7 @@ type serviceGraphStats struct {
 	ctrlClient         ctrlclient.WithWatch
 	linseed            lsclient.Client
 	clientSetFactory   k8s.ClientSetFactory
+	reviewer           authzreview.Reviewer
 	serviceGraphCache  ServiceGraphCache
 	emptyServiceGroups ServiceGroups
 	config             *Config
@@ -426,7 +429,7 @@ func (s *serviceGraphStats) getNamespaces(ctx context.Context, cluster string, c
 	if !ok {
 		resultChan <- namespacesResult{err: errors.New("user not found in context"), duration: time.Since(start)}
 	}
-	authorizedNamespaces, globalAccess, err := authorizedNamespacesFromNamespacedEndpoints(ctx, clientSetFactory, userInfo, cluster)
+	authorizedNamespaces, globalAccess, err := authorizedNamespacesFromNamespacedEndpoints(ctx, s.reviewer, userInfo, cluster)
 	if err != nil {
 		resultChan <- namespacesResult{err: err, duration: time.Since(start)}
 		return
@@ -615,11 +618,11 @@ func (s *serviceGraphStats) fetchServiceGraphResponse(ctx context.Context, clust
 
 func authorizedNamespacesFromNamespacedEndpoints(
 	ctx context.Context,
-	csFactory k8s.ClientSetFactory,
+	reviewer authzreview.Reviewer,
 	user user.Info,
 	cluster string,
 ) (namespaces map[string]bool, clusterWide bool, err error) {
-	verbs, err := auth.PerformUserAuthorizationReviewForLogs(ctx, csFactory, user, cluster)
+	verbs, err := reviewer.ReviewForLogs(ctx, user, cluster)
 	if err != nil {
 		return nil, false, err
 	}

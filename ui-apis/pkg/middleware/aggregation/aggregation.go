@@ -17,8 +17,8 @@ import (
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 
@@ -39,20 +39,17 @@ const (
 	TypeFlows
 )
 
-func NewHandler(lsclient client.Client, clientSetFactory k8s.ClientSetFactory, typ DataType) http.Handler {
+func NewHandler(lsclient client.Client, reviewer authzreview.Reviewer, typ DataType) http.Handler {
+	auth := &realAuthorizer{
+		reviewer: reviewer,
+	}
 	switch typ {
 	case TypeDNS:
-		return NewDNSHandler(lsclient, &realAuthorizer{
-			clientSetFactory: clientSetFactory,
-		})
+		return NewDNSHandler(lsclient, auth)
 	case TypeL7:
-		return NewL7Handler(lsclient, &realAuthorizer{
-			clientSetFactory: clientSetFactory,
-		})
+		return NewL7Handler(lsclient, auth)
 	case TypeFlows:
-		return NewFlowHandler(lsclient, &realAuthorizer{
-			clientSetFactory: clientSetFactory,
-		})
+		return NewFlowHandler(lsclient, auth)
 	}
 	panic("Unhandled aggregation type")
 }

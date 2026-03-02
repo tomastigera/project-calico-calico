@@ -12,9 +12,9 @@ import (
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization
@@ -60,7 +60,7 @@ func NewAllowAllRBACFilter() RBACFilter {
 }
 
 // NewRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
-func NewRBACFilter(ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, cluster string) (RBACFilter, error) {
+func NewRBACFilter(ctx context.Context, authz lmaauth.RBACAuthorizer, reviewer authzreview.Reviewer, cluster string) (RBACFilter, error) {
 	var verbs []v3.AuthorizedResourceVerbs
 	var l7Permitted, dnsPermitted, alertsPermitted bool
 	var verbsErr, l7Err, dnsErr, alertsErr error
@@ -78,7 +78,7 @@ func NewRBACFilter(ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory 
 	}
 
 	wg.Go(func() {
-		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForLogs(ctx, csFactory, user, cluster)
+		verbs, verbsErr = reviewer.ReviewForLogs(ctx, user, cluster)
 	})
 	wg.Go(func() {
 		l7Permitted, l7Err = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "l7"), nil)

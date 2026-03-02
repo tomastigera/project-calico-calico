@@ -9,9 +9,8 @@ import (
 	libcalv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 type AuthorizationReview interface {
@@ -20,18 +19,16 @@ type AuthorizationReview interface {
 
 // The user authentication review struct implementing the authentication review interface.
 type userAuthorizationReview struct {
-	csf lmak8s.ClientSetFactory
+	reviewer authzreview.Reviewer
 }
 
 // NewAuthorizationReview creates an implementation of the AuthorizationReview.
-func NewAuthorizationReview(csFactory lmak8s.ClientSetFactory) AuthorizationReview {
-	return &userAuthorizationReview{csf: csFactory}
+func NewAuthorizationReview(reviewer authzreview.Reviewer) AuthorizationReview {
+	return &userAuthorizationReview{reviewer: reviewer}
 }
 
-// PerformReviewForElasticLogs performs an authorization review on behalf of the user specified in
-// the HTTP request.
-//
-// This function wraps lma's PerformUserAuthorizationReviewForElasticLogs.
+// PerformReview performs an authorization review on behalf of the user specified in
+// the HTTP request using the RBAC calculator.
 func (a userAuthorizationReview) PerformReview(ctx context.Context, cluster string) ([]libcalv3.AuthorizedResourceVerbs, error) {
 	user, ok := request.UserFrom(ctx)
 	if !ok {
@@ -44,6 +41,5 @@ func (a userAuthorizationReview) PerformReview(ctx context.Context, cluster stri
 		}
 	}
 
-	verbs, err := lmaauth.PerformUserAuthorizationReviewForLogs(ctx, a.csf, user, cluster)
-	return verbs, err
+	return a.reviewer.ReviewForLogs(ctx, user, cluster)
 }

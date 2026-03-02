@@ -5,28 +5,30 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
+
+// mockCalculator implements rbac.Calculator for testing.
+type mockCalculator struct {
+	permissions rbac.Permissions
+	err         error
+}
+
+func (m *mockCalculator) CalculatePermissions(_ user.Info, _ []rbac.ResourceVerbs) (rbac.Permissions, error) {
+	return m.permissions, m.err
+}
 
 var _ = Describe("queryserver resource authorizer tests", func() {
 	var authz Authorizer
-	var mockClientSetFactory *lmak8s.MockClientSetFactory
 
 	BeforeEach(func() {
-		mockClientSet := &lmak8s.MockClientSet{}
-		mockClientSetFactory = &lmak8s.MockClientSetFactory{}
-		mockClientSetFactory.On("NewClientSetForApplication", mock.Anything, mock.Anything).Return(mockClientSet, nil).Maybe()
-		mockClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3()).Maybe()
-
-		authz = NewAuthorizer(mockClientSetFactory)
+		authz = NewAuthorizer(authzreview.NewAuthzReviewer(&mockCalculator{permissions: rbac.Permissions{}}, nil))
 	})
 
 	Context("Test authorizer.PerformUserAuthorizationReview", func() {

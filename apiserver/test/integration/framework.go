@@ -135,16 +135,6 @@ func withConfigGetFreshAPIServerServerAndClient(
 	return pcs, clientset, cfg, shutdownServer
 }
 
-func getFreshAPIServerServerAndClient(t *testing.T, newEmptyObj func() runtime.Object) (*apiserver.ProjectCalicoServer, calicoclient.Interface, func()) {
-	serverConfig := &TestServerConfig{
-		etcdServerList:     []string{"http://localhost:2379"},
-		emptyObjFunc:       newEmptyObj,
-		applyTigeraLicense: true,
-	}
-	pcs, client, _, shutdownFunc := withConfigGetFreshAPIServerServerAndClient(t, serverConfig)
-	return pcs, client, shutdownFunc
-}
-
 func getFreshAPIServerAndClient(t *testing.T, newEmptyObj func() runtime.Object, applyTigeraLicense bool) (calicoclient.Interface, func()) {
 	serverConfig := &TestServerConfig{
 		etcdServerList:     []string{"http://localhost:2379"},

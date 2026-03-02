@@ -316,7 +316,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 		authenticators: map[string]Authenticator{
 			// This issuer is used for tokens from service account secrets.
 			ServiceAccountIss: authn,
-			// This user is used for tokens from impersonating users.
+			// This issuer is used for tokens from impersonating users.
 			k8sIss: authn,
 		},
 		RBACAuthorizer: cfg.authorizer,

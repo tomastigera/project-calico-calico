@@ -55,6 +55,7 @@ func TestAuthService(t *testing.T) {
 				AuthorizedVerbsCacheReviewsTimeout:    time.Second,
 				AuthorizedVerbsCacheRevalidateTimeout: time.Second,
 			},
+			nil,
 		)
 		require.NoError(t, err)
 

@@ -1,30 +1,32 @@
 // Copyright (c) 2026 Tigera, Inc. All rights reserved.
 
-package rbac
+package authzreview
 
 import (
 	"sort"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 )
 
-// RequestToResourceVerbs expands the request resource attributes into a set of ResourceVerbs
+// requestToResourceVerbs expands the request resource attributes into a set of ResourceVerbs
 // as input to the RBAC calculator.
-func RequestToResourceVerbs(attributes []v3.AuthorizationReviewResourceAttributes) []ResourceVerbs {
-	rvs := []ResourceVerbs{}
+func requestToResourceVerbs(attributes []v3.AuthorizationReviewResourceAttributes) []rbac.ResourceVerbs {
+	rvs := []rbac.ResourceVerbs{}
 	for _, ra := range attributes {
 		if len(ra.Verbs) == 0 || len(ra.Resources) == 0 {
 			continue
 		}
 
-		verbs := make([]Verb, len(ra.Verbs))
+		verbs := make([]rbac.Verb, len(ra.Verbs))
 		for i := range ra.Verbs {
-			verbs[i] = Verb(ra.Verbs[i])
+			verbs[i] = rbac.Verb(ra.Verbs[i])
 		}
 
 		for _, r := range ra.Resources {
-			rvs = append(rvs, ResourceVerbs{
-				ResourceType: ResourceType{
+			rvs = append(rvs, rbac.ResourceVerbs{
+				ResourceType: rbac.ResourceType{
 					APIGroup: ra.APIGroup,
 					Resource: r,
 				},
@@ -35,14 +37,14 @@ func RequestToResourceVerbs(attributes []v3.AuthorizationReviewResourceAttribute
 	return rvs
 }
 
-// PermissionsToStatus transfers the results from the RBAC calculator to the AuthorizationReviewStatus.
+// permissionsToStatus transfers the results from the RBAC calculator to the AuthorizationReviewStatus.
 // It sorts the results to ensure deterministic data.
-func PermissionsToStatus(results Permissions) v3.AuthorizationReviewStatus {
+func permissionsToStatus(results rbac.Permissions) v3.AuthorizationReviewStatus {
 	status := v3.AuthorizationReviewStatus{}
 
 	// Transfer the results to the status. Sort the results to ensure deterministic data.
 	// Start by ordering the resource type info.
-	rts := make([]ResourceType, 0, len(results))
+	rts := make([]rbac.ResourceType, 0, len(results))
 	for rt := range results {
 		rts = append(rts, rt)
 	}
@@ -73,7 +75,7 @@ func PermissionsToStatus(results Permissions) v3.AuthorizationReviewStatus {
 
 		for _, v := range verbs {
 			// Grab the authorization matches for the verb and order them before adding to the status.
-			ms := vms[Verb(v)]
+			ms := vms[rbac.Verb(v)]
 			rgs := []v3.AuthorizedResourceGroup{}
 
 			sort.Slice(ms, func(i, j int) bool {

@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
+	"github.com/projectcalico/calico/ui-apis/pkg/authzreview"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.
@@ -40,6 +41,7 @@ type ServiceGraphBackend interface {
 
 type realServiceGraphBackend struct {
 	authz            auth.RBACAuthorizer
+	reviewer         authzreview.Reviewer
 	clientSetFactory k8s.ClientSetFactory
 	config           *Config
 	linseed          lsclient.Client
@@ -180,7 +182,7 @@ func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *Request
 	if !r.config.FineGrainedRBAC {
 		return NewAllowAllRBACFilter(), nil
 	}
-	return NewRBACFilter(ctx, r.authz, r.clientSetFactory, rd.ServiceGraphRequest.Cluster)
+	return NewRBACFilter(ctx, r.authz, r.reviewer, rd.ServiceGraphRequest.Cluster)
 }
 
 func (r *realServiceGraphBackend) NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error) {

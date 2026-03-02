@@ -118,6 +118,7 @@ type Config struct {
 	OIDCAuthGroupsClaim     string        `default:"groups" split_words:"true"`
 	OIDCAuthGroupsPrefix    string        `split_words:"true"`
 	OIDCTokenReviewCacheTTL time.Duration `default:"0" split_words:"true"`
+
 	// This will enable tenant claims check on the Bearer token presented on a request
 	// The actual value of the claim is checked against the tenant claim
 	RequireTenantClaim bool   `split_words:"true"`

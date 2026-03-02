@@ -17,7 +17,6 @@ package integration
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -39,13 +38,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -3595,139 +3590,6 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 	}
 
 	return nil
-}
-
-// TestAuthorizationReviewsClient exercises the AuthorizationReviews client.
-func TestAuthorizationReviewsClient(t *testing.T) {
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			pcs, client, shutdownServer := getFreshAPIServerServerAndClient(t, func() runtime.Object {
-				return &v3.AuthorizationReview{}
-			})
-			defer shutdownServer()
-			if err := testAuthorizationReviewsClient(pcs, client); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	if !t.Run("test-authorization-reviews", rootTestFunc()) {
-		t.Errorf("test-authorization-reviews failed")
-	}
-}
-
-func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client calicoclient.Interface) error {
-	// Check we are able to create the authorization review.
-	ar := v3.AuthorizationReview{}
-	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Create a user context.
-	name := "name"
-	groups := []string{name}
-	extra := map[string][]string{name: groups}
-	uid := "uid"
-
-	ctx := request.NewContext()
-	ctx = request.WithUser(ctx, &user.DefaultInfo{
-		Name:   name,
-		Groups: groups,
-		Extra:  extra,
-		UID:    uid,
-	})
-
-	// Create the authorization review REST backend using the instantiated RBAC helper.
-	if pcs.RBACCalculator == nil {
-		return fmt.Errorf("No RBAC calc")
-	}
-	auth := authorizationreview.NewREST(pcs.RBACCalculator)
-
-	// For testing tier permissions.
-	tierClient := client.ProjectcalicoV3().Tiers()
-	order := float64(100.0)
-	tier := &v3.Tier{
-		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
-		Spec: v3.TierSpec{
-			Order: &order,
-		},
-	}
-
-	_, err = tierClient.Create(ctx, tier, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("Failed to create tier: %v", err)
-	}
-	defer func() {
-		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
-	}()
-
-	// Get the users permissions.
-	req := &v3.AuthorizationReview{
-		Spec: v3.AuthorizationReviewSpec{
-			ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
-				{
-					APIGroup:  "",
-					Resources: []string{"namespaces"},
-					Verbs:     []string{"create", "get"},
-				},
-				{
-					APIGroup:  "",
-					Resources: []string{"pods"},
-					// Try some duplicates to make sure they are contracted.
-					Verbs: []string{"patch", "create", "delete", "patch", "delete"},
-				},
-			},
-		},
-	}
-
-	// The user will currently have no permissions, so the returned status should contain an entry for each resource
-	// type and verb combination, but contain no match entries for each.
-	obj, err := auth.Create(ctx, req, nil, nil)
-	if err != nil {
-		return fmt.Errorf("Failed to create AuthorizationReview: %v", err)
-	}
-
-	if obj == nil {
-		return errors.New("expected an AuthorizationReview")
-	}
-
-	status := obj.(*v3.AuthorizationReview).Status
-
-	if err := checkAuthorizationReviewStatus(status, v3.AuthorizationReviewStatus{
-		AuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{
-			{
-				APIGroup: "",
-				Resource: "namespaces",
-				Verbs: []v3.AuthorizedResourceVerb{
-					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
-					{Verb: "get", ResourceGroups: []v3.AuthorizedResourceGroup{}},
-				},
-			}, {
-				APIGroup: "",
-				Resource: "pods",
-				Verbs: []v3.AuthorizedResourceVerb{
-					{Verb: "create", ResourceGroups: []v3.AuthorizedResourceGroup{}},
-					{Verb: "delete", ResourceGroups: []v3.AuthorizedResourceGroup{}},
-					{Verb: "patch", ResourceGroups: []v3.AuthorizedResourceGroup{}},
-				},
-			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func checkAuthorizationReviewStatus(actual, expected v3.AuthorizationReviewStatus) error {
-	if reflect.DeepEqual(actual, expected) {
-		return nil
-	}
-
-	actualBytes, _ := json.Marshal(actual)
-	expectedBytes, _ := json.Marshal(expected)
-
-	return fmt.Errorf("Expected status: %s\nActual Status: %s", string(expectedBytes), string(actualBytes))
 }
 
 // TestPacketCaptureClient exercises the PacketCaptures client.
