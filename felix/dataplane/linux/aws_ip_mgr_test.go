@@ -467,22 +467,30 @@ func describeAWSIPMgrCommonTests(mode string) {
 				Expect(rt.Routes[ifaceName]).To(ConsistOf(
 					routetable.Target{
 						Type: routetable.TargetTypeLinkLocalUnicast,
-						CIDR: ip.MustParseCIDROrIP("100.64.0.0/16"),
+						RouteKey: routetable.RouteKey{
+							CIDR: ip.MustParseCIDROrIP("100.64.0.0/16"),
+						},
 					},
 					routetable.Target{
 						Type: routetable.TargetTypeGlobalUnicast,
-						CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
-						GW:   gwAddrAsCIDR.Addr(),
+						RouteKey: routetable.RouteKey{
+							CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
+						},
+						GW: gwAddrAsCIDR.Addr(),
 					},
 				), "Expected gateway and default routes.")
 				Expect(rt.Routes[routetable.InterfaceNone]).To(ConsistOf(
 					routetable.Target{
 						Type: routetable.TargetTypeThrow,
-						CIDR: ip.MustParseCIDROrIP("192.168.0.0/16"),
+						RouteKey: routetable.RouteKey{
+							CIDR: ip.MustParseCIDROrIP("192.168.0.0/16"),
+						},
 					},
 					routetable.Target{
 						Type: routetable.TargetTypeThrow,
-						CIDR: ip.MustParseCIDROrIP("10.23.0.0/16"),
+						RouteKey: routetable.RouteKey{
+							CIDR: ip.MustParseCIDROrIP("10.23.0.0/16"),
+						},
 					},
 				), "Expected 'throw' route for the non-AWS IP pools.")
 			}
@@ -1430,7 +1438,7 @@ func (f *fakeRouteTable) RouteUpdate(class routetable.RouteClass, _ string, _ ro
 	panic("implement me")
 }
 
-func (f *fakeRouteTable) RouteRemove(class routetable.RouteClass, _ string, _ ip.CIDR) {
+func (f *fakeRouteTable) RouteRemove(class routetable.RouteClass, _ string, _ routetable.RouteKey) {
 	panic("implement me")
 }
 

@@ -814,13 +814,17 @@ func (a *awsIPManager) programIfaceRoutes(rt routetable.Interface, ifaceName str
 			// Make whole subnet reachable on the link.  This allows for host-to-remote pod traffic using
 			// the primary IP of the interface.
 			Type: routetable.TargetTypeLinkLocalUnicast,
-			CIDR: a.awsState.SubnetCIDR,
+			RouteKey: routetable.RouteKey{
+				CIDR: a.awsState.SubnetCIDR,
+			},
 		},
 		{
 			// With gateway via the gateway address.
 			Type: routetable.TargetTypeGlobalUnicast,
-			CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
-			GW:   a.awsState.GatewayAddr,
+			RouteKey: routetable.RouteKey{
+				CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
+			},
+			GW: a.awsState.GatewayAddr,
 		},
 	}
 	rt.SetRoutes(routetable.RouteClassAWSDefault, ifaceName, routes)
@@ -838,7 +842,9 @@ func (a *awsIPManager) programIfaceRoutes(rt routetable.Interface, ifaceName str
 		}
 		noIFRoutes = append(noIFRoutes, routetable.Target{
 			Type: routetable.TargetTypeThrow,
-			CIDR: ip.MustParseCIDROrIP(pool.Cidr),
+			RouteKey: routetable.RouteKey{
+				CIDR: ip.MustParseCIDROrIP(pool.Cidr),
+			},
 		})
 	}
 	rt.SetRoutes(routetable.RouteClassAWSThrow, routetable.InterfaceNone, noIFRoutes)

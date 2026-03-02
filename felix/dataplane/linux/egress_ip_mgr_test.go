@@ -293,7 +293,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -301,7 +303,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -309,7 +313,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -317,36 +323,48 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 
 			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.3"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 
 			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
@@ -423,7 +441,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.140.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -431,7 +451,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.141.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -439,7 +461,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.142.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -447,36 +471,48 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.143.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 
 			expectRulesAndTable([]string{"10.0.144.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.3"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 
 			expectRulesAndTable([]string{"10.0.145.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
@@ -502,14 +538,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, "egress.calico", []routetable.Target{
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -532,12 +572,16 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -548,14 +592,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, "egress.calico", []routetable.Target{
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -574,12 +622,16 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.7"}),
 				},
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -599,12 +651,16 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
 				},
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -631,12 +687,16 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      ip.MustParseCIDROrIP("10.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/8"),
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -693,11 +753,15 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR: ip.MustParseCIDROrIP("11.0.0.0/8"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("11.0.0.0/8"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -750,34 +814,46 @@ var _ = Describe("EgressIPManager", func() {
 			// Changes to an IPSet should have no impact on existing workload tables, only on new workloads.
 			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.4", "10.0.1.5"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
 			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.3", "10.0.1.4"}),
 				},
 				{
-					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					RouteKey: routetable.RouteKey{
+						CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					},
 					Type: routetable.TargetTypeThrow,
 				},
 			})
@@ -929,7 +1005,9 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectRulesAndTable([]string{"10.0.246.0/32", "10.1.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -986,7 +1064,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeUnreachable,
 				},
 			})
@@ -1029,7 +1109,9 @@ var _ = Describe("EgressIPManager", func() {
 			// pod-0 use table 1 at start.
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -1046,7 +1128,9 @@ var _ = Describe("EgressIPManager", func() {
 			// pod-0 use table 2 as the result.
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
@@ -1084,7 +1168,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeUnreachable,
 				},
 			})
@@ -1104,7 +1190,9 @@ var _ = Describe("EgressIPManager", func() {
 			// pod-0 use table 1 as the result.
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.10.1", "10.0.10.2", "10.0.10.3"}),
 				},
@@ -1170,21 +1258,27 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -1256,14 +1350,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.246.0/32"}, 7, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.247.0/32"}, 8, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
 				},
@@ -1284,14 +1382,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.248.0/32"}, 9, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3", "10.0.0.4"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.249.0/32"}, 10, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3", "10.0.0.4"}),
 				},
@@ -1518,7 +1620,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3", "10.0.3.1"}),
 				},
@@ -1643,7 +1747,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -1657,7 +1763,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
@@ -1671,7 +1779,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
 				},
@@ -1685,7 +1795,9 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
@@ -1705,42 +1817,54 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.2").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.2").Addr(),
 				},
@@ -1760,42 +1884,54 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.2", "10.0.0.3"}),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
-					CIDR:      defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type:      routetable.TargetTypeVXLAN,
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 				},
@@ -1827,42 +1963,54 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.1/32"}, 2, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.2/32"}, 3, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.3/32"}, 4, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.4/32"}, 5, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.1").Addr(),
 				},
 			})
 			expectRulesAndTable([]string{"10.0.240.5/32"}, 6, "egress.calico", []routetable.Target{
 				{
-					CIDR: defaultCidr,
+					RouteKey: routetable.RouteKey{
+						CIDR: defaultCidr,
+					},
 					Type: routetable.TargetTypeVXLAN,
 					GW:   ip.MustParseCIDROrIP("10.0.0.3").Addr(),
 				},
