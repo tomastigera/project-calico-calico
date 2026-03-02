@@ -24,7 +24,7 @@ type PolicyInfo struct {
 	Name      string `json:"name"`
 }
 
-// PolicyActivityRequest is the request type for the /policyactivity endpoint.
+// PolicyActivityRequest is the request type for the /policy_activity endpoint.
 // It accepts a list of policies (with generation) and returns aggregated policy
 // activity data with per-rule details.
 type PolicyActivityRequest struct {
@@ -41,7 +41,7 @@ type PolicyActivityQueryPolicy struct {
 	Generation int64  `json:"generation"`
 }
 
-// PolicyActivityResponse is the response type for the /policyactivity endpoint.
+// PolicyActivityResponse is the response type for the /policy_activity endpoint.
 type PolicyActivityResponse struct {
 	Items []PolicyActivityResult `json:"items"`
 }

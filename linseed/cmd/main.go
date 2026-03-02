@@ -202,8 +202,6 @@ func run() {
 		wafBackend = wafbackend.NewBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
 		ipSetBackend = threatfeedsbackend.NewIPSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
 		domainNameSetBackend = threatfeedsbackend.NewDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false)
-		// We use the single-index backend for policy activity here to consolidate data into one index, significantly reducing the overall index count.
-		policyBackend = policybackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
 	case config.BackendTypeSingleIndex:
 		flowLogBackend = flowbackend.NewSingleIndexFlowLogBackend(esClient, flowInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticFlowLogsBaseIndexName))
 		flowBackend = flowbackend.NewSingleIndexFlowBackend(esClient, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticFlowLogsBaseIndexName))
@@ -222,10 +220,13 @@ func run() {
 		wafBackend = wafbackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticWAFLogsBaseIndexName))
 		ipSetBackend = threatfeedsbackend.NewSingleIndexIPSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsIPSetBaseIndexName))
 		domainNameSetBackend = threatfeedsbackend.NewSingleIndexDomainNameSetBackend(esClient, defaultInitializer, cfg.ElasticClientConfig.ElasticIndexMaxResultWindow, false, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticThreatFeedsDomainSetBaseIndexName))
-		policyBackend = policybackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
 	default:
 		logrus.Fatalf("Invalid backend type: %s", cfg.Backend)
 	}
+
+	// Policy activity always uses the single-index backend regardless of the configured backend strategy,
+	// consolidating all clusters into one index to reduce overall index count.
+	policyBackend = policybackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
 
 	// Ensure the policy backend background routines (cache cleanup)
 	// are stopped when the server shuts down.
