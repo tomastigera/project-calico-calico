@@ -20,6 +20,8 @@ include ../lib.Makefile
 # Define some constants
 ###############################################################################
 BINDIR    ?= bin
+MMDB_CITY := geoip/dbip-city-lite.mmdb
+MMDB_ASN  := geoip/dbip-asn-lite.mmdb
 SRC_FILES  = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../api/pkg -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
@@ -79,7 +81,7 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): mmdb-download docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(IDS_CONTROLLER_CONTAINER_CREATED): $(MMDB_CITY) $(MMDB_ASN) docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
@@ -96,18 +98,18 @@ $(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile $(BINDIR)/in
 .PHONY: ut
 ut: run-elastic run-ut stop-elastic
 
-run-ut: mmdb-download
+run-ut: $(MMDB_CITY) $(MMDB_ASN)
 	mkdir -p report
 	$(DOCKER_RUN) \
-		-v $(CURDIR)/bin/database/GeoLite2-ASN.mmdb:/etc/maxmind/GeoLite2-ASN.mmdb \
-		-v $(CURDIR)/bin/database/GeoLite2-City.mmdb:/etc/maxmind/GeoLite2-City.mmdb \
+		-v $(CURDIR)/$(MMDB_ASN):/usr/share/GeoIP/dbip-asn-lite.mmdb \
+		-v $(CURDIR)/$(MMDB_CITY):/usr/share/GeoIP/dbip-city-lite.mmdb \
 		$(CALICO_BUILD) \
 			sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: clean
 clean:
 	rm -fr $(BINDIR)
-	rm -f $(MMDB_DOWNLOADED)
+	rm -rf geoip
 	rm -f $(IDS_CONTROLLER_CONTAINER_CREATED)
 	rm -f $(JOB_INSTALLER_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(IDS_CONTROLLER_IMAGE) -a -q)
@@ -135,11 +137,13 @@ cd: image-all cd-common
 migrate-dashboards:
 	bash migrate_dashboards.sh
 
-MMDB_DOWNLOADED=.mmdb.downloaded
-mmdb-download: $(MMDB_DOWNLOADED)
-$(MMDB_DOWNLOADED):
-	@echo "[INFO] pulling MaxMind database frpom GCP bucket..."
-	mkdir -p bin/database/
-	gsutil cp gs://intrusion-detection-geoip-maxmind-db/GeoLite2-City.mmdb bin/database/GeoLite2-City.mmdb
-	gsutil cp gs://intrusion-detection-geoip-maxmind-db/GeoLite2-ASN.mmdb bin/database/GeoLite2-ASN.mmdb
-	touch $@
+# Download GeoIP databases from db-ip.com (same approach as app-policy).
+# The Semaphore pipeline caches these files to avoid repeated downloads.
+$(MMDB_CITY):
+	mkdir -p geoip
+	$(eval CITY_RELEASE=$(shell curl -s https://db-ip.com/db/download/ip-to-city-lite | grep -o 'dbip-city-lite-[0-9]\{4\}-[0-9]\{2\}.mmdb.gz'))
+	curl -sfL https://download.db-ip.com/free/$(CITY_RELEASE) | zcat > $@
+$(MMDB_ASN):
+	mkdir -p geoip
+	$(eval ASN_RELEASE=$(shell curl -s https://db-ip.com/db/download/ip-to-asn-lite | grep -o 'dbip-asn-lite-[0-9]\{4\}-[0-9]\{2\}.mmdb.gz'))
+	curl -sfL https://download.db-ip.com/free/$(ASN_RELEASE) | zcat > $@

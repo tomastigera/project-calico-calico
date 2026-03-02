@@ -620,11 +620,14 @@ blocks:
       prologue:
         commands:
           - cache delete app-policy-geoip
+          - cache delete ids-geoip
       epilogue:
         on_pass:
           commands:
             - cache store app-policy-geoip app-policy/geoip
+            - cache store ids-geoip intrusion-detection-controller/geoip
       jobs:
         - name: Refresh GeoIP cache
           commands:
             - make -C app-policy geoip/dbip-city-lite.mmdb
+            - make -C intrusion-detection-controller geoip/dbip-city-lite.mmdb geoip/dbip-asn-lite.mmdb
