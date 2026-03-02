@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-    operator.prometheus.io/version: 0.88.0
+    operator.prometheus.io/version: 0.89.0
   name: alertmanagers.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -2254,6 +2254,8 @@ spec:
                   x-kubernetes-list-map-keys:
                     - ip
                   x-kubernetes-list-type: map
+                hostNetwork:
+                  type: boolean
                 hostUsers:
                   type: boolean
                 image:
