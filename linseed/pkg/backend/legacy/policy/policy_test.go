@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -222,48 +223,60 @@ func TestCreate_Deduplication(t *testing.T) {
 	assert.Greater(t, esHits, 0, "Write after window expiry should hit ES")
 }
 
+// scrollHandler wraps a response body so the first request (initial search) returns hits
+// with a _scroll_id, and the follow-up scroll request returns an empty result to signal EOF.
+func scrollHandler(_ *testing.T, hitsJSON string, validateBody func(string)) http.HandlerFunc {
+	scrolled := false
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "_search/scroll") {
+			// Follow-up scroll request: return empty hits to signal done.
+			_, _ = fmt.Fprint(w, `{"_scroll_id":"test","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "_search") && !scrolled {
+			scrolled = true
+			if validateBody != nil {
+				body, _ := io.ReadAll(r.Body)
+				validateBody(string(body))
+			}
+			_, _ = fmt.Fprintf(w, `{"_scroll_id":"test","hits":{"total":{"value":0,"relation":"eq"},"hits":%s}}`, hitsJSON)
+			return
+		}
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}
+}
+
 func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	earlier := now.Add(-1 * time.Hour)
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		bodyStr := string(body)
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+				"rule": "3|ingress|0",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+				"rule": "3|egress|1",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), earlier.Format(time.RFC3339Nano))
 
-		// Verify the query contains expected terms.
+	handler := scrollHandler(t, hitsJSON, func(bodyStr string) {
 		assert.Contains(t, bodyStr, "policy.kind")
 		assert.Contains(t, bodyStr, "NetworkPolicy")
 		assert.Contains(t, bodyStr, "policy.name")
 		assert.Contains(t, bodyStr, "allow-dns")
 		assert.Contains(t, bodyStr, "prefix")
-		assert.Contains(t, bodyStr, "3|") // generation prefix
-
-		// Return two docs for the same policy with different rules.
-		response := fmt.Sprintf(`{
-			"hits": {
-				"total": { "value": 2, "relation": "eq" },
-				"hits": [
-					{
-						"_id": "1",
-						"_source": {
-							"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
-							"rule": "3|ingress|0",
-							"last_evaluated": %q
-						}
-					},
-					{
-						"_id": "2",
-						"_source": {
-							"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
-							"rule": "3|egress|1",
-							"last_evaluated": %q
-						}
-					}
-				]
-			}
-		}`, now.Format(time.RFC3339Nano), earlier.Format(time.RFC3339Nano))
-		_, _ = fmt.Fprint(w, response)
-	}
+		assert.Contains(t, bodyStr, "3|")
+	})
 
 	b, ts := setupBackendWithHandler(t, handler, false)
 	defer ts.Close()
@@ -311,6 +324,7 @@ func TestGetPolicyActivity_EmptyPolicies(t *testing.T) {
 
 func TestGetPolicyActivity_ESError(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		// Return error for all requests including scroll.
 		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
 	}
 
@@ -332,34 +346,26 @@ func TestGetPolicyActivity_ESError(t *testing.T) {
 func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		response := fmt.Sprintf(`{
-			"hits": {
-				"total": { "value": 2, "relation": "eq" },
-				"hits": [
-					{
-						"_id": "1",
-						"_source": {
-							"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
-							"rule": "1|ingress|0",
-							"last_evaluated": %q
-						}
-					},
-					{
-						"_id": "2",
-						"_source": {
-							"policy": {"kind": "GlobalNetworkPolicy", "namespace": "", "name": "gnp1"},
-							"rule": "2|egress|0",
-							"last_evaluated": %q
-						}
-					}
-				]
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
 			}
-		}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
-		_, _ = fmt.Fprint(w, response)
-	}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "GlobalNetworkPolicy", "namespace": "", "name": "gnp1"},
+				"rule": "2|egress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityRequest{
@@ -382,34 +388,26 @@ func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
 func TestGetPolicyActivity_SkipsUnparsableRules(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		response := fmt.Sprintf(`{
-			"hits": {
-				"total": { "value": 2, "relation": "eq" },
-				"hits": [
-					{
-						"_id": "1",
-						"_source": {
-							"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
-							"rule": "bad-format",
-							"last_evaluated": %q
-						}
-					},
-					{
-						"_id": "2",
-						"_source": {
-							"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
-							"rule": "1|ingress|0",
-							"last_evaluated": %q
-						}
-					}
-				]
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "bad-format",
+				"last_evaluated": %q
 			}
-		}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
-		_, _ = fmt.Fprint(w, response)
-	}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityRequest{
@@ -479,6 +477,96 @@ func TestBuildPolicyActivityQuery_SingleIndex(t *testing.T) {
 	assert.Contains(t, jsonStr, "t1")
 	// Should include generation prefix.
 	assert.Contains(t, jsonStr, "5|")
+}
+
+func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	// Simulate two scroll pages: each returns a batch of hits, then a third call returns empty.
+	page := 0
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "_search/scroll") {
+			page++
+			if page == 1 {
+				// Second page of results.
+				response := fmt.Sprintf(`{
+					"_scroll_id": "test2",
+					"hits": {
+						"total": {"value": 0, "relation": "eq"},
+						"hits": [
+							{
+								"_id": "3",
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p2"},
+									"rule": "1|egress|0",
+									"last_evaluated": %q
+								}
+							}
+						]
+					}
+				}`, now.Format(time.RFC3339Nano))
+				_, _ = fmt.Fprint(w, response)
+				return
+			}
+			// Third call: empty hits to signal EOF.
+			_, _ = fmt.Fprint(w, `{"_scroll_id":"test3","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "_search") {
+			// Initial search: first page of results.
+			response := fmt.Sprintf(`{
+				"_scroll_id": "test1",
+				"hits": {
+					"total": {"value": 0, "relation": "eq"},
+					"hits": [
+						{
+							"_id": "1",
+							"_source": {
+								"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+								"rule": "1|ingress|0",
+								"last_evaluated": %q
+							}
+						},
+						{
+							"_id": "2",
+							"_source": {
+								"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+								"rule": "1|egress|0",
+								"last_evaluated": %q
+							}
+						}
+					]
+				}
+			}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+			_, _ = fmt.Fprint(w, response)
+			return
+		}
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler, false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p2", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
+
+	// p1 should have 2 rules (from page 1), p2 should have 1 rule (from page 2).
+	assert.Equal(t, "p1", resp.Items[0].Policy.Name)
+	assert.Len(t, resp.Items[0].Rules, 2)
+	assert.Equal(t, "p2", resp.Items[1].Policy.Name)
+	assert.Len(t, resp.Items[1].Rules, 1)
+
+	// Verify all scroll pages were consumed.
+	assert.Equal(t, 2, page, "Should have made 2 follow-up scroll requests")
 }
 
 func TestGetPolicyActivity_InvalidCluster(t *testing.T) {

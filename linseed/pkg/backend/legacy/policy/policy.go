@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -292,16 +293,24 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 
 	query := b.buildPolicyActivityQuery(i, req)
 
-	results, err := b.esClient.Search(b.index.Index(i)).
+	// Use scroll to handle result sets that may exceed the 10k max_result_window.
+	var allHits []*elastic.SearchHit
+	scroll := b.esClient.Scroll(b.index.Index(i)).
 		Size(10000).
-		Query(query).
-		Do(ctx)
-	if err != nil {
-		log.WithError(err).Error("Elasticsearch search failed for GetPolicyActivities")
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		Query(query)
+	for {
+		results, err := scroll.Do(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.WithError(err).Error("Elasticsearch scroll failed for GetPolicyActivities")
+			return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		}
+		allHits = append(allHits, results.Hits.Hits...)
 	}
 
-	return aggregatePolicyActivity(log, req, results), nil
+	return aggregatePolicyActivity(log, req, allHits), nil
 }
 
 // buildPolicyActivityQuery constructs an ES bool query that matches docs for
@@ -363,10 +372,10 @@ type policyActivityEntry struct {
 
 // aggregatePolicyActivity groups ES hits by policy, parses rule strings, computes
 // per-policy last_evaluated, and returns results in the same order as the request.
-func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, results *elastic.SearchResult) *v1.PolicyActivityResponse {
+func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, hits []*elastic.SearchHit) *v1.PolicyActivityResponse {
 	resultMap := make(map[policyKey]*policyActivityEntry)
 
-	for _, hit := range results.Hits.Hits {
+	for _, hit := range hits {
 		var doc v1.PolicyActivity
 		if err := json.Unmarshal(hit.Source, &doc); err != nil {
 			log.WithError(err).Error("Error unmarshaling policy activity doc")
