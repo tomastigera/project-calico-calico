@@ -139,6 +139,8 @@ migrate-dashboards:
 
 # Download GeoIP databases from db-ip.com (same approach as app-policy).
 # The Semaphore pipeline caches these files to avoid repeated downloads.
+# .DELETE_ON_ERROR ensures partial/corrupt files are removed on failure.
+.DELETE_ON_ERROR: $(MMDB_CITY) $(MMDB_ASN)
 $(MMDB_CITY):
 	mkdir -p geoip
 	$(eval CITY_RELEASE=$(shell curl -s https://db-ip.com/db/download/ip-to-city-lite | grep -o 'dbip-city-lite-[0-9]\{4\}-[0-9]\{2\}.mmdb.gz'))
