@@ -2,7 +2,6 @@ package smoke
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,51 +75,49 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	scriptsDir := filepath.Join(repoRoot, ".semaphore", "end-to-end", "scripts")
 	bodyScript := filepath.Join(scriptsDir, "body_standard.sh")
 
-	// Defer epilogue and cleanup so they run even on panic or Fatalf.
-	defer func() {
-		if err := runScript(filepath.Join(scriptsDir, "global_epilogue.sh")); err != nil {
-			t.Errorf("Epilogue script failed: %v", err)
+	// Register cleanup to run after test completes (even on Fatalf).
+	// Uses t.Errorf (non-fatal) so both epilogue and cleanup always execute.
+	t.Cleanup(func() {
+		epiloguePath := filepath.Join(scriptsDir, "global_epilogue.sh")
+		if _, statErr := os.Stat(epiloguePath); statErr == nil {
+			logrus.Infof("Executing: %s", epiloguePath)
+			if _, err := command.RunInDir(filepath.Dir(epiloguePath), "/bin/bash", []string{filepath.Base(epiloguePath)}); err != nil {
+				t.Errorf("Epilogue script failed: %v", err)
+			}
 		}
-		if err := runCleanup(); err != nil {
-			t.Errorf("Cleanup failed: %v", err)
-		}
-	}()
+		runCleanup(t)
+	})
 
 	// Run prologue
-	if err := runScript(filepath.Join(scriptsDir, "global_prologue.sh")); err != nil {
-		t.Fatalf("Prologue script failed: %v", err)
-	}
+	runScript(t, filepath.Join(scriptsDir, "global_prologue.sh"))
 
 	// Run the main test body
-	if err := runScript(bodyScript); err != nil {
-		t.Fatalf("Smoke test failed: %v", err)
-	}
+	runScript(t, bodyScript)
 }
 
-// runScript executes a shell script and returns any error.
-func runScript(scriptPath string) error {
+// runScript executes a shell script, calling t.Fatalf on failure.
+func runScript(t *testing.T, scriptPath string) {
+	t.Helper()
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		return fmt.Errorf("script not found: %s", scriptPath)
+		t.Fatalf("script not found: %s", scriptPath)
 	}
 	logrus.Infof("Executing: %s", scriptPath)
-	_, err := command.RunInDir(filepath.Dir(scriptPath), "/bin/bash", []string{filepath.Base(scriptPath)})
-	if err != nil {
-		return fmt.Errorf("script %s failed: %w", filepath.Base(scriptPath), err)
+	if _, err := command.RunInDir(filepath.Dir(scriptPath), "/bin/bash", []string{filepath.Base(scriptPath)}); err != nil {
+		t.Fatalf("script %s failed: %v", filepath.Base(scriptPath), err)
 	}
-	return nil
 }
 
 // runCleanup removes test resources by running banzai destroy.
-func runCleanup() error {
+// It uses t.Errorf (non-fatal) so other cleanup steps can still run.
+func runCleanup(t *testing.T) {
+	t.Helper()
 	logrus.Info("Running cleanup...")
 	cleanupCmd := `if command -v bz &> /dev/null; then
 		bz destroy || echo "Cleanup failed or no resources to clean"
 	else
 		echo "bz command not found, skipping cleanup"
 	fi`
-	_, err := command.RunInDir("", "/bin/bash", []string{"-c", cleanupCmd})
-	if err != nil {
-		return fmt.Errorf("cleanup failed: %w", err)
+	if _, err := command.RunInDir("", "/bin/bash", []string{"-c", cleanupCmd}); err != nil {
+		t.Errorf("cleanup failed: %v", err)
 	}
-	return nil
 }
