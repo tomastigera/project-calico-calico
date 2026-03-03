@@ -5,6 +5,7 @@ package visibility
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
@@ -16,6 +17,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubernetes/test/e2e/framework/kubectl"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -134,6 +136,13 @@ var _ = describe.CalicoDescribe(
 				cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
 				defer cp.Stop()
 
+				By("checking flow log file on client node")
+				Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
+					clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+				By("checking flow log file on server node")
+				Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
+					server.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+
 				By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 					validateFlowLogs(esclient,
 						esQuery("src"),
@@ -193,6 +202,10 @@ var _ = describe.CalicoDescribe(
 					cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
 					defer cp.Stop()
 
+					By("checking flow log file on client node")
+					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
+						clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
 							esQuery("src"),
@@ -244,6 +257,13 @@ var _ = describe.CalicoDescribe(
 					cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
 					defer cp.Stop()
 
+					By("checking flow log file on client node")
+					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
+						clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					By("checking flow log file on server node")
+					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
+						server.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
 							esQuery("src"),
@@ -279,4 +299,49 @@ func windowsFlowLogQuery(namespace, clientBaseName, serverBaseName string, targe
 		elastic.NewPrefixQuery("dest_name_aggr", serverBaseName),
 		elastic.NewTermQuery("dest_port", targetPort),
 		elastic.NewTermsQuery("reporter", reporter))
+}
+
+// testFlowLogsPresent checks if flow log entries containing both searchStr1 and searchStr2
+// exist in the flows.log file on the given node. Reads only the tail of the file to avoid
+// transferring the entire flows.log (which can be 8MB+). Splits on "start_time" to handle
+// multi-line flow log entries where source and dest IPs may be on different lines.
+func testFlowLogsPresent(nodeName, searchStr1, searchStr2 string) bool {
+	// Find the calico-node-windows pod on this node.
+	getPodArgs := []string{
+		"get", "pod",
+		"-l", "k8s-app=calico-node-windows",
+		"--field-selector", "spec.nodeName=" + nodeName,
+		"-o", "jsonpath={.items[0].metadata.name}",
+	}
+	podName, err := kubectl.NewKubectlCommand("calico-system", getPodArgs...).
+		WithTimeout(time.After(10 * time.Second)).
+		Exec()
+	if err != nil {
+		logrus.WithError(err).Warnf("Failed to find calico-node-windows pod on %s", nodeName)
+		return false
+	}
+
+	// Read only the last 500 lines to avoid transferring the full file.
+	execArgs := []string{
+		"exec", strings.TrimSpace(podName), "-c", "node",
+		"--", "powershell.exe", "-Command",
+		"Get-Content C:\\TigeraCalico\\flowlogs\\flows.log -Tail 500 -ErrorAction SilentlyContinue",
+	}
+	output, err := kubectl.NewKubectlCommand("calico-system", execArgs...).
+		WithTimeout(time.After(30 * time.Second)).
+		Exec()
+	if err != nil {
+		logrus.WithError(err).Warnf("Failed to get flow logs from node %s", nodeName)
+		return false
+	}
+
+	// Split on "start_time" to get per-entry chunks, since flow log entries may
+	// span multiple lines.
+	for _, entry := range strings.Split(output, "start_time") {
+		if strings.Contains(entry, searchStr1) && strings.Contains(entry, searchStr2) {
+			logrus.Infof("Found flow log entry on %s containing %q and %q", nodeName, searchStr1, searchStr2)
+			return true
+		}
+	}
+	return false
 }

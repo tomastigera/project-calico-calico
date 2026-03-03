@@ -49,8 +49,15 @@ var _ = describe.CalicoDescribe(
 			namespace = f.Namespace.Name
 			ctx := context.TODO()
 
+			// On Windows, domain-based allow policies take longer to propagate because
+			// Felix must intercept DNS responses to learn domain-to-IP mappings.
+			timeout := "30s"
+			if runOnWindows {
+				timeout = "90s"
+			}
+
 			By("Checking... Cannot reach external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), timeout, "3s").Should(HaveOccurred())
 
 			By("Allowing egress to external service domains")
 			for _, obj := range allowObjs {
@@ -61,11 +68,25 @@ var _ = describe.CalicoDescribe(
 				cleanups()
 			}
 
+			if runOnWindows {
+				// On Windows, flush the DNS cache and force a fresh DNS lookup so
+				// Felix can intercept the DNS response and learn the domain-to-IP
+				// mapping for the allow policy. We use ipconfig (universally available)
+				// rather than Clear-DnsClientCache (requires DnsClient PS module which
+				// may not be present in minimal container images), and then nslookup
+				// to bypass any remaining cache and generate DNS traffic on the wire.
+				By("Flushing Windows DNS cache and resolving allowed domain")
+				e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
+					"ipconfig", "/flushdns")
+				e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
+					"nslookup", external)
+			}
+
 			By("Checking... Can reach allowed external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), timeout, "3s").ShouldNot(HaveOccurred())
 
 			By("Checking... Cannot reach blocked service")
-			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), timeout, "3s").Should(HaveOccurred())
 		}
 
 		Context("[RunsOnWindows] Test DNS policy of a workload. ", func() {
