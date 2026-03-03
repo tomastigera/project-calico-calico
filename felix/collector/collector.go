@@ -227,10 +227,6 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		log.Infof("Pending policies disabled")
 	}
 
-	log.Infof("Policy activity refresh enabled with interval %v", policyActivityRefreshInterval)
-	c.tickerPolicyActivityRefresh = jitter.NewTicker(policyActivityRefreshInterval*9/10, policyActivityRefreshInterval*1/10)
-	c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
-
 	return c
 }
 
@@ -387,11 +383,12 @@ func (c *collector) startStatsCollectionAndReporting() {
 	if c.conntrackInfoReader != nil {
 		ctInfoC = c.conntrackInfoReader.ConntrackInfoChan()
 	}
-	if c.tickerPolicyActivityRefresh != nil {
+	if c.policyActivityReporter != nil {
+		log.Infof("Policy activity refresh enabled with interval %v", policyActivityRefreshInterval)
+		c.tickerPolicyActivityRefresh = jitter.NewTicker(policyActivityRefreshInterval*9/10, policyActivityRefreshInterval*1/10)
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
 		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
-		// Start the async evaluation goroutine now, after SetPolicyActivityReporter()
-		// has been called. Closing the channel on return stops the goroutine cleanly.
-		go c.loopEvaluatingPolicyActivity()
+		go c.loopEvaluatingPolicyActivity(c.policyActivityReporter)
 		defer close(c.policyActivityRefreshC)
 	}
 
@@ -1307,16 +1304,46 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 // updatePendingRuleTraces evaluates each flow of epStats against the policies in the PolicyStore
 // to get the latest pending rule trace. It replaces the Data's copy if they are different.
+// It snapshots eligible entries first, then acquires the policy store read lock once for the
+// entire batch rather than per-connection.
 func (c *collector) updatePendingRuleTraces() {
-	// The epStats map may be quite large, so we chose to lock each entry individually to avoid
-	// locking the entire map.
+	// Snapshot entries that need evaluation, performing endpoint matching outside the lock.
+	type pendingEntry struct {
+		data *Data
+		flow TupleAsFlow
+	}
+	var entries []pendingEntry
 	for _, data := range c.epStats {
 		if data == nil {
 			continue
 		}
 
-		c.evaluatePendingRuleTraceForLocalEp(data)
+		srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
+		if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
+			continue
+		}
+
+		entries = append(entries, pendingEntry{data: data, flow: TupleAsFlow(data.Tuple)})
 	}
+
+	if len(entries) == 0 {
+		return
+	}
+
+	// Acquire the read lock once and evaluate all entries.
+	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+		for i := range entries {
+			e := &entries[i]
+
+			if e.data.DstEp != nil && !e.data.DstEp.IsHostEndpoint() && e.data.DstEp.IsLocal() {
+				c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, e.data.DstEp, e.flow, &e.data.IngressPendingRuleIDs)
+			}
+
+			if e.data.SrcEp != nil && !e.data.SrcEp.IsHostEndpoint() && e.data.SrcEp.IsLocal() {
+				c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, e.data.SrcEp, e.flow, &e.data.EgressPendingRuleIDs)
+			}
+		}
+	})
 }
 
 func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
@@ -1363,6 +1390,7 @@ func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *pol
 func (c *collector) refreshPolicyActivityForActiveConnections() {
 	var entries []policyActivityEntry
 	for _, data := range c.epStats {
+		// Skip aggregated flow stats; only long-lived connections need re-evaluation.
 		if data == nil || !data.IsConnection {
 			continue
 		}
@@ -1395,7 +1423,7 @@ func (c *collector) refreshPolicyActivityForActiveConnections() {
 // snapshots from policyActivityRefreshC. It acquires the policy store read lock once per batch,
 // evaluates all connections, then reports the results. This avoids acquiring/releasing the lock
 // per-connection and reduces contention with policy store writers.
-func (c *collector) loopEvaluatingPolicyActivity() {
+func (c *collector) loopEvaluatingPolicyActivity(reporter types.Reporter) {
 	for entries := range c.policyActivityRefreshC {
 		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			for i := range entries {
@@ -1407,7 +1435,7 @@ func (c *collector) loopEvaluatingPolicyActivity() {
 					if protoEp := c.lookupProtoWorkloadEndpoint(ps, entry.DstEp.Key()); protoEp != nil {
 						trace := checker.Evaluate(rules.RuleDirIngress, ps, protoEp, &flow)
 						if len(trace) > 0 {
-							c.reportPolicyActivityFromEntry(entry, trace)
+							reportPolicyActivityFromEntry(reporter, entry, trace)
 						}
 					}
 				}
@@ -1417,7 +1445,7 @@ func (c *collector) loopEvaluatingPolicyActivity() {
 					if protoEp := c.lookupProtoWorkloadEndpoint(ps, entry.SrcEp.Key()); protoEp != nil {
 						trace := checker.Evaluate(rules.RuleDirEgress, ps, protoEp, &flow)
 						if len(trace) > 0 {
-							c.reportPolicyActivityFromEntry(entry, trace)
+							reportPolicyActivityFromEntry(reporter, entry, trace)
 						}
 					}
 				}
@@ -1426,12 +1454,10 @@ func (c *collector) loopEvaluatingPolicyActivity() {
 	}
 }
 
-// reportPolicyActivityFromEntry sends a metric.Update to the PolicyActivityReporter from a
-// policyActivityEntry snapshot. Used by the async policy activity evaluation goroutine.
-func (c *collector) reportPolicyActivityFromEntry(entry *policyActivityEntry, ruleIDs []*calc.RuleID) {
-	if c.policyActivityReporter == nil {
-		return
-	}
+// reportPolicyActivityFromEntry sends a metric.Update to the given reporter from a
+// policyActivityEntry snapshot. The reporter is passed explicitly to avoid unsynchronized
+// access to the collector's policyActivityReporter field from the goroutine.
+func reportPolicyActivityFromEntry(reporter types.Reporter, entry *policyActivityEntry, ruleIDs []*calc.RuleID) {
 	mu := metric.Update{
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      entry.Tuple,
@@ -1439,7 +1465,7 @@ func (c *collector) reportPolicyActivityFromEntry(entry *policyActivityEntry, ru
 		DstEp:      entry.DstEp,
 		RuleIDs:    ruleIDs,
 	}
-	if err := c.policyActivityReporter.Report(mu); err != nil {
+	if err := reporter.Report(mu); err != nil {
 		log.WithError(err).Debug("Failed to report policy activity refresh")
 	}
 }

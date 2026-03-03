@@ -35,5 +35,8 @@ func ReadPolicyActivityLogsFile(logDir string) ([]policy.ActivityLog, error) {
 		}
 		logs = append(logs, al)
 	}
+	if err := s.Err(); err != nil {
+		return logs, fmt.Errorf("error reading policy activity log: %w", err)
+	}
 	return logs, nil
 }
