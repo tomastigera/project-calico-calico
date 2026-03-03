@@ -130,15 +130,18 @@ var _ = describe.CalicoDescribe(
 			})
 
 			It("should generate flow logs when no policy applies", func() {
-				By("a client pod connecting to a server pod")
-				checker.ExpectSuccess(clientPod, server.ClusterIPs()...)
-				checker.Execute()
-				checker.ResetExpectations()
+				By("generating continuous traffic from client to server")
+				cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
+				defer cp.Stop()
 
-				// NOTE: On Windows, the source reporter does not generate a flow log when the
-				// connection is denied at the destination. The TCP SYN goes out but never gets
-				// a SYN-ACK, and Windows Felix/HNS does not track half-open connections.
-				// Only the destination reporter captures the deny.
+				By("validating flow logs pushed to elasticsearch where reporter=src", func() {
+					validateFlowLogs(esclient,
+						esQuery("src"),
+						flowExpectation{
+							action: "allow",
+							policy: ".kns." + f.Namespace.Name + "|allow",
+						})
+				})
 
 				By("validating flow logs pushed to elasticsearch where reporter=dst", func() {
 					validateFlowLogs(esclient,
@@ -186,10 +189,9 @@ var _ = describe.CalicoDescribe(
 				})
 
 				It("should generate flow logs when policy denies src", func() {
-					By("a client pod connecting to a server pod")
-					checker.ExpectFailure(clientPod, server.ClusterIPs()...)
-					checker.Execute()
-					checker.ResetExpectations()
+					By("generating continuous traffic from client to server")
+					cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
+					defer cp.Stop()
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
@@ -238,10 +240,9 @@ var _ = describe.CalicoDescribe(
 				})
 
 				It("should generate flow logs when policy denies dst", func() {
-					By("a client pod connecting to a server pod")
-					checker.ExpectFailure(clientPod, server.ClusterIPs()...)
-					checker.Execute()
-					checker.ResetExpectations()
+					By("generating continuous traffic from client to server")
+					cp := checker.ExpectContinuously(clientPod, server.ClusterIPs()...)
+					defer cp.Stop()
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,

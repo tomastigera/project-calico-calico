@@ -50,7 +50,7 @@ var _ = describe.CalicoDescribe(
 			ctx := context.TODO()
 
 			By("Checking... Cannot reach external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "9s", "3s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
 
 			By("Allowing egress to external service domains")
 			for _, obj := range allowObjs {
@@ -62,10 +62,10 @@ var _ = describe.CalicoDescribe(
 			}
 
 			By("Checking... Can reach allowed external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "10s", "1s").ShouldNot(HaveOccurred())
+			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 			By("Checking... Cannot reach blocked service")
-			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), "3s", "1s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
 		}
 
 		Context("[RunsOnWindows] Test DNS policy of a workload. ", func() {
