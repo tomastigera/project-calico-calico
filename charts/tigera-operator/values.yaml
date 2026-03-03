@@ -15,6 +15,10 @@ installation:
   # nodeMetricsPort: 9090
   # typhaMetricsPort: 9091
 
+  # Path to the kubelet volume plugin directory used by the Calico CSI driver.
+  # Set to "None" to disable the CSI driver. If unset, defaults to /var/lib/kubelet (CSI enabled).
+  kubeletVolumePluginPath: "/var/lib/kubelet"
+
   # --- General Image Settings ---
   # registry: <custom-registry>
   # imagePath: <optional-path>
@@ -26,10 +30,6 @@ installation:
   #
   # Example: --set installation.imagePullSecrets[0].name=my-existing-secret
   imagePullSecrets: []
-
-  # Path to the kubelet volume plugin directory used by the Calico CSI driver.
-  # Set to "None" to disable the CSI driver. If unset, defaults to /var/lib/kubelet (CSI enabled).
-  kubeletVolumePluginPath: "/var/lib/kubelet"
 
   # Valid options: EKS, GKE, AKS, RKE2, OpenShift, DockerEnterprise, TKG, Kind.
   # If empty the operator will attempt to automatically determine the current provider.
