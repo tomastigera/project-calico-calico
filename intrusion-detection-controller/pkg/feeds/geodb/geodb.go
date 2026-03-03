@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	cityDatabaseFilepath = "/etc/maxmind/GeoLite2-City.mmdb"
-	asnDatabaseFilepath  = "/etc/maxmind/GeoLite2-ASN.mmdb"
+	cityDatabaseFilepath = "/usr/share/GeoIP/dbip-city-lite.mmdb"
+	asnDatabaseFilepath  = "/usr/share/GeoIP/dbip-asn-lite.mmdb"
 )
 
 type GeoDatabase interface {

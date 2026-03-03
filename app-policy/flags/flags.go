@@ -94,7 +94,7 @@ func New() *Config {
 	fs.StringVar(
 		&cfg.GeoDBPath,
 		"geo-db-path",
-		util.GetEnv("GEOIP_DB_PATH", "/opt/geoip/dbip-city-lite.mmdb"),
+		util.GetEnv("GEOIP_DB_PATH", "/usr/share/GeoIP/dbip-city-lite.mmdb"),
 		"Path to .mmdb binary database file to use instead of embedded one",
 	)
 	fs.StringVar(

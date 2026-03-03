@@ -48,7 +48,7 @@ clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
-	rm -rf bin report
+	rm -rf bin report geoip
 	-docker image rm -f $$(docker images $(DIKASTES_IMAGE) -a -q)
 
 .PHONY: clean-generated
@@ -98,6 +98,8 @@ protobuf: $(GENERATED_FILES)
 ###############################################################################
 # Look for city-lite release filename pattern: dbip-city-lite-YYYY-MM.mmdb.gz.
 # The Semaphore pipeline caches this file to avoid repeated downloads.
+# .DELETE_ON_ERROR ensures partial/corrupt files are removed on failure.
+.DELETE_ON_ERROR: geoip/dbip-city-lite.mmdb
 geoip/dbip-city-lite.mmdb:
 	mkdir -p geoip
 	$(eval MMDB_RELEASE=$(shell curl -s https://db-ip.com/db/download/ip-to-city-lite | grep -o 'dbip-city-lite-[0-9]\{4\}-[0-9]\{2\}.mmdb.gz'))

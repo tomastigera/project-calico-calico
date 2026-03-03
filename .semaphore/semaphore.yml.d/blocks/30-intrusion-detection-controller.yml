@@ -6,8 +6,7 @@
   task:
     prologue:
       commands:
-        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
-        - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+        - cache restore ids-geoip
         - cd intrusion-detection-controller
     jobs:
       - name: "Intrusion detection controller: CI"
@@ -24,3 +23,6 @@
       always:
         commands:
           - 'test-results publish ./report/*.xml --name "IDS Controller: UT" || true'
+      on_pass:
+        commands:
+          - cache store ids-geoip intrusion-detection-controller/geoip

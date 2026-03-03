@@ -74,7 +74,7 @@ COPY --from=builder /lib64/libxtables.so.12 /lib64/libxtables.so.12
 COPY --from=builder /usr/lib64/xtables/ /usr/lib64/xtables/
 
 COPY ${BINDIR}/dikastes-${TARGETARCH} /dikastes
-COPY geoip/dbip-city-lite.mmdb /opt/geoip/dbip-city-lite.mmdb
+COPY geoip/dbip-city-lite.mmdb /usr/share/GeoIP/dbip-city-lite.mmdb
 
 FROM ${CALICO_BASE}
 

@@ -2092,8 +2092,7 @@ blocks:
     task:
       prologue:
         commands:
-          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
-          - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+          - cache restore ids-geoip
           - cd intrusion-detection-controller
       jobs:
         - name: "Intrusion detection controller: CI"
@@ -2110,6 +2109,9 @@ blocks:
         always:
           commands:
             - 'test-results publish ./report/*.xml --name "IDS Controller: UT" || true'
+        on_pass:
+          commands:
+            - cache store ids-geoip intrusion-detection-controller/geoip
   - name: key-cert-provisioner
     run:
       when: "true"
@@ -2644,14 +2646,17 @@ blocks:
       prologue:
         commands:
           - cache delete app-policy-geoip
+          - cache delete ids-geoip
       epilogue:
         on_pass:
           commands:
             - cache store app-policy-geoip app-policy/geoip
+            - cache store ids-geoip intrusion-detection-controller/geoip
       jobs:
         - name: Refresh GeoIP cache
           commands:
             - make -C app-policy geoip/dbip-city-lite.mmdb
+            - make -C intrusion-detection-controller geoip/dbip-city-lite.mmdb geoip/dbip-asn-lite.mmdb
   - name: Prometheus Operator
     run:
       when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

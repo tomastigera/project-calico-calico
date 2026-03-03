@@ -14,9 +14,16 @@ var (
 	ip = net.ParseIP("95.179.135.3")
 )
 
-var _ = Describe("Maxmind GeoIP tests", func() {
+var _ = Describe("GeoIP database path constants", func() {
+	It("should use /usr/share/GeoIP/ with DB-IP filenames", func() {
+		Expect(cityDatabaseFilepath).To(Equal("/usr/share/GeoIP/dbip-city-lite.mmdb"))
+		Expect(asnDatabaseFilepath).To(Equal("/usr/share/GeoIP/dbip-asn-lite.mmdb"))
+	})
+})
 
-	Context("Maxmind GeoIP lookup", func() {
+var _ = Describe("GeoIP lookup tests", func() {
+
+	Context("GeoIP lookup", func() {
 		BeforeEach(func() {
 			_, err := os.Stat(cityDatabaseFilepath)
 			Expect(err).NotTo(HaveOccurred())
@@ -33,7 +40,7 @@ var _ = Describe("Maxmind GeoIP tests", func() {
 
 			Expect(city.CountryName).To(Equal("The Netherlands"))
 			Expect(city.ISO).To(Equal("NL"))
-			Expect(city.CityName).To(Equal("Amsterdam"))
+			Expect(city.CityName).To(Equal("Haarlem"))
 		})
 
 		It("should lookup ASN", func() {
