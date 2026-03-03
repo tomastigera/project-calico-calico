@@ -53,18 +53,19 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	t.Setenv("K8S_VERSION", k8sVersionStable)
 	t.Setenv("DATAPLANE", dataplaneType)
 
-	// Load URL environment variables from hashrelease metadata file if provided
-	if hashreleaseMetadataFile != "" {
-		metadata, err := outputs.LoadPublishedHashrelease(hashreleaseMetadataFile)
-		if err != nil {
-			t.Fatalf("Failed to load hashrelease metadata from %s: %v", hashreleaseMetadataFile, err)
-		}
-		url := strings.TrimRight(metadata.HashreleaseURL, "/")
-		t.Setenv("RELEASE_ARTIFACTS_URL", url+"/")
-		t.Setenv("DOCS_MANIFEST_URL", url+"/manifests")
-		t.Setenv("DOCS_URL", url+"/")
-		logrus.Infof("Hashrelease URL: %s", url)
+	// Load URL environment variables from hashrelease metadata file
+	if hashreleaseMetadataFile == "" {
+		t.Fatal("The -hashrelease-metadata-file flag is required")
 	}
+	metadata, err := outputs.LoadPublishedHashrelease(hashreleaseMetadataFile)
+	if err != nil {
+		t.Fatalf("Failed to load hashrelease metadata from %s: %v", hashreleaseMetadataFile, err)
+	}
+	url := strings.TrimRight(metadata.HashreleaseURL, "/")
+	t.Setenv("RELEASE_ARTIFACTS_URL", url+"/")
+	t.Setenv("DOCS_MANIFEST_URL", url+"/manifests")
+	t.Setenv("DOCS_URL", url+"/")
+	logrus.Infof("Hashrelease URL: %s", url)
 
 	// Resolve repo root
 	repoRoot, err := command.GitDir()
@@ -75,24 +76,24 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	scriptsDir := filepath.Join(repoRoot, ".semaphore", "end-to-end", "scripts")
 	bodyScript := filepath.Join(scriptsDir, "body_standard.sh")
 
+	// Defer epilogue and cleanup so they run even on panic or Fatalf.
+	defer func() {
+		if err := runScript(filepath.Join(scriptsDir, "global_epilogue.sh")); err != nil {
+			t.Errorf("Epilogue script failed: %v", err)
+		}
+		if err := runCleanup(); err != nil {
+			t.Errorf("Cleanup failed: %v", err)
+		}
+	}()
+
 	// Run prologue
 	if err := runScript(filepath.Join(scriptsDir, "global_prologue.sh")); err != nil {
 		t.Fatalf("Prologue script failed: %v", err)
 	}
 
 	// Run the main test body
-	bodyErr := runScript(bodyScript)
-
-	// Always run epilogue and cleanup, even if body failed
-	if err := runScript(filepath.Join(scriptsDir, "global_epilogue.sh")); err != nil {
-		t.Errorf("Epilogue script failed: %v", err)
-	}
-	if err := runCleanup(); err != nil {
-		t.Errorf("Cleanup failed: %v", err)
-	}
-
-	if bodyErr != nil {
-		t.Fatalf("Smoke test failed: %v", bodyErr)
+	if err := runScript(bodyScript); err != nil {
+		t.Fatalf("Smoke test failed: %v", err)
 	}
 }
 

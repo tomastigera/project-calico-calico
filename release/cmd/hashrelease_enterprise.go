@@ -389,13 +389,13 @@ func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "validate",
 		Usage: "Post-hashrelease validation (smoke tests)",
-		Flags: append(append([]cli.Flag{
+		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "hashrelease-metadata-file",
 				Usage: "Path to hashrelease metadata file for setting URL environment variables",
-				Value: filepath.Join(cfg.RepoRootDir, "release", "_output", "hashrelease", "hashrelease.yaml"),
+				Value: filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), "hashrelease.yaml"),
 			},
-		}, slackFlags...), ciFlag, ciBaseURLFlag, ciJobIDFlag),
+		},
 		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-hashrelease-validation.log")
 

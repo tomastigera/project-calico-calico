@@ -478,6 +478,3 @@ bin/gotestsum:
 postrelease-checks: release/bin/release bin/gotestsum
 	@release/bin/release release validate
 
-hashrelease-validate: release/bin/release
-	@release/bin/release hashrelease enterprise validate
-

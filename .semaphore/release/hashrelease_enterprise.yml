@@ -81,13 +81,9 @@ blocks:
     dependencies: ["Publish hashrelease"]
     task:
       secrets:
-        - name: marvin-github-ssh-private-key
         - name: banzai-secrets
-        - name: releasebot-slack
       prologue:
         commands:
-          - checkout
-          - retry git fetch --quiet --unshallow
           - artifact pull workflow release/_output/hashrelease/hashrelease.yaml
       jobs:
         - name: "Run hashrelease enterprise smoke tests"
