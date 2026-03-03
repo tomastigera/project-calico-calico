@@ -874,7 +874,10 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 					logCxt.Debug("Endpoint up, adding routes")
 					for _, s := range ipStrings {
 						routeTargets = append(routeTargets, routetable.Target{
-							CIDR:    ip.MustParseCIDROrIP(s),
+							RouteKey: routetable.RouteKey{
+
+								CIDR: ip.MustParseCIDROrIP(s),
+							},
 							DestMAC: mac,
 						})
 					}

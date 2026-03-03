@@ -107,7 +107,9 @@ func newTProxyManager(
 		anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
 		rt.RouteUpdate(routetable.RouteClassTPROXY, "lo", routetable.Target{
 			Type: routetable.TargetTypeLocal,
-			CIDR: anyV4,
+			RouteKey: routetable.RouteKey{
+				CIDR: anyV4,
+			},
 		})
 
 		rr.SetRule(routerule.NewRule(4, 1).
@@ -160,7 +162,9 @@ func newTProxyManager(
 				"lo",
 				routetable.Target{
 					Type: routetable.TargetTypeLocal,
-					CIDR: anyV6,
+					RouteKey: routetable.RouteKey{
+						CIDR: anyV6,
+					},
 				},
 			)
 

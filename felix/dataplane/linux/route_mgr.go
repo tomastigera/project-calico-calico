@@ -406,8 +406,10 @@ func blackholeRoutes(localIPAMBlocks map[string]*proto.RouteUpdate, proto netlin
 			continue
 		}
 		rtt = append(rtt, routetable.Target{
-			Type:     routetable.TargetTypeBlackhole,
-			CIDR:     cidr,
+			Type: routetable.TargetTypeBlackhole,
+			RouteKey: routetable.RouteKey{
+				CIDR: cidr,
+			},
 			Protocol: proto,
 		})
 	}
@@ -425,8 +427,10 @@ func (m *routeManager) noEncapRoute(cidr ip.CIDR, r *proto.RouteUpdate) *routeta
 		return nil
 	}
 	noEncapRoute := routetable.Target{
-		Type:     routetable.TargetTypeNoEncap,
-		CIDR:     cidr,
+		Type: routetable.TargetTypeNoEncap,
+		RouteKey: routetable.RouteKey{
+			CIDR: cidr,
+		},
 		GW:       ip.FromString(r.DstNodeIp),
 		Protocol: m.routeProtocol,
 	}

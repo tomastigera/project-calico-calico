@@ -1142,7 +1142,9 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 		if r.throwToMain {
 			route := routetable.Target{
 				Type: routetable.TargetTypeThrow,
-				CIDR: dst,
+				RouteKey: routetable.RouteKey{
+					CIDR: dst,
+				},
 			}
 			noIfaceRoutes = append(noIfaceRoutes, route)
 		} else {
@@ -1160,11 +1162,13 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 				// Set multipath L3 route.
 				// Note the interface is InterfaceNone for multipath.
 				route := routetable.Target{
-					Type:      routetable.TargetTypeVXLAN,
-					CIDR:      dst,
+					Type: routetable.TargetTypeVXLAN,
+					RouteKey: routetable.RouteKey{
+						CIDR: dst,
+					},
 					MultiPath: multipath,
 				}
-				rTable.RouteRemove(m.vxlanDevice, dst)
+				rTable.RouteRemove(m.vxlanDevice, route.RouteKey)
 				noIfaceRoutes = append(noIfaceRoutes, route)
 			} else if len(multipath) == 1 {
 				// If we send multipath routes with just one path, netlink will program it successfully.
@@ -1173,8 +1177,10 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 				// we should not send a multipath target with just one GW.
 				route := routetable.Target{
 					Type: routetable.TargetTypeVXLAN,
-					CIDR: dst,
-					GW:   multipath[0].Gw,
+					RouteKey: routetable.RouteKey{
+						CIDR: dst,
+					},
+					GW: multipath[0].Gw,
 				}
 				vxlanSinglePathRouteIsUsed = true
 
@@ -1185,15 +1191,17 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 				// egress.calico updates, route table module will continue on processing InterfaceNone updates
 				// and remove default route (see RouteRemove below).
 				// Route updates for egress.vxlan will be successful at next dataplane apply().
-				rTable.RouteRemove(routetable.InterfaceNone, dst)
+				rTable.RouteRemove(routetable.InterfaceNone, route.RouteKey)
 				vxlanRoutes = append(vxlanRoutes, route)
 			} else {
 				// Set unreachable route.
 				route := routetable.Target{
 					Type: routetable.TargetTypeUnreachable,
-					CIDR: dst,
+					RouteKey: routetable.RouteKey{
+						CIDR: dst,
+					},
 				}
-				rTable.RouteRemove(m.vxlanDevice, dst)
+				rTable.RouteRemove(m.vxlanDevice, route.RouteKey)
 				noIfaceRoutes = append(noIfaceRoutes, route)
 			}
 		}
@@ -1332,8 +1340,8 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 			"index":       index,
 			"destination": dst,
 		}).Debug("Removing L3 routes.")
-		table.RouteRemove(routetable.RouteClassEgress, routetable.InterfaceNone, dst)
-		table.RouteRemove(routetable.RouteClassEgress, m.vxlanDevice, dst)
+		table.RouteRemove(routetable.RouteClassEgress, routetable.InterfaceNone, routetable.RouteKey{CIDR: dst})
+		table.RouteRemove(routetable.RouteClassEgress, m.vxlanDevice, routetable.RouteKey{CIDR: dst})
 	}
 	delete(m.tableIndexToEgressTable, index)
 	// Don't remove the entry from m.tableIndexToRouteTable, it is needed in GetRouteTableSyncers()
