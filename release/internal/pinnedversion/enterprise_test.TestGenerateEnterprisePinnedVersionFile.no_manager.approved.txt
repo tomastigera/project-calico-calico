@@ -33,7 +33,7 @@
     coreos-config-reloader:
       version: v0.89.0
     coreos-dex:
-      version: v2.41.1
+      version: v2.45.0
     coreos-prometheus:
       version: v3.9.1
     coreos-prometheus-operator:
