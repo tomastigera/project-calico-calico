@@ -145,6 +145,19 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			reqBody:         testutils.MarshalBulkParams[v1.FlowLog](flowLogs),
 			want:            testResult{false, 200, ""},
 		},
+
+		// All lines malformed
+		{
+			name:            "all lines malformed",
+			backendFlowLogs: noFlowLogs,
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         "BAD1\nBAD2\nBAD3\n",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

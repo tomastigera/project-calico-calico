@@ -59,7 +59,7 @@ func (h goldmaneFlowHandler) Create() http.HandlerFunc {
 			logCtx = logCtx.WithField("body", body)
 		}
 
-		data, httpErr := handler.DecodeAndValidateBulkParams[*proto.Flow](w, req)
+		decoded, httpErr := handler.DecodeAndValidateBulkParams[*proto.Flow](w, req)
 		if httpErr != nil {
 			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
 			httputils.JSONError(w, httpErr, httpErr.Status)
@@ -75,20 +75,24 @@ func (h goldmaneFlowHandler) Create() http.HandlerFunc {
 		}
 
 		// Convert the proto.Flow objects to v1.FlowLog objects.
-		logs := make([]v1.FlowLog, 0, len(data))
-		for _, d := range data {
+		logs := make([]v1.FlowLog, 0, len(decoded.Items))
+		for _, d := range decoded.Items {
 			if f, err := convert(d); err == nil {
 				logs = append(logs, f)
 			} else {
 				// This branch means we received a Flow object that we deem to be invalid. This
 				// could be a bug, or it could be a malicious client.
 				logCtx.WithField("log", d).WithError(err).Error("Invalid flow object received")
-				httputils.JSONError(w, &v1.HTTPError{
-					Status: http.StatusBadRequest,
-					Msg:    err.Error(),
-				}, http.StatusBadRequest)
-				return
+				decoded.FailedCount++
 			}
+		}
+
+		if len(logs) == 0 {
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusBadRequest,
+				Msg:    "Request body contains no valid flow logs",
+			}, http.StatusBadRequest)
+			return
 		}
 
 		// Call the creation function.
@@ -101,6 +105,8 @@ func (h goldmaneFlowHandler) Create() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}
