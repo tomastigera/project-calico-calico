@@ -744,6 +744,22 @@ rules:
       - ipamblocks
     verbs:
       - list
+  - apiGroups:
+      - k8s.cni.cncf.io
+    resources:
+      - network-attachment-definitions
+    verbs:
+      - create
+  - apiGroups:
+      - k8s.cni.cncf.io
+    resources:
+      - network-attachment-definitions
+    resourceNames:
+      - istio-cni
+    verbs:
+      - get
+      - update
+      - delete
   # Permissions below this point are required for TSEE only.
   # For AWS security group setup. In enterprise, also needed for IDS installer and curator cronjob.
   - apiGroups:
