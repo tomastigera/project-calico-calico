@@ -10,8 +10,15 @@
 #include <bpf_helpers.h>
 #include <bpf_tracing.h>
 
+#if defined(__TARGET_ARCH_x86)
 SEC("kprobe/__x64_sys_execve")
 int BPF_KPROBE(__x64_sys_execve)
+#elif defined(__TARGET_ARCH_arm64)
+SEC("kprobe/__arm64_sys_execve")
+int BPF_KPROBE(__arm64_sys_execve)
+#else
+#error "Unsupported architecture"
+#endif
 {
 	char *fileAddr = NULL, **argAddr = NULL;
 	char *argp;
@@ -31,7 +38,8 @@ int BPF_KPROBE(__x64_sys_execve)
 	struct calico_exec_value *data = cali_exec_lookup_elem(&zero);
 	if (data) {
 		__builtin_memset(data, 0, sizeof(struct calico_exec_value));
-		/* x86 has syscall wrappers, as a result unwrap the ctx.
+		/* Both x86 and arm64 have syscall wrappers, as a result
+		 * unwrap the ctx to get the real pt_regs.
 		 */
 		struct pt_regs *__ctx = (struct pt_regs *)(PT_REGS_PARM1(ctx));
 		// Read the address where filename is stored.

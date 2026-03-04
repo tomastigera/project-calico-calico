@@ -16,6 +16,7 @@ package kprobe
 import (
 	"fmt"
 	"path"
+	"runtime"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +29,14 @@ import (
 
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf", "tcp_connect"}
 var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
-var syscallFns = []string{"__x64_sys_execve"}
+var syscallFns = func() []string {
+	switch runtime.GOARCH {
+	case "arm64":
+		return []string{"__arm64_sys_execve"}
+	default:
+		return []string{"__x64_sys_execve"}
+	}
+}()
 
 type bpfKprobe struct {
 	logLevel   string
