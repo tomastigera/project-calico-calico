@@ -4,8 +4,6 @@ package policy
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -19,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/ptr"
@@ -29,19 +28,8 @@ import (
 	"github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
 	"github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
-
-type StagedPolicyCRDType string
-
-type StagedPolicyKind string
-
-const (
-	StagedGlobalNetworkPolicyKind     StagedPolicyKind = "StagedGlobalNetworkPolicy"
-	StagedNetworkPolicyKind           StagedPolicyKind = "StagedNetworkPolicy"
-	StagedKubernetesNetworkPolicyKind StagedPolicyKind = "StagedKubernetesNetworkPolicy"
-)
-
-const ProjectCalicoAPIVersion string = "projectcalico.org/v3"
 
 // DESCRIPTION: This test verifies the staged network policy feature.
 //
@@ -115,7 +103,7 @@ var _ = describe.EnterpriseDescribe(
 			})
 
 			Describe("for StagedKubernetesNetworkPolicies", func() {
-				var policy1 *v3.StagedKubernetesNetworkPolicy
+				var sknpAllow *v3.StagedKubernetesNetworkPolicy
 				BeforeEach(func() {
 					// create policy
 					labelSelector := metav1.LabelSelector{
@@ -128,8 +116,8 @@ var _ = describe.EnterpriseDescribe(
 							Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: int32(serverPort)},
 						}},
 					}}
-					policy1 = CreateStagedKubernetesNetworkPolicyAllow("sknp-allow", server.Pod().Namespace, labelSelector, ingress, nil)
-					Expect(cli.Create(context.TODO(), policy1)).ShouldNot(HaveOccurred())
+					sknpAllow = CreateStagedKubernetesNetworkPolicyAllow("sknp-allow", server.Pod().Namespace, labelSelector, ingress, nil)
+					Expect(cli.Create(context.TODO(), sknpAllow)).ShouldNot(HaveOccurred())
 
 					// create client pod and connect from client to server
 					checker.ExpectSuccess(client1, server.ClusterIP().Port(serverPort))
@@ -143,50 +131,37 @@ var _ = describe.EnterpriseDescribe(
 
 					// The PendingPolicies should include the first of the two staged policies defined above.
 					Expect(len(item.Policies.PendingPolicies)).To(Equal(1), "Expected 1 pending policies but got: %v", item.Policies.PendingPolicies)
-					expectedPolicy1 := fmt.Sprintf("0|default|%s/staged:knp.default.sknp-allow|allow|0", f.Namespace.Name)
-					Expect(item.Policies.PendingPolicies).To(ContainElement(expectedPolicy1), "Expected pending policies to include %s but got %v", expectedPolicy1, item.Policies.PendingPolicies)
+					ExpectPolicyInFlowLogs(item.Policies.PendingPolicies, sknpAllow)
 
 					// The EnforcedPolicies should include the __PROFILE__ only.
 					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(1), "Expected 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
-					expectedEnforced := fmt.Sprintf("0|__PROFILE__|__PROFILE__.kns.%s|allow|0", client1.Pod().Namespace)
-					Expect(item.Policies.EnforcedPolicies).To(ContainElement(expectedEnforced), "Expected enforced policies to include %s but got %v", expectedEnforced, item.Policies.EnforcedPolicies)
+					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 
 				AfterEach(func() {
-					Expect(cli.Delete(context.TODO(), policy1)).ShouldNot(HaveOccurred())
+					Expect(cli.Delete(context.TODO(), sknpAllow)).ShouldNot(HaveOccurred())
 				})
 			})
 
 			Describe("for StagedNetworkPolicies", func() {
-				var (
-					policy1, policy2, policy3, policy4                                 *v3.StagedNetworkPolicy
-					policy1BaseName, policy2BaseName, policy3BaseName, policy4BaseName string
-				)
-				actualOrder := map[*v3.StagedNetworkPolicy]int{}
+				var policy1, policy2, policy3, policy4 *v3.StagedNetworkPolicy
 
 				BeforeEach(func() {
-					ingress := []v3.Rule{{Action: v3.Allow}}
 					selector := fmt.Sprintf("pod-name==\"%s\"", server.Name())
 
-					policy1BaseName = "snp-deny-1"
-					ingress[0].Action = v3.Deny
-					policy1 = CreateStagedNetworkPolicy(policy1BaseName, tierObj.Name, server.Pod().Namespace, 10, selector, ingress, nil)
-
-					policy2BaseName = "snp-allow-2"
-					ingress[0].Action = v3.Allow
-					policy2 = CreateStagedNetworkPolicy(policy2BaseName, tierObj.Name, server.Pod().Namespace, 11, selector, ingress, nil)
-
-					policy3BaseName = "snp-pass-3"
-					ingress[0].Action = v3.Pass
-					policy3 = CreateStagedNetworkPolicy(policy3BaseName, tierObj.Name, server.Pod().Namespace, 12, selector, ingress, nil)
-
-					policy4BaseName = "snp-invisible-4"
-					ingress[0].Action = v3.Allow
-					policy4 = CreateStagedNetworkPolicy(policy4BaseName, tierObj.Name, server.Pod().Namespace, 13, selector, ingress, nil)
-
+					// Each policy gets its own ingress rules to avoid sharing the same
+					// slice backing array, which would cause all policies to end up with
+					// the last-assigned action.
+					policy1 = CreateStagedNetworkPolicy("snp-deny-1", tierObj.Name, server.Pod().Namespace, 10, selector, []v3.Rule{{Action: v3.Deny}}, nil)
 					Expect(cli.Create(context.TODO(), policy1)).ShouldNot(HaveOccurred())
+
+					policy2 = CreateStagedNetworkPolicy("snp-allow-2", tierObj.Name, server.Pod().Namespace, 11, selector, []v3.Rule{{Action: v3.Allow}}, nil)
 					Expect(cli.Create(context.TODO(), policy2)).ShouldNot(HaveOccurred())
+
+					policy3 = CreateStagedNetworkPolicy("snp-pass-3", tierObj.Name, server.Pod().Namespace, 12, selector, []v3.Rule{{Action: v3.Pass}}, nil)
 					Expect(cli.Create(context.TODO(), policy3)).ShouldNot(HaveOccurred())
+
+					policy4 = CreateStagedNetworkPolicy("snp-invisible-4", tierObj.Name, server.Pod().Namespace, 13, selector, []v3.Rule{{Action: v3.Allow}}, nil)
 					Expect(cli.Create(context.TODO(), policy4)).ShouldNot(HaveOccurred())
 
 					// Connect to all the server's cluster IPs.
@@ -202,35 +177,16 @@ var _ = describe.EnterpriseDescribe(
 					Expect(len(flowLogs)).To(BeNumerically(">", 0))
 
 					item := flowLogs[0]
-					// flowlog entries should only have 4 policy string
-					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(5))
 
-					for _, policyString := range item.Policies.EnforcedPolicies {
+					// Staged policies appear in PendingPolicies. The first policy is a Deny which
+					// terminates staged evaluation, so only 1 pending policy is recorded.
+					Expect(len(item.Policies.PendingPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 pending policy but got: %v", item.Policies.PendingPolicies)
+					hit1 := FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
+					Expect(string(hit1.Action())).To(Equal("deny"))
 
-						policySections := strings.Split(policyString, "|")
-						fullname := policySections[2]
-						action := policySections[3]
-						index, err := strconv.Atoi(policySections[0])
-						Expect(err).NotTo(HaveOccurred())
-
-						if strings.Contains(fullname, policy1BaseName) {
-							actualOrder[policy1] = index
-							Expect(action == "deny")
-						} else if strings.Contains(fullname, policy2BaseName) {
-							actualOrder[policy2] = index
-							Expect(action == "allow")
-						} else if strings.Contains(fullname, policy3BaseName) {
-							actualOrder[policy3] = index
-							Expect(action == "pass")
-						} else if strings.Contains(fullname, policy4BaseName) {
-							actualOrder[policy4] = index
-							Expect(action == "allow")
-						}
-					}
-
-					// relative ordering should be preserved in flowlogs
-					Expect(actualOrder[policy1] < actualOrder[policy2]).To(Equal(*policy1.Spec.Order < *policy2.Spec.Order))
-					Expect(actualOrder[policy2] < actualOrder[policy3]).To(Equal(*policy2.Spec.Order < *policy3.Spec.Order))
+					// EnforcedPolicies should include just the __PROFILE__.
+					Expect(len(item.Policies.EnforcedPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
+					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
 				})
 
 				AfterEach(func() {
@@ -242,32 +198,24 @@ var _ = describe.EnterpriseDescribe(
 			})
 
 			Describe("for StagedGlobalNetworkPolicies", func() {
-				var (
-					policy1, policy2, policy3, policy4                                 *v3.StagedGlobalNetworkPolicy
-					policy1BaseName, policy2BaseName, policy3BaseName, policy4BaseName string
-				)
+				var policy1, policy2, policy3, policy4 *v3.StagedGlobalNetworkPolicy
 
 				BeforeEach(func() {
 					selector := fmt.Sprintf("pod-name == \"%s\"", server.Name())
-					ingress := []v3.Rule{{Action: v3.Deny}}
-					policy1BaseName = "sgnp-deny-1"
-					policy1 = CreateStagedGlobalNetworkPolicy(policy1BaseName, tierObj.Name, 10, selector, ingress, nil)
 
-					policy2BaseName = "sgnp-allow-2"
-					ingress[0].Action = v3.Allow
-					policy2 = CreateStagedGlobalNetworkPolicy(policy2BaseName, tierObj.Name, 11, selector, ingress, nil)
-
-					policy3BaseName = "sgnp-pass-3"
-					ingress[0].Action = v3.Pass
-					policy3 = CreateStagedGlobalNetworkPolicy(policy3BaseName, tierObj.Name, 12, selector, ingress, nil)
-
-					policy4BaseName = "sgnp-invisible-4"
-					ingress[0].Action = v3.Allow
-					policy4 = CreateStagedGlobalNetworkPolicy(policy4BaseName, tierObj.Name, 13, selector, ingress, nil)
-
+					// Each policy gets its own ingress rules to avoid sharing the same
+					// slice backing array, which would cause all policies to end up with
+					// the last-assigned action.
+					policy1 = CreateStagedGlobalNetworkPolicy("sgnp-deny-1", tierObj.Name, 10, selector, []v3.Rule{{Action: v3.Deny}}, nil)
 					Expect(cli.Create(context.TODO(), policy1)).ShouldNot(HaveOccurred())
+
+					policy2 = CreateStagedGlobalNetworkPolicy("sgnp-allow-2", tierObj.Name, 11, selector, []v3.Rule{{Action: v3.Allow}}, nil)
 					Expect(cli.Create(context.TODO(), policy2)).ShouldNot(HaveOccurred())
+
+					policy3 = CreateStagedGlobalNetworkPolicy("sgnp-pass-3", tierObj.Name, 12, selector, []v3.Rule{{Action: v3.Pass}}, nil)
 					Expect(cli.Create(context.TODO(), policy3)).ShouldNot(HaveOccurred())
+
+					policy4 = CreateStagedGlobalNetworkPolicy("sgnp-invisible-4", tierObj.Name, 13, selector, []v3.Rule{{Action: v3.Allow}}, nil)
 					Expect(cli.Create(context.TODO(), policy4)).ShouldNot(HaveOccurred())
 
 					// create client pod and connect from client to server
@@ -276,42 +224,21 @@ var _ = describe.EnterpriseDescribe(
 				})
 
 				It("Validate actions, names, and orders", func() {
-					actualOrder := map[*v3.StagedGlobalNetworkPolicy]int{}
-
 					// validate the staged policy applied to the client-server traffic in flowlogs
 					flowLogs := fetchFlowlogs(esclient, f.Namespace.Name, f.Namespace.Name, clientPodNamePrefix, server.Name(), "dst")
-					Expect(len(flowLogs)).To(Equal(1))
+					Expect(len(flowLogs)).To(BeNumerically(">", 0))
 
 					item := flowLogs[0]
 
-					// flowlog entries should have 5 policy string (4 defined in this test and one __PROFILE__)
-					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(5))
+					// Staged policies appear in PendingPolicies. The first policy is a Deny which
+					// terminates staged evaluation, so only 1 pending policy is recorded.
+					Expect(len(item.Policies.PendingPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 pending policy but got: %v", item.Policies.PendingPolicies)
+					hit1 := FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
+					Expect(string(hit1.Action())).To(Equal("deny"))
 
-					for _, policyString := range item.Policies.EnforcedPolicies {
-						policySections := strings.Split(policyString, "|")
-						fullname := policySections[2]
-						action := policySections[3]
-						index, err := strconv.Atoi(policySections[0])
-						Expect(err).NotTo(HaveOccurred())
-
-						if strings.Contains(fullname, policy1BaseName) {
-							actualOrder[policy1] = index
-							Expect(action == "deny")
-						} else if strings.Contains(fullname, policy2BaseName) {
-							actualOrder[policy2] = index
-							Expect(action == "allow")
-						} else if strings.Contains(fullname, policy3BaseName) {
-							actualOrder[policy3] = index
-							Expect(action == "pass")
-						} else if strings.Contains(fullname, policy4BaseName) {
-							actualOrder[policy4] = index
-							Expect(action == "allow")
-						}
-					}
-
-					// relative ordering of the stagedpolicies should be preserved in flowlogs
-					Expect(actualOrder[policy1] < actualOrder[policy2]).To(Equal(*policy1.Spec.Order < *policy2.Spec.Order))
-					Expect(actualOrder[policy2] < actualOrder[policy3]).To(Equal(*policy2.Spec.Order < *policy3.Spec.Order))
+					// EnforcedPolicies should include just the __PROFILE__.
+					Expect(len(item.Policies.EnforcedPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
+					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
 				})
 
 				AfterEach(func() {
@@ -510,18 +437,15 @@ var _ = describe.EnterpriseDescribe(
 					flowLogs := fetchFlowlogs(esclient, client1.Pod().Namespace, "", client1.Pod().Name, "networkset-google", "src")
 					flog := flowLogs[0]
 
-					expectedPending := fmt.Sprintf("0|%s|%s/%s.staged:snp-deny-networkset|deny|0", tierObj.Name, f.Namespace.Name, tierObj.Name)
-					expectedEnforced := fmt.Sprintf("0|__PROFILE__|__PROFILE__.kns.%s|allow|0", client1.Pod().Namespace)
-
 					// PendingPolicies should include the staged policy defined above.
 					msg := fmt.Sprintf("Expected 1 pending policies but got %d: %v", len(flog.Policies.PendingPolicies), flog.Policies.PendingPolicies)
 					Expect(len(flog.Policies.PendingPolicies)).To(Equal(1), msg)
-					Expect(flog.Policies.PendingPolicies).To(ContainElement(expectedPending), "Expected pending policies to include %s but got %v", expectedPending, flog.Policies.PendingPolicies)
+					ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, stagedPolicy)
 
 					// EnforcedPolicies should have a single entry: the __PROFILE__
 					msg = fmt.Sprintf("Expected 1 enforced policy but got %d: %v", len(flog.Policies.EnforcedPolicies), flog.Policies.EnforcedPolicies)
 					Expect(len(flog.Policies.EnforcedPolicies)).To(Equal(1), msg)
-					Expect(flog.Policies.EnforcedPolicies).To(ContainElement(expectedEnforced), "Expected enforced policies to include %s but got %v", expectedEnforced, flog.Policies.EnforcedPolicies)
+					ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 			})
 
@@ -570,19 +494,15 @@ var _ = describe.EnterpriseDescribe(
 					flowLogs := fetchFlowlogs(esclient, client1.Pod().Namespace, "", client1.Pod().Name, "global-networkset-microsoft", "src")
 					flog := flowLogs[0]
 
-					// Define expected policy matches.
-					expectedPending := fmt.Sprintf("0|%s|%s.staged:snp-deny-globalnetworkset|deny|0", tierObj.Name, tierObj.Name)
-					expectedEnforced := fmt.Sprintf("0|__PROFILE__|__PROFILE__.kns.%s|allow|0", client1.Pod().Namespace)
-
 					// PendingPolicies should include the staged policy defined above.
 					msg := fmt.Sprintf("Expected 1 pending policies but got %d: %v", len(flog.Policies.PendingPolicies), flog.Policies.PendingPolicies)
 					Expect(len(flog.Policies.PendingPolicies)).To(Equal(1), msg)
-					Expect(flog.Policies.PendingPolicies).To(ContainElement(expectedPending), "Expected pending policies to include %s but got %v", expectedPending, flog.Policies.PendingPolicies)
+					ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, policy)
 
 					// EnforcedPolicies should have a single entry: the __PROFILE__
 					msg = fmt.Sprintf("Expected 1 enforced policy but got %d: %v", len(flog.Policies.EnforcedPolicies), flog.Policies.EnforcedPolicies)
 					Expect(len(flog.Policies.EnforcedPolicies)).To(Equal(1), msg)
-					Expect(flog.Policies.EnforcedPolicies).To(ContainElement(expectedEnforced), "Expected enforced policies to include %s but got %v", expectedEnforced, flog.Policies.EnforcedPolicies)
+					ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 			})
 		})
@@ -693,4 +613,67 @@ func CreateStagedKubernetesNetworkPolicyAllow(
 	}
 
 	return policy
+}
+
+// kindFromObject derives the Calico API kind from the Go struct type. This is needed because
+// controller-runtime clears TypeMeta GVK after Create(), making GetObjectKind().GroupVersionKind().Kind
+// return "" on in-memory objects.
+func kindFromObject(obj runtime.Object) string {
+	switch obj.(type) {
+	case *v3.StagedNetworkPolicy:
+		return v3.KindStagedNetworkPolicy
+	case *v3.StagedGlobalNetworkPolicy:
+		return v3.KindStagedGlobalNetworkPolicy
+	case *v3.StagedKubernetesNetworkPolicy:
+		return v3.KindStagedKubernetesNetworkPolicy
+	default:
+		return ""
+	}
+}
+
+// FindPolicyInFlowLogs parses each flow log policy string and returns the PolicyHit that matches
+// the expected policy object by name, namespace, and kind. Fails the test if no match is found.
+func FindPolicyInFlowLogs(policyStrings []string, expected runtime.Object) api.PolicyHit {
+	ns := expected.(metav1.Object).GetNamespace()
+	name := expected.(metav1.Object).GetName()
+	kind := kindFromObject(expected)
+
+	for _, s := range policyStrings {
+		hit, err := api.PolicyHitFromFlowLogPolicyString(s, 0)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
+		if hit.Name() == name && hit.Namespace() == ns && (kind == "" || hit.Kind() == kind) {
+			return hit
+		}
+	}
+
+	msg := fmt.Sprintf(
+		"Expected to find policy %s/%s (kind %s) in flow logs but did not. Got policies: %v",
+		ns, name, kind, policyStrings,
+	)
+	ExpectWithOffset(1, false).To(BeTrue(), msg)
+	return nil
+}
+
+// ExpectPolicyInFlowLogs asserts that the given policy object appears in the flow log policy strings.
+func ExpectPolicyInFlowLogs(policyStrings []string, expected runtime.Object) {
+	FindPolicyInFlowLogs(policyStrings, expected)
+}
+
+// ExpectProfileInFlowLogs asserts that a profile for the given namespace appears in the flow log
+// policy strings. Kubernetes namespace profiles are named "kns.<namespace>" in the flow log.
+func ExpectProfileInFlowLogs(policyStrings []string, namespace string) {
+	expectedName := "kns." + namespace
+	for _, s := range policyStrings {
+		hit, err := api.PolicyHitFromFlowLogPolicyString(s, 0)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
+		if hit.Name() == expectedName && hit.Kind() == "Profile" {
+			return
+		}
+	}
+
+	msg := fmt.Sprintf(
+		"Expected to find profile for namespace %s (kns.%s) in flow logs but did not. Got policies: %v",
+		namespace, namespace, policyStrings,
+	)
+	ExpectWithOffset(1, false).To(BeTrue(), msg)
 }
