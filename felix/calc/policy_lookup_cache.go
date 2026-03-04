@@ -484,6 +484,7 @@ const (
 	ProfileTierStr     = "__PROFILE__"
 	NoMatchNameStr     = "__NO_MATCH__"
 	UnknownStr         = "__UNKNOWN__"
+	ImplicitDeniedStr  = "__IMPLICIT_DENIED__"
 
 	// Special rule index that specifies that a policy has selected traffic that has applied the
 	//  tier default action on traffic.

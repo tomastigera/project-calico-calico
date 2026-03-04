@@ -253,7 +253,7 @@ func TestPolicyActivityReporter_GenerationLookup(t *testing.T) {
 		if assert.Len(t, batch, 1) {
 			logEntry := batch[0]
 
-			expectedRuleStr := "123-egress-5"
+			expectedRuleStr := "123|egress|5"
 
 			assert.Equal(t, expectedRuleStr, logEntry.Rule,
 				"Rule string should contain the generation retrieved from LookupsCache")
@@ -312,17 +312,20 @@ func TestProcessRule(t *testing.T) {
 		expectedRule string
 	}{
 		{
-			name: "Skip system rule (rule index -1)",
+			name: "Log denied rule (rule index -1)",
 			rule: &calc.RuleID{
 				PolicyID: calc.PolicyID{
 					Kind:      apiv3.KindNetworkPolicy,
 					Name:      "system-rule",
 					Namespace: "default",
 				},
-				IndexStr: "-1",
+				Direction: rules.RuleDirIngress,
+				IndexStr:  "-1",
 			},
-			mockGenID: 99,
-			expectLog: false,
+			mockGenID:    99,
+			expectLog:    true,
+			expectedName: "system-rule",
+			expectedRule: fmt.Sprintf("99|ingress|%s", calc.ImplicitDeniedStr),
 		},
 		{
 			name: "Log valid rule with generation",
@@ -338,7 +341,7 @@ func TestProcessRule(t *testing.T) {
 			mockGenID:    42,
 			expectLog:    true,
 			expectedName: "backend-policy",
-			expectedRule: "42-ingress-5",
+			expectedRule: "42|ingress|5",
 		},
 		{
 			name: "Log unknown index with generation",
@@ -354,7 +357,7 @@ func TestProcessRule(t *testing.T) {
 			mockGenID:    101,
 			expectLog:    true,
 			expectedName: "catch-all",
-			expectedRule: fmt.Sprintf("101-egress-%s", calc.UnknownStr),
+			expectedRule: fmt.Sprintf("101|egress|%s", calc.UnknownStr),
 		},
 	}
 
