@@ -21,11 +21,11 @@
     coreos-prometheus-operator:
       version: v0.89.0
     eck-elasticsearch:
-      version: 8.19.10
+      version: 8.19.12
     eck-elasticsearch-operator:
       version: 2.16.0
     eck-kibana:
-      version: 8.19.10
+      version: 8.19.12
     guardian:
       version: v3.22.0-1.0
     linseed:

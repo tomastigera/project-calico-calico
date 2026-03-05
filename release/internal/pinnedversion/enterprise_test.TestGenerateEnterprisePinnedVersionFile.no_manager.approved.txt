@@ -50,11 +50,11 @@
     dikastes:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     eck-elasticsearch:
-      version: 8.19.10
+      version: 8.19.12
     eck-elasticsearch-operator:
       version: 2.16.0
     eck-kibana:
-      version: 8.19.10
+      version: 8.19.12
     egress-gateway:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     elastic-tsee-installer:

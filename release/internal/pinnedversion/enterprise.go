@@ -52,9 +52,9 @@ var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	coreosDexComponentName:                {Version: "v2.45.0"},
 	coreosPrometheusComponentName:         {Version: "v3.9.1"},
 	coreosPrometheusOperatorComponentName: {Version: "v0.89.0"},
-	eckElasticsearchComponentName:         {Version: "8.19.10"},
+	eckElasticsearchComponentName:         {Version: "8.19.12"},
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
-	eckKibanaComponentName:                {Version: "8.19.10"},
+	eckKibanaComponentName:                {Version: "8.19.12"},
 	upstreamFluentdComponentName:          {Version: "1.19.2"},
 }
 

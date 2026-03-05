@@ -1,28 +1,33 @@
-From cb955aeb08b4532a460eb30c9aa5bdfb02dbfee5 Mon Sep 17 00:00:00 2001
-From: Pasan Weerasinghe <pasan@tigera.io>
-Date: Thu, 8 May 2025 12:46:47 -0700
-Subject: [PATCH] Apply Tigera customizations to Kibana
+From 67e31bd65e4699237a92a391dd1407847415129d Mon Sep 17 00:00:00 2001
+From: Tian Feng <tian@tigera.io>
+Date: Wed, 4 Mar 2026 10:40:37 -0800
+Subject: [PATCH 1/4] Apply Tigera customization to Kibana
 
 ---
- config/kibana.yml                                  | 19 ++++++
- .../chrome/browser-internal/src/chrome_service.tsx |  1 +
- .../browser-internal/src/ui/header/header.test.tsx |  1 +
- .../browser-internal/src/ui/header/header.tsx      |  3 +
- .../browser-internal/src/ui/header/header_logo.tsx | 31 ++++------
- .../tigera_icons/calico_cloud_logo_square.svg      |  1 +
- .../tigera_icons/calico_enterprise_logo_square.svg |  1 +
- .../server-internal/src/views/template.tsx         | 15 ++++-
- .../tigera_icons/calico_cloud_logo_square.tsx      | 69 ++++++++++++++++++++++
- .../tigera_icons/calico_enterprise_logo_square.tsx | 67 +++++++++++++++++++++
- .../rendering/server-internal/tsconfig.json        |  1 +
- .../public/components/search_bar.tsx               | 20 ++++++-
- .../global_search_bar/public/components/types.ts   |  1 +
- .../private/global_search_bar/public/plugin.tsx    |  2 +
- .../public/authentication/login/login_app.ts       |  1 +
- .../public/authentication/login/login_page.tsx     | 22 +++----
- .../shared/security/tigera_icons/calico_logo.svg   |  1 +
- .../platform/plugins/shared/security/tsconfig.json |  1 +
- 18 files changed, 220 insertions(+), 37 deletions(-)
+ config/kibana.yml                             | 19 +++++
+ .../browser-internal/src/chrome_service.tsx   |  1 +
+ .../src/ui/header/header.test.tsx             |  1 +
+ .../browser-internal/src/ui/header/header.tsx |  3 +
+ .../src/ui/header/header_logo.tsx             | 31 +++------
+ .../tigera_icons/calico_cloud_logo_square.svg |  1 +
+ .../calico_enterprise_logo_square.svg         |  1 +
+ .../server-internal/src/views/template.tsx    | 13 +++-
+ .../tigera_icons/calico_cloud_logo_square.tsx | 69 +++++++++++++++++++
+ .../calico_enterprise_logo_square.tsx         | 67 ++++++++++++++++++
+ .../rendering/server-internal/tsconfig.json   |  1 +
+ .../public/components/search_bar.tsx          | 20 +++++-
+ .../public/components/types.ts                |  1 +
+ .../global_search_bar/public/plugin.tsx       |  2 +
+ .../public/authentication/login/login_app.ts  |  1 +
+ .../authentication/login/login_page.tsx       | 22 +++---
+ .../security/tigera_icons/calico_logo.svg     |  1 +
+ .../plugins/shared/security/tsconfig.json     |  1 +
+ 18 files changed, 218 insertions(+), 37 deletions(-)
+ create mode 100644 src/core/packages/chrome/browser-internal/tigera_icons/calico_cloud_logo_square.svg
+ create mode 100644 src/core/packages/chrome/browser-internal/tigera_icons/calico_enterprise_logo_square.svg
+ create mode 100644 src/core/packages/rendering/server-internal/tigera_icons/calico_cloud_logo_square.tsx
+ create mode 100644 src/core/packages/rendering/server-internal/tigera_icons/calico_enterprise_logo_square.tsx
+ create mode 100644 x-pack/platform/plugins/shared/security/tigera_icons/calico_logo.svg
 
 diff --git a/config/kibana.yml b/config/kibana.yml
 index b0ffc8e0e..8435fd2b2 100644
@@ -194,7 +199,7 @@ index 000000000..503a3313d
 +<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 104.05 113.1"><defs><style>.cls-1{fill:url(#linear-gradient);}.cls-2{fill:#fff;}.cls-3{fill:#a8754a;}.cls-4{fill:#231f20;}</style><linearGradient id="linear-gradient" y1="56.55" x2="104.05" y2="56.55" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="orange"/><stop offset="1" stop-color="#e76d2c"/></linearGradient></defs><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M104,29.53A3,3,0,0,0,102.46,27L53.45.36a3,3,0,0,0-2.85,0L1.59,27A3,3,0,0,0,0,29.53c-.4,20.71,3.82,38.28,12.54,52.23,8.45,13.54,21.34,24,38.3,31.1a2.9,2.9,0,0,0,2.31,0c17-7.1,29.85-17.56,38.3-31.1C100.2,67.81,104.42,50.24,104,29.53ZM78.27,57.62A24.41,24.41,0,0,1,53.89,82H50.16A24.41,24.41,0,0,1,25.78,57.62V31.1l10.69,7.45a2.35,2.35,0,0,0,1.35.43h.48a2.38,2.38,0,0,0,1-.2,32.68,32.68,0,0,1,25.55,0,2.38,2.38,0,0,0,1,.2h.48a2.35,2.35,0,0,0,1.35-.43L78.27,31.1Z"/><path class="cls-2" d="M78.27,31.1,67.58,38.55a2.35,2.35,0,0,1-1.35.43h-.48a2.38,2.38,0,0,1-1-.2,32.68,32.68,0,0,0-25.55,0,2.38,2.38,0,0,1-1,.2h-.48a2.35,2.35,0,0,1-1.35-.43L25.78,31.1V57.62A24.41,24.41,0,0,0,50.16,82h3.73A24.41,24.41,0,0,0,78.27,57.62Z"/><path class="cls-3" d="M51.74,36.19a31.78,31.78,0,0,0-12.49,2.59,2.38,2.38,0,0,1-1,.2h-.48a2.35,2.35,0,0,1-1.35-.43L25.78,31.1V57.62c0,.57,0,1.14.09,1.71a19.07,19.07,0,0,0,25.87-9.95Z"/><path class="cls-4" d="M66.23,39h-.48a2.38,2.38,0,0,1-1-.2A32.15,32.15,0,0,0,52,36.18h-.28V49A19.06,19.06,0,0,0,78.18,59.31c0-.56.09-1.12.09-1.69V31.1L67.58,38.55A2.35,2.35,0,0,1,66.23,39Z"/></g></g></svg>
 \ No newline at end of file
 diff --git a/src/core/packages/rendering/server-internal/src/views/template.tsx b/src/core/packages/rendering/server-internal/src/views/template.tsx
-index c502e1a0d..9e8de0803 100644
+index 40a4b4f0f..ca437cbbb 100644
 --- a/src/core/packages/rendering/server-internal/src/views/template.tsx
 +++ b/src/core/packages/rendering/server-internal/src/views/template.tsx
 @@ -12,8 +12,9 @@ import { EUI_STYLES_GLOBAL, EUI_STYLES_UTILS } from '@kbn/core-base-common';
@@ -208,16 +213,18 @@ index c502e1a0d..9e8de0803 100644
  
  interface Props {
    metadata: RenderingMetadata;
-@@ -33,14 +34,22 @@ export const Template: FunctionComponent<Props> = ({
+@@ -33,14 +34,20 @@ export const Template: FunctionComponent<Props> = ({
      customBranding,
    },
  }) => {
 +  const licenseEdition =
 +    injectedMetadata.legacyMetadata.uiSettings.defaults['tigeratagmanager.licenseEdition'];
 +  const isEnterprise = licenseEdition.value === 'enterpriseEdition';
++  const editionLabel = isEnterprise ? 'Enterprise' : 'Cloud';
    const title = customBranding.pageTitle ?? 'Elastic';
    const favIcon = customBranding.faviconSVG ?? `${uiPublicUrl}/favicons/favicon.svg`;
    const favIconPng = customBranding.faviconPNG ?? `${uiPublicUrl}/favicons/favicon.png`;
+   const colorScheme = darkMode === 'system' ? 'light dark' : darkMode ? 'dark' : 'light';
    const logo = customBranding.logo ? (
      <img src={customBranding.logo} width="64" height="64" alt="logo" />
 +  ) : isEnterprise ? (
@@ -226,13 +233,9 @@ index c502e1a0d..9e8de0803 100644
 -    <Logo />
 +    <CalicoCloudLogoSquare />
    );
-+
-+  const editionLabel = isEnterprise ? 'Enterprise' : 'Cloud';
-+
    return (
      <html lang={locale}>
-       <head>
-@@ -97,7 +106,7 @@ export const Template: FunctionComponent<Props> = ({
+@@ -98,7 +105,7 @@ export const Template: FunctionComponent<Props> = ({
                })}
              >
                {i18n.translate('core.ui.welcomeMessage', {
@@ -496,7 +499,7 @@ index 495bd8d10..7e6db5d46 100644
          );
        },
 diff --git a/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx b/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
-index fca8ec357..703ee8ed7 100644
+index d03b1eccb..281775ba2 100644
 --- a/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
 +++ b/x-pack/platform/plugins/shared/security/public/authentication/login/login_page.tsx
 @@ -12,7 +12,6 @@ import {
@@ -513,9 +516,9 @@ index fca8ec357..703ee8ed7 100644
  import type { LogoutReason } from '../../../common/types';
 +import calicoLogo from '../../../tigera_icons/calico_logo.svg';
  import type { ConfigType } from '../../config';
+ import { MessageType } from '../components';
  
- interface Props {
-@@ -52,6 +52,7 @@ interface Props {
+@@ -53,6 +53,7 @@ interface Props {
    loginAssistanceMessage: string;
    sameSiteCookies?: ConfigType['sameSiteCookies'];
    customBranding: CustomBrandingStart;
@@ -523,7 +526,7 @@ index fca8ec357..703ee8ed7 100644
  }
  
  interface State {
-@@ -145,27 +146,26 @@ export class LoginPage extends Component<Props, State> {
+@@ -146,27 +147,26 @@ export class LoginPage extends Component<Props, State> {
        ['loginWelcome__contentDisabledForm']: !loginIsSupported,
      });
  
@@ -580,3 +583,6 @@ index 839a15830..118ef4f60 100644
    ],
    "kbn_references": [
      "@kbn/cloud-plugin",
+-- 
+2.43.0
+
