@@ -41,6 +41,7 @@ import (
 	"github.com/projectcalico/calico/webhooks/pkg/auditlogs"
 	"github.com/projectcalico/calico/webhooks/pkg/managedcluster"
 	"github.com/projectcalico/calico/webhooks/pkg/rbac"
+	"github.com/projectcalico/calico/webhooks/pkg/uisettings"
 	"github.com/projectcalico/calico/webhooks/pkg/utils"
 )
 
@@ -154,6 +155,7 @@ func registerHooks(ctx context.Context, cs kubernetes.Interface, calico clientse
 	auditlogs.RegisterHook(auditLogPath, utils.HandleFn(handleFn))
 	managedcluster.RegisterHook(cs, mcmAddr, mcmCAType, mcmSecret, multiTenant, utils.HandleFn(handleFn))
 	managedcluster.StartCleanupController(ctx, calico)
+	uisettings.RegisterHook(cs, calico, utils.HandleFn(handleFn))
 
 	// Register a readiness endpoint that can be used by Kubernetes to check the health of the webhook server.
 	http.HandleFunc("/readyz", readyFn())

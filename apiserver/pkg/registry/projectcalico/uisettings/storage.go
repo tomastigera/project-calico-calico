@@ -4,9 +4,7 @@ package uisettings
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"reflect"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +24,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	uisettingswebhook "github.com/projectcalico/calico/webhooks/pkg/uisettings"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -128,18 +127,10 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.Validate
 		// Set the owner reference to only include the group. This is a private API and nothing should be changing
 		// how these resources are garbage collected.
 		uiSettings = uiSettings.DeepCopy()
-		falseVal := false
-		uiSettings.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion:         v3.GroupVersionCurrent,
-			Kind:               v3.KindUISettingsGroup,
-			Name:               gp.Name,
-			UID:                gp.UID,
-			Controller:         &falseVal,
-			BlockOwnerDeletion: &falseVal,
-		}}
+		uiSettings.OwnerReferences = []metav1.OwnerReference{uisettingswebhook.BuildGroupOwnerReference(gp)}
 
-		// If the group is user-specific, set the user name of teh creator.
-		if gp.Spec.FilterType == v3.FilterTypeUser {
+		// If the group is user-specific, set the user name of the creator.
+		if uisettingswebhook.ShouldInjectUser(gp) {
 			//  Get the user name from the context attributes.
 			uiSettings.Spec.User = r.user(ctx)
 		}
@@ -159,24 +150,9 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
 	// Modify the update validation to check that the owner reference is not being updated to remove or change the
 	// group.
 	updatedUpdateValidation := func(ctx context.Context, obj, old runtime.Object) error {
-		oldUISettings := old.(*v3.UISettings)
-		newUISettings := obj.(*v3.UISettings)
-		if !reflect.DeepEqual(oldUISettings.OwnerReferences, newUISettings.OwnerReferences) {
-			return errors.New("not permitted to change UISettingsGroup owner reference")
+		if err := uisettingswebhook.ValidateImmutableFields(old.(*v3.UISettings), obj.(*v3.UISettings)); err != nil {
+			return err
 		}
-
-		oldGroup := oldUISettings.Spec.Group
-		newGroup := newUISettings.Spec.Group
-		if oldGroup != newGroup {
-			return errors.New("not permitted to change Spec.Group")
-		}
-
-		oldUser := oldUISettings.Spec.User
-		newUser := newUISettings.Spec.User
-		if oldUser != newUser {
-			return errors.New("not permitted to change Spec.User")
-		}
-
 		return updateValidation(ctx, obj, old)
 	}
 
