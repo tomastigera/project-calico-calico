@@ -363,11 +363,17 @@ type policyKey struct {
 	Name      string
 }
 
+// ruleKey identifies a unique rule within a policy by direction and index.
+type ruleKey struct {
+	Direction string
+	Index     string
+}
+
 // policyActivityEntry accumulates per-policy activity results during aggregation.
 type policyActivityEntry struct {
 	policy        v1.PolicyInfo
 	lastEvaluated *time.Time
-	rules         []v1.PolicyActivityRuleResult
+	rules         map[ruleKey]v1.PolicyActivityRuleResult
 }
 
 // aggregatePolicyActivity groups ES hits by policy, parses rule strings, computes
@@ -391,7 +397,10 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, h
 		key := policyKey{Kind: doc.Policy.Kind, Namespace: doc.Policy.Namespace, Name: doc.Policy.Name}
 		entry, ok := resultMap[key]
 		if !ok {
-			entry = &policyActivityEntry{policy: doc.Policy}
+			entry = &policyActivityEntry{
+				policy: doc.Policy,
+				rules:  make(map[ruleKey]v1.PolicyActivityRuleResult),
+			}
 			resultMap[key] = entry
 		}
 
@@ -400,11 +409,15 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, h
 			entry.lastEvaluated = &t
 		}
 
-		entry.rules = append(entry.rules, v1.PolicyActivityRuleResult{
-			Direction:     parts[1],
-			Index:         parts[2],
-			LastEvaluated: doc.LastEvaluated,
-		})
+		rk := ruleKey{Direction: parts[1], Index: parts[2]}
+		existing, exists := entry.rules[rk]
+		if !exists || doc.LastEvaluated.After(existing.LastEvaluated) {
+			entry.rules[rk] = v1.PolicyActivityRuleResult{
+				Direction:     parts[1],
+				Index:         parts[2],
+				LastEvaluated: doc.LastEvaluated,
+			}
+		}
 	}
 
 	// Build response preserving request order.
@@ -415,10 +428,14 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, h
 		if !ok {
 			continue
 		}
+		rules := make([]v1.PolicyActivityRuleResult, 0, len(entry.rules))
+		for _, r := range entry.rules {
+			rules = append(rules, r)
+		}
 		items = append(items, v1.PolicyActivityResult{
 			Policy:        entry.policy,
 			LastEvaluated: entry.lastEvaluated,
-			Rules:         entry.rules,
+			Rules:         rules,
 		})
 	}
 

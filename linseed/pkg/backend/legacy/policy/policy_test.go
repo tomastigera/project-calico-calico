@@ -310,7 +310,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	assert.Equal(t, earlier, item.Rules[1].LastEvaluated)
 }
 
-func TestGetPolicyActivity_EmptyPolicies(t *testing.T) {
+func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, nil, false)
 	defer ts.Close()
 
@@ -322,7 +322,7 @@ func TestGetPolicyActivity_EmptyPolicies(t *testing.T) {
 	assert.Empty(t, resp.Items)
 }
 
-func TestGetPolicyActivity_ESError(t *testing.T) {
+func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// Return error for all requests including scroll.
 		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
@@ -343,7 +343,7 @@ func TestGetPolicyActivity_ESError(t *testing.T) {
 	assert.Contains(t, err.Error(), "elasticsearch search failed")
 }
 
-func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
+func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
 	hitsJSON := fmt.Sprintf(`[
@@ -385,7 +385,7 @@ func TestGetPolicyActivity_MultiplePolicies(t *testing.T) {
 	assert.Equal(t, "p1", resp.Items[1].Policy.Name)
 }
 
-func TestGetPolicyActivity_SkipsUnparsableRules(t *testing.T) {
+func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
 	hitsJSON := fmt.Sprintf(`[
@@ -424,7 +424,7 @@ func TestGetPolicyActivity_SkipsUnparsableRules(t *testing.T) {
 	assert.Equal(t, "ingress", resp.Items[0].Rules[0].Direction)
 }
 
-func TestBuildPolicyActivityQuery_WithTimeRange(t *testing.T) {
+func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, nil, false)
 	defer ts.Close()
 
@@ -452,7 +452,7 @@ func TestBuildPolicyActivityQuery_WithTimeRange(t *testing.T) {
 	assert.Contains(t, jsonStr, "to")
 }
 
-func TestBuildPolicyActivityQuery_SingleIndex(t *testing.T) {
+func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFiltersInSingleIndexMode(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, nil, true)
 	defer ts.Close()
 
@@ -569,7 +569,7 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 	assert.Equal(t, 2, page, "Should have made 2 follow-up scroll requests")
 }
 
-func TestGetPolicyActivity_InvalidCluster(t *testing.T) {
+func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, nil, false)
 	defer ts.Close()
 
@@ -582,4 +582,49 @@ func TestGetPolicyActivity_InvalidCluster(t *testing.T) {
 
 	_, err := b.GetPolicyActivities(context.Background(), info, req)
 	assert.Error(t, err)
+}
+
+func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	earlier := now.Add(-1 * time.Hour)
+
+	// Two hits for the same rule (same policy, direction, index) with different timestamps.
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, earlier.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+
+	// Should deduplicate to a single rule with the latest timestamp.
+	require.Len(t, resp.Items[0].Rules, 1)
+	assert.Equal(t, "ingress", resp.Items[0].Rules[0].Direction)
+	assert.Equal(t, "0", resp.Items[0].Rules[0].Index)
+	assert.Equal(t, now, resp.Items[0].Rules[0].LastEvaluated)
 }

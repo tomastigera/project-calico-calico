@@ -64,5 +64,16 @@ func (r *PolicyActivityRequest) Valid() error {
 	if r.From != nil && r.To != nil && r.To.Before(*r.From) {
 		return fmt.Errorf("invalid time range: 'to' %q is before 'from' %q", r.To, r.From)
 	}
+	for i, p := range r.Policies {
+		if p.Kind == "" {
+			return fmt.Errorf("policies[%d].kind is required", i)
+		}
+		if p.Name == "" {
+			return fmt.Errorf("policies[%d].name is required", i)
+		}
+		if p.Generation <= 0 {
+			return fmt.Errorf("policies[%d].generation must be positive", i)
+		}
+	}
 	return nil
 }

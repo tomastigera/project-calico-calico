@@ -18,7 +18,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/middleware"
 )
 
 func setupTest(t *testing.T) func() {
@@ -61,7 +61,7 @@ func TestGetPolicyActivities(t *testing.T) {
 		want            testResult
 	}{
 		{
-			name:    "malformed json returns 400",
+			name:    "malformed JSON returns 400",
 			reqBody: "{#}",
 			want: testResult{
 				httpStatus: http.StatusBadRequest,
@@ -75,6 +75,42 @@ func TestGetPolicyActivities(t *testing.T) {
 				"from": "2026-01-27T00:00:00Z",
 				"to":   "2026-01-01T00:00:00Z",
 				"policies": [{"kind": "NetworkPolicy", "namespace": "ns", "name": "pol", "generation": 1}]
+			}`,
+			want: testResult{
+				httpStatus: http.StatusBadRequest,
+				wantErr:    true,
+			},
+		},
+		{
+			name:            "empty policies list returns 200 with empty items",
+			reqBody:         `{"policies": []}`,
+			backendResponse: &v1.PolicyActivityResponse{Items: []v1.PolicyActivityResult{}},
+			want:            testResult{httpStatus: http.StatusOK},
+		},
+		{
+			name: "missing policy kind returns 400",
+			reqBody: `{
+				"policies": [{"name": "p", "generation": 1}]
+			}`,
+			want: testResult{
+				httpStatus: http.StatusBadRequest,
+				wantErr:    true,
+			},
+		},
+		{
+			name: "missing policy name returns 400",
+			reqBody: `{
+				"policies": [{"kind": "NetworkPolicy", "generation": 1}]
+			}`,
+			want: testResult{
+				httpStatus: http.StatusBadRequest,
+				wantErr:    true,
+			},
+		},
+		{
+			name: "non-positive generation returns 400",
+			reqBody: `{
+				"policies": [{"kind": "NetworkPolicy", "name": "p", "generation": 0}]
 			}`,
 			want: testResult{
 				httpStatus: http.StatusBadRequest,
@@ -106,13 +142,7 @@ func TestGetPolicyActivities(t *testing.T) {
 			want:            testResult{httpStatus: http.StatusOK},
 		},
 		{
-			name:            "empty policies list returns 200",
-			reqBody:         `{"policies": []}`,
-			backendResponse: &v1.PolicyActivityResponse{Items: []v1.PolicyActivityResult{}},
-			want:            testResult{httpStatus: http.StatusOK},
-		},
-		{
-			name: "request without time range is valid",
+			name: "request without time range returns 200",
 			reqBody: `{
 				"policies": [{"kind": "NetworkPolicy", "namespace": "ns", "name": "pol", "generation": 2}]
 			}`,
@@ -120,7 +150,7 @@ func TestGetPolicyActivities(t *testing.T) {
 			want:            testResult{httpStatus: http.StatusOK},
 		},
 		{
-			name: "multiple policies in request",
+			name: "multiple policies in request returns 200",
 			reqBody: `{
 				"from": "2026-01-01T00:00:00Z",
 				"to":   "2026-01-27T00:00:00Z",
@@ -145,6 +175,9 @@ func TestGetPolicyActivities(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
+			// Set cluster ID in request context as the middleware would.
+			req = req.WithContext(middleware.WithClusterID(req.Context(), "test-cluster"))
+
 			h.GetPolicyActivities().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
@@ -156,7 +189,29 @@ func TestGetPolicyActivities(t *testing.T) {
 					assert.JSONEq(t, tt.want.errorMsg, string(bodyBytes))
 				}
 			} else {
-				assert.JSONEq(t, testutils.Marshal(t, tt.backendResponse), string(bodyBytes))
+				// Assert against hardcoded JSON for the success case to verify wire format.
+				if tt.name == "valid request with time range returns 200" {
+					expectedJSON := `{
+						"items": [
+							{
+								"policy": {
+									"kind": "NetworkPolicy",
+									"namespace": "my-namespace-1",
+									"name": "my-network-policy-1"
+								},
+								"last_evaluated": "` + now.Format(time.RFC3339Nano) + `",
+								"rules": [
+									{
+										"direction": "ingress",
+										"index": "0",
+										"last_evaluated": "` + now.Format(time.RFC3339Nano) + `"
+									}
+								]
+							}
+						]
+					}`
+					assert.JSONEq(t, expectedJSON, string(bodyBytes))
+				}
 			}
 		})
 	}
@@ -164,7 +219,7 @@ func TestGetPolicyActivities(t *testing.T) {
 
 // policyHandlerWithMock creates a policy handler with a mock backend.
 // The mock only expects GetPolicyActivities to be called when the handler will
-// reach the backend (i.e. not for malformed-JSON or invalid time range requests).
+// reach the backend (i.e. not for malformed-JSON or invalid request parameters).
 func policyHandlerWithMock(t *testing.T, response *v1.PolicyActivityResponse, backendErr error) *policy {
 	mockBackend := api.NewMockPolicyBackend(t)
 

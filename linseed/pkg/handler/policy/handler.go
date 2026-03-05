@@ -85,6 +85,15 @@ func (h policy) GetPolicyActivities() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
+		if err := clusterInfo.Valid(); err != nil {
+			logCtx.WithError(err).Error("Invalid cluster info")
+			httputils.JSONError(w, &v1.HTTPError{
+				Status: http.StatusBadRequest,
+				Msg:    err.Error(),
+			}, http.StatusBadRequest)
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), v1.DefaultTimeOut)
 		defer cancel()
 

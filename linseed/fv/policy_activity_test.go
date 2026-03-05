@@ -173,6 +173,46 @@ func TestFV_PolicyActivity(t *testing.T) {
 		require.Empty(t, resp.Items)
 	})
 
+	RunPolicyActivityTest(t, "should return error when to is before from", func(t *testing.T, idx bapi.Index) {
+		from := time.Now()
+		to := from.Add(-1 * time.Hour)
+		req := &v1.PolicyActivityRequest{
+			From: &from,
+			To:   &to,
+			Policies: []v1.PolicyActivityQueryPolicy{
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+			},
+		}
+
+		_, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "status 400")
+	})
+
+	RunPolicyActivityTest(t, "should return error when policy kind is empty", func(t *testing.T, idx bapi.Index) {
+		req := &v1.PolicyActivityRequest{
+			Policies: []v1.PolicyActivityQueryPolicy{
+				{Kind: "", Namespace: "default", Name: "allow-dns", Generation: 1},
+			},
+		}
+
+		_, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "status 400")
+	})
+
+	RunPolicyActivityTest(t, "should return error when generation is not positive", func(t *testing.T, idx bapi.Index) {
+		req := &v1.PolicyActivityRequest{
+			Policies: []v1.PolicyActivityQueryPolicy{
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 0},
+			},
+		}
+
+		_, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "status 400")
+	})
+
 	RunPolicyActivityTest(t, "should isolate activity by cluster", func(t *testing.T, idx bapi.Index) {
 		now := time.Now().UTC().Truncate(time.Second)
 
