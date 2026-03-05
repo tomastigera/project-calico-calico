@@ -376,6 +376,19 @@ type policyActivityEntry struct {
 	rules         map[ruleKey]v1.PolicyActivityRuleResult
 }
 
+var specialRuleIndices = map[string]string{
+	"__IMPLICIT_DENIED__": "implicit_denied",
+	"__UNKNOWN__":         "unknown",
+}
+
+// translateRuleIndex converts special rule index values to human-readable strings.
+func translateRuleIndex(idx string) string {
+	if v, ok := specialRuleIndices[idx]; ok {
+		return v
+	}
+	return idx
+}
+
 // aggregatePolicyActivity groups ES hits by policy, parses rule strings, computes
 // per-policy last_evaluated, and returns results in the same order as the request.
 func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, hits []*elastic.SearchHit) *v1.PolicyActivityResponse {
@@ -409,12 +422,13 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, h
 			entry.lastEvaluated = &t
 		}
 
-		rk := ruleKey{Direction: parts[1], Index: parts[2]}
+		ruleIdx := translateRuleIndex(parts[2])
+		rk := ruleKey{Direction: parts[1], Index: ruleIdx}
 		existing, exists := entry.rules[rk]
 		if !exists || doc.LastEvaluated.After(existing.LastEvaluated) {
 			entry.rules[rk] = v1.PolicyActivityRuleResult{
 				Direction:     parts[1],
-				Index:         parts[2],
+				Index:         ruleIdx,
 				LastEvaluated: doc.LastEvaluated,
 			}
 		}

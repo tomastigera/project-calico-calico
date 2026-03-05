@@ -584,6 +584,52 @@ func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|__IMPLICIT_DENIED__",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|egress|__UNKNOWN__",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityRequest{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	require.Len(t, resp.Items[0].Rules, 2)
+
+	rulesByDirection := map[string]v1.PolicyActivityRuleResult{}
+	for _, r := range resp.Items[0].Rules {
+		rulesByDirection[r.Direction] = r
+	}
+
+	assert.Equal(t, "implicit_denied", rulesByDirection["ingress"].Index)
+	assert.Equal(t, "unknown", rulesByDirection["egress"].Index)
+}
+
 func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	earlier := now.Add(-1 * time.Hour)
