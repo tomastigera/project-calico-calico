@@ -377,7 +377,7 @@ type policyActivityEntry struct {
 }
 
 var specialRuleIndices = map[string]string{
-	"__IMPLICIT_DENIED__": "implicit_denied",
+	"__IMPLICIT_DENIED__": "implicit_deny",
 	"__UNKNOWN__":         "unknown",
 }
 

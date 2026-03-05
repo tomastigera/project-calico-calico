@@ -626,7 +626,7 @@ func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
 		rulesByDirection[r.Direction] = r
 	}
 
-	assert.Equal(t, "implicit_denied", rulesByDirection["ingress"].Index)
+	assert.Equal(t, "implicit_deny", rulesByDirection["ingress"].Index)
 	assert.Equal(t, "unknown", rulesByDirection["egress"].Index)
 }
 
