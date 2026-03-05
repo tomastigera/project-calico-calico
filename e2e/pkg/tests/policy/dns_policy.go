@@ -49,15 +49,8 @@ var _ = describe.CalicoDescribe(
 			namespace = f.Namespace.Name
 			ctx := context.TODO()
 
-			// On Windows, domain-based allow policies take longer to propagate because
-			// Felix must intercept DNS responses to learn domain-to-IP mappings.
-			timeout := "30s"
-			if runOnWindows {
-				timeout = "90s"
-			}
-
 			By("Checking... Cannot reach external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), timeout, "3s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
 
 			By("Allowing egress to external service domains")
 			for _, obj := range allowObjs {
@@ -68,25 +61,26 @@ var _ = describe.CalicoDescribe(
 				cleanups()
 			}
 
+			By("Checking... Can reach allowed external service")
 			if runOnWindows {
-				// On Windows, flush the DNS cache and force a fresh DNS lookup so
-				// Felix can intercept the DNS response and learn the domain-to-IP
-				// mapping for the allow policy. We use ipconfig (universally available)
-				// rather than Clear-DnsClientCache (requires DnsClient PS module which
-				// may not be present in minimal container images), and then nslookup
-				// to bypass any remaining cache and generate DNS traffic on the wire.
-				By("Flushing Windows DNS cache and resolving allowed domain")
-				e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
-					"ipconfig", "/flushdns")
-				e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
-					"nslookup", external)
+				// On Windows, Felix must intercept DNS responses to learn domain-to-IP
+				// mappings for the allow policy. We flush the DNS cache and resolve the
+				// domain before each curl attempt, so Felix has multiple chances to
+				// intercept the DNS response (it may miss the first one if it hasn't
+				// finished processing the dnsCacheEpoch or policy updates yet).
+				Eventually(func() error {
+					e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
+						"ipconfig", "/flushdns")
+					e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
+						"nslookup", external)
+					return curlServiceFromNamespace(external, namespace, runOnWindows)()
+				}, "30s", "3s").ShouldNot(HaveOccurred())
+			} else {
+				Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 			}
 
-			By("Checking... Can reach allowed external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), timeout, "3s").ShouldNot(HaveOccurred())
-
 			By("Checking... Cannot reach blocked service")
-			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), timeout, "3s").Should(HaveOccurred())
+			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
 		}
 
 		Context("[RunsOnWindows] Test DNS policy of a workload. ", func() {
@@ -136,7 +130,23 @@ var _ = describe.CalicoDescribe(
 				err = cli.Update(context.TODO(), fc)
 				Expect(err).NotTo(HaveOccurred())
 
+				if runOnWindows {
+					// Wait for calico-node-windows pods to be Ready, in case a
+					// prior test triggered a Felix restart that is still in progress.
+					// Sleep first to allow any in-flight restart to begin.
+					By("Waiting for calico-node-windows pods to be ready")
+					time.Sleep(10 * time.Second)
+					e2ekubectl.RunKubectlOrDie("calico-system", "wait",
+						"--for=condition=Ready",
+						"pod", "-l", "k8s-app=calico-node-windows",
+						"--timeout=120s")
+				}
+
 				DeferCleanup(func() {
+					if CurrentSpecReport().Failed() && runOnWindows {
+						windows.DumpFelixDiags()
+					}
+
 					ctx := context.TODO()
 					if !runOnWindows {
 						// Restore FelixConfiguration.
@@ -183,7 +193,7 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Expect(curlServiceFromNamespace(externalService, namespace, runOnWindows)()).NotTo(HaveOccurred())
+					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -208,7 +218,7 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"*.net"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Expect(curlServiceFromNamespace(externalService, namespace, runOnWindows)()).NotTo(HaveOccurred())
+					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -233,7 +243,7 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Expect(curlServiceFromNamespace(externalService, namespace, runOnWindows)()).NotTo(HaveOccurred())
+					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -258,7 +268,7 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"*.net"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Expect(curlServiceFromNamespace(externalService, namespace, runOnWindows)()).NotTo(HaveOccurred())
+					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -373,7 +383,7 @@ var _ = describe.CalicoDescribe(
 				ctx := context.TODO()
 
 				By("Checking... Initially, connectivity to external service succeeds")
-				Expect(curlServiceFromNamespace(externalService, namespace, runOnWindows)()).NotTo(HaveOccurred())
+				Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
 
 				// First configure allow policy to ensure that host endpoints do not
 				// block access to and from the Kubernetes API.

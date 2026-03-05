@@ -26,6 +26,7 @@ import (
 	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
 	esutil "github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
+	"github.com/projectcalico/calico/e2e/pkg/utils/windows"
 )
 
 // DESCRIPTION: Test Calico Enterprise flow logs on Windows.
@@ -78,6 +79,16 @@ var _ = describe.CalicoDescribe(
 			err = cli.Update(ctx, testFC)
 			Expect(err).NotTo(HaveOccurred())
 
+			// The FelixConfiguration changes above trigger a Felix restart.
+			// Sleep to allow Felix to begin restarting, then wait for the
+			// pod to become Ready again with the new configuration.
+			By("Waiting for calico-node-windows pods to restart after config change")
+			time.Sleep(10 * time.Second)
+			kubectl.RunKubectlOrDie("calico-system", "wait",
+				"--for=condition=Ready",
+				"pod", "-l", "k8s-app=calico-node-windows",
+				"--timeout=120s")
+
 			DeferCleanup(func() {
 				fc := v3.NewFelixConfiguration()
 				err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc)
@@ -129,6 +140,10 @@ var _ = describe.CalicoDescribe(
 
 			AfterEach(func() {
 				checker.Stop()
+
+				if CurrentSpecReport().Failed() {
+					windows.DumpFelixDiags()
+				}
 			})
 
 			It("should generate flow logs when no policy applies", func() {
