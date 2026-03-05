@@ -1,44 +1,78 @@
 # For more information on the CODEOWNERS file format, see:
 # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-code-owners
 
-# Changes to this CODEOWNERS file will be reviewed by the codeowners-reviewers to help monitor and align 
-# on code ownership of this repo over time. 
+# Changes to this CODEOWNERS file will be reviewed by the codeowners-reviewers to help monitor and align
+# on code ownership of this repo over time.
 CODEOWNERS @tigera/codeowners-reviewers
 
-# The following require review from the oss-merge-queue-reviewers group because they impact merges from OSS. 
-# This is regardless of which team is the primary committer to these paths - additional reviewers may be 
-# needed for business logic. 
-/api/**                     @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/apiserver/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/app-policy/**              @tigera/oss-merge-queue-reviewers
-/calicoctl/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/charts/**                  @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/cni-plugin/**              @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/confd/**                   @tigera/oss-merge-queue-reviewers
-/crypto/**                  @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/devstack/**                @tigera/oss-merge-queue-reviewers
-/e2e/**                     @tigera/oss-merge-queue-reviewers
-/felix/**                   @tigera/oss-merge-queue-reviewers
-/goldmane/**                @tigera/oss-merge-queue-reviewers
-/guardian/**                @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/hack/**                    @tigera/oss-merge-queue-reviewers
-/key-cert-provisioner/**    @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/kube-controllers/**        @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/lib/**                     @tigera/oss-merge-queue-reviewers
-/libcalico-go/**            @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/licenses/**                @tigera/oss-merge-queue-reviewers
-/manifests/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
-/networking-calico/**       @tigera/oss-merge-queue-reviewers
-/node/**                    @tigera/oss-merge-queue-reviewers
-/pkg/**                     @tigera/oss-merge-queue-reviewers
-/pod2daemon/**              @tigera/oss-merge-queue-reviewers @tigera/ev-team
-/process/**                 @tigera/oss-merge-queue-reviewers
-/release/**                 @tigera/oss-merge-queue-reviewers @tigera/release-team
-/test-tools/mocknode/**     @tigera/oss-merge-queue-reviewers
-/third_party/envoy-*        @tigera/oss-merge-queue-reviewers
-/typha/**                   @tigera/oss-merge-queue-reviewers
-/whisker/**                 @tigera/oss-merge-queue-reviewers
-/whisker-backend/**         @tigera/oss-merge-queue-reviewers
+# The following require review from the oss-merge-queue-reviewers group because they impact merges from OSS.
+# This is regardless of which team is the primary committer to these paths - additional reviewers may be
+# needed for business logic.
+/.claude/**                            @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/api/**                                @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/apiserver/**                          @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/app-policy/**                         @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/calicoctl/**                          @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/charts/**                             @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/cni-plugin/**                         @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/confd/**                              @tigera/oss-merge-queue-reviewers
+/crypto/**                             @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/devstack/**                           @tigera/oss-merge-queue-reviewers
+/e2e/**                                @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/felix/**                              @tigera/oss-merge-queue-reviewers
+/goldmane/**                           @tigera/oss-merge-queue-reviewers
+/guardian/**                           @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/hack/**                               @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/key-cert-provisioner/**               @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/kube-controllers/**                   @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/lib/**                                @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/libcalico-go/**                       @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/manifests/**                          @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
+/networking-calico/**                  @tigera/oss-merge-queue-reviewers
+/node/**                               @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/pkg/**                                @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/pod2daemon/**                         @tigera/oss-merge-queue-reviewers @tigera/ev-team
+/process/**                            @tigera/oss-merge-queue-reviewers @tigera/release-team
+/release/**                            @tigera/oss-merge-queue-reviewers @tigera/release-team
+/test-tools/mocknode/**                @tigera/oss-merge-queue-reviewers
+/typha/**                              @tigera/oss-merge-queue-reviewers
+/whisker/**                            @tigera/oss-merge-queue-reviewers
+/whisker-backend/**                    @tigera/oss-merge-queue-reviewers
+/metadata.mk                           @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
+/lib.Makefile                          @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
 
-/metadata.mk                @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
-/lib.Makefile               @tigera/oss-merge-queue-reviewers @tigera/ev-team @tigera/release-team
+# EV team maintained files
+/.argoci/**                            @tigera/ev-team
+/.cve-reports/**                       @tigera/ev-team
+/.semaphore/**                         @tigera/ev-team
+/compliance/**                         @tigera/ev-team
+/dashboards/**                         @tigera/ev-team
+/deep-packet-inspection/**             @tigera/ev-team
+/es-gateway/**                         @tigera/ev-team
+/elasticsearch/**                      @tigera/ev-team
+/elasticsearch-metrics/**              @tigera/ev-team
+/firewall-integration/**               @tigera/ev-team
+/fluent-bit/**                         @tigera/ev-team
+/fluentd/**                            @tigera/ev-team
+/gateway/**                            @tigera/ev-team
+/git-hooks/**                          @tigera/ev-team
+/ingress-collector/**                  @tigera/ev-team
+/intrusion-detection-controller/**     @tigera/ev-team
+/istio/**                              @tigera/ev-team
+/kibana/**                             @tigera/ev-team
+/l7-admission-controller/**            @tigera/ev-team
+/l7-collector/**                       @tigera/ev-team
+/license-agent/**                      @tigera/ev-team
+/licensing/**                          @tigera/ev-team
+/linseed/**                            @tigera/ev-team
+/lma/**                                @tigera/ev-team
+/packetcapture/**                      @tigera/ev-team
+/policy-recommendation/**              @tigera/ev-team
+/prometheus-service/**                 @tigera/ev-team
+/queryserver/**                        @tigera/ev-team
+/selinux/**                            @tigera/ev-team
+/third_party/**                        @tigera/ev-team
+/ui-apis/**                            @tigera/ev-team
+/voltron/**                            @tigera/ev-team
+/webhooks/**                           @tigera/ev-team
+/webhooks-processor/**                 @tigera/ev-team
