@@ -327,7 +327,7 @@ E2E_SKIP ?= "\[sig-calico\].*staged"
 E2E_PROCS ?= 4
 K8S_NETPOL_SUPPORTED_FEATURES ?= "ClusterNetworkPolicy"
 K8S_NETPOL_UNSUPPORTED_FEATURES ?= ""
-CLUSTER_ROUTING ?= BGP
+CLUSTER_ROUTING ?= BIRD
 
 ## Create a kind cluster and run all e2e tests.
 e2e-test:
