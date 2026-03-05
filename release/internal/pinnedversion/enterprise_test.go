@@ -217,24 +217,11 @@ func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to generate pinned version file: %v", err)
 	}
-	op, expectedPath, err := GenerateEnterpriseOperatorComponents(dir, "")
+	err = GenerateEnterpriseOperatorComponents(dir, "")
 	if err != nil {
 		t.Fatalf("failed to generate operator components: %v", err)
 	}
-	expectedOperator := registry.OperatorComponent{
-		Component: registry.Component{
-			Version:  "v1.40.0-v3.22.0",
-			Image:    "tigera/operator",
-			Registry: "quay.io",
-		},
-	}
-	if diff := cmp.Diff(op, expectedOperator); diff != "" {
-		t.Errorf("operator does not match expected:\n%s", diff)
-	}
-	if expectedPath != filepath.Join(dir, operatorComponentsFileName) {
-		t.Errorf("path does not match expected: got %s, want %s", expectedPath, filepath.Join(dir, operatorComponentsFileName))
-	}
-	f, err := os.ReadFile(expectedPath)
+	f, err := os.ReadFile(filepath.Join(dir, operatorComponentsFileName))
 	if err != nil {
 		t.Fatalf("failed to read generated file: %v", err)
 	}

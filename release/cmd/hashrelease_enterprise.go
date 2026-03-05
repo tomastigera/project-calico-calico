@@ -109,28 +109,28 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			productRegistries := c.StringSlice(registryFlag.Name)
 
 			// Build the operator
+			if err := pinnedversion.GenerateEnterpriseOperatorComponents(cfg.TmpDir, hashrel.Source); err != nil {
+				return fmt.Errorf("failed to generate enterprise operator components: %v", err)
+			}
 			operatorOpts := []operator.Option{
 				operator.WithOperatorDirectory(operatorDir),
 				operator.WithReleaseBranchPrefix(c.String(operatorReleaseBranchPrefixFlag.Name)),
-				operator.WithDevTagIdentifier(c.String(operatorDevTagSuffixFlag.Name)),
-				operator.WithImage(c.String(operatorImageFlag.Name)),
+				operator.WithImage(pinned.OperatorCfg.Image),
+				operator.WithRegistry(pinned.OperatorCfg.Registry),
 				operator.IsHashRelease(),
 				operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 				operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				operator.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				operator.WithVersion(data.OperatorVersion()),
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
-				operator.WithTempDirectory(cfg.TmpDir),
+				operator.WithCalicoVersion(data.ProductVersion()),
 				operator.WithOutputDirectory(hashrel.Source),
-			}
-			if reg := c.String(operatorRegistryFlag.Name); reg != "" {
-				operatorOpts = append(operatorOpts, operator.WithRegistry(reg))
 			}
 			if len(productRegistries) > 0 {
 				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
 			}
 			if !c.Bool(skipOperatorFlag.Name) {
-				o := operator.NewEnterpriseManager(operatorOpts...)
+				o := operator.NewManager(operatorOpts...)
 				if err := o.Build(); err != nil {
 					return err
 				}
@@ -197,7 +197,6 @@ func validateEnterpriseHashreleasePublishFlags(_ context.Context, c *cli.Command
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 	flags := append(gitFlags,
 		devTagSuffixFlag,
-		operatorDevTagSuffixFlag,
 		archFlag,
 		registryFlag,
 		windowsArchiveBucketFlag,
@@ -247,13 +246,11 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 
 			// Push the operator hashrelease first before validation.
 			// This is because validation checks all images exists and sends to Image Scan Service
-			o := operator.NewEnterpriseManager(
+			o := operator.NewManager(
 				operator.WithOperatorDirectory(filepath.Join(cfg.TmpDir, operator.DefaultRepoName)),
 				operator.IsHashRelease(),
-				operator.WithDevTagIdentifier(c.String(operatorDevTagSuffixFlag.Name)),
 				operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 				operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
-				operator.WithTempDirectory(cfg.TmpDir),
 			)
 			if !c.Bool(skipOperatorFlag.Name) {
 				if err := o.Publish(); err != nil {
