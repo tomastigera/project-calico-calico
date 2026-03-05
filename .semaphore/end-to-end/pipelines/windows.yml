@@ -29,10 +29,6 @@ global_job_config:
       value: --ginkgo.focus=(\[sig-calico\].*\[RunsOnWindows\]) --ginkgo.skip=(\[LinuxOnly\])
     - name: FUNCTIONAL_AREA
       value: "windows.yml"
-    - name: USE_PRIVATE_REGISTRY
-      value: "true"
-    - name: PRIVATE_REGISTRY
-      value: "quay.io/"
     - name: INSTALLER
       value: "operator"
     - name: RUN_LOCAL_TESTS # run e2e tests from locally built binary
