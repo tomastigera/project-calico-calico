@@ -21,6 +21,8 @@ global_job_config:
     - name: marvin-github-ssh-private-key
     - name: banzai-secrets
   env_vars:
+    - name: PRODUCT
+      value: calient
     - name: CREATE_WINDOWS_NODES
       value: "true"
     - name: K8S_E2E_FLAGS
