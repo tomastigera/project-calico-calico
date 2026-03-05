@@ -78,5 +78,5 @@ var LifeCycleEnabledLookup = map[bapi.DataType]bool{
 	bapi.Snapshots:      true,
 	bapi.IPSet:          false,
 	bapi.DomainNameSet:  false,
-	bapi.PolicyActivity: true,
+	bapi.PolicyActivity: false,
 }
