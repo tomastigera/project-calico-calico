@@ -101,6 +101,30 @@ Common conflicts:
 
 For multiple PRs, cherry-pick each merge commit in sequence.
 
+**Empty cherry-pick (changes already present):**
+
+If after resolving conflicts `git cherry-pick --continue` reports the commit is
+empty, the enterprise repo already contains all the changes from that OSS PR.
+Skip it with `git cherry-pick --skip` and label that specific PR:
+
+```bash
+gh pr edit <PR> --repo projectcalico/calico --add-label "skip-bot-cherry-pick"
+```
+
+**For multi-PR picks**, track which PRs were skipped vs successfully picked.
+Continue cherry-picking the remaining PRs in sequence. At the end:
+
+- **All PRs empty**: clean up the branch, do not create a calico-private PR,
+  and report which PRs were skipped and why.
+- **Some PRs empty, some picked**: proceed with the normal workflow (steps 4–6)
+  for the successfully picked PRs. Exclude the skipped PRs from the branch
+  name, PR title, and PR body. Mention the skipped PRs in the PR body as a
+  note (e.g., "Skipped projectcalico/calico#NNNN — already present in
+  enterprise"). Label only the skipped OSS PRs with `skip-bot-cherry-pick`.
+- **Single PR empty**: clean up the branch, do not create a calico-private PR.
+
+In all cases, tell the user which PRs were skipped and why.
+
 ### 4. Fix up module references and generated files
 
 The enterprise fork uses `tigera/api` instead of `projectcalico/api`. After
