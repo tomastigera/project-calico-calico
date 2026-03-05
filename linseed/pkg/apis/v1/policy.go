@@ -30,15 +30,15 @@ type PolicyInfo struct {
 type PolicyActivityRequest struct {
 	From     *time.Time                  `json:"from,omitempty"`
 	To       *time.Time                  `json:"to,omitempty"`
-	Policies []PolicyActivityQueryPolicy `json:"policies"`
+	Policies []PolicyActivityQueryPolicy `json:"policies" validate:"dive"`
 }
 
 // PolicyActivityQueryPolicy identifies a specific policy and generation to query.
 type PolicyActivityQueryPolicy struct {
-	Kind       string `json:"kind"`
+	Kind       string `json:"kind" validate:"required"`
 	Namespace  string `json:"namespace"`
-	Name       string `json:"name"`
-	Generation int64  `json:"generation"`
+	Name       string `json:"name" validate:"required"`
+	Generation int64  `json:"generation" validate:"gt=0"`
 }
 
 // PolicyActivityResponse is the response type for the /policy_activity endpoint.
@@ -63,17 +63,6 @@ type PolicyActivityRuleResult struct {
 func (r *PolicyActivityRequest) Valid() error {
 	if r.From != nil && r.To != nil && r.To.Before(*r.From) {
 		return fmt.Errorf("invalid time range: 'to' %q is before 'from' %q", r.To, r.From)
-	}
-	for i, p := range r.Policies {
-		if p.Kind == "" {
-			return fmt.Errorf("policies[%d].kind is required", i)
-		}
-		if p.Name == "" {
-			return fmt.Errorf("policies[%d].name is required", i)
-		}
-		if p.Generation <= 0 {
-			return fmt.Errorf("policies[%d].generation must be positive", i)
-		}
 	}
 	return nil
 }
