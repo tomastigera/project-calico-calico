@@ -668,6 +668,8 @@ rules:
       - network-attachment-definitions
     verbs:
       - create
+      - list
+      - watch
   - apiGroups:
       - k8s.cni.cncf.io
     resources:
