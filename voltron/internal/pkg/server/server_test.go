@@ -581,11 +581,12 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						}, 2*time.Second)
 						Expect(err).ShouldNot(HaveOccurred())
 
-						clusterCTunnel, err := tunnel.DialTLS(voltronTunnelAddr, clusterCTunnelTLSConfig, 5*time.Second, nil)
-						Expect(err).NotTo(HaveOccurred())
-
+						// Wait for the cluster to be registered before dialing the tunnel.
 						_, err = chanutil.ReadWithDeadline(ctx, clusterCConnected, 5*time.Second)
 						Expect(err).Should(Equal(chanutil.ErrChannelClosed))
+
+						clusterCTunnel, err := tunnel.DialTLS(voltronTunnelAddr, clusterCTunnelTLSConfig, 5*time.Second, nil)
+						Expect(err).NotTo(HaveOccurred())
 
 						reqCChan := startMgdClusterService(ctx, clusterCTunnel, clusterATLSCert)
 
