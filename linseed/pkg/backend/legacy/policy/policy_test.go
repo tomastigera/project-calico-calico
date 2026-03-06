@@ -75,7 +75,7 @@ func (m *mockLMAClient) SearchCompositeAggregations(
 	return buckets, errs
 }
 
-func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc, singleIndex bool) (*policyBackend, *httptest.Server) {
+func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc) (*policyBackend, *httptest.Server) {
 	ts := httptest.NewServer(handlerFunc)
 
 	client, err := elastic.NewClient(
@@ -88,13 +88,7 @@ func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc, singleI
 	lmaClient := &mockLMAClient{esClient: client}
 	mockInit := &mockIndexInitializer{}
 
-	var b bapi.PolicyBackend
-	if singleIndex {
-		b = NewSingleIndexBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
-	} else {
-		b = NewBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
-	}
-
+	b := NewBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
 	pb := b.(*policyBackend)
 	pb.dedupWindow = 1 * time.Hour
 
@@ -112,23 +106,15 @@ func TestGenDeterministicID(t *testing.T) {
 }
 
 func TestPrepareForWrite(t *testing.T) {
-	// Single Index Mode
-	pbSingle, _ := setupBackendWithHandler(t, nil, true)
+	pb, _ := setupBackendWithHandler(t, nil)
 	info := bapi.ClusterInfo{Cluster: "c1", Tenant: "t1"}
 	log := v1.PolicyActivity{Rule: "r1"}
 
-	resSingle := pbSingle.prepareForWrite(info, log)
-	lwe, ok := resSingle.(*logWithExtras)
+	res := pb.prepareForWrite(info, log)
+	lwe, ok := res.(*logWithExtras)
 	require.True(t, ok)
 	assert.Equal(t, "c1", lwe.Cluster)
 	assert.Equal(t, "t1", lwe.Tenant)
-
-	// Multi Index Mode
-	pbMulti, _ := setupBackendWithHandler(t, nil, false)
-	resMulti := pbMulti.prepareForWrite(info, log)
-	lOrig, ok := resMulti.(v1.PolicyActivity)
-	require.True(t, ok)
-	assert.Equal(t, "c1", lOrig.Cluster)
 }
 
 func TestCreate_FullFlow(t *testing.T) {
@@ -157,7 +143,7 @@ func TestCreate_FullFlow(t *testing.T) {
 		http.Error(w, "unexpected request", http.StatusInternalServerError)
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	logs := []v1.PolicyActivity{
@@ -199,7 +185,7 @@ func TestCreate_Deduplication(t *testing.T) {
 		}
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	_, err := b.Create(context.Background(), info, []v1.PolicyActivity{logItem})
@@ -278,7 +264,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 		assert.Contains(t, bodyStr, "3|")
 	})
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -311,7 +297,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 }
 
 func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, false)
+	b, ts := setupBackendWithHandler(t, nil)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{Policies: []v1.PolicyActivityQueryPolicy{}}
@@ -328,7 +314,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing
 		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -365,7 +351,7 @@ func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *te
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -407,7 +393,7 @@ func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -425,7 +411,7 @@ func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t
 }
 
 func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, false)
+	b, ts := setupBackendWithHandler(t, nil)
 	defer ts.Close()
 
 	from := time.Now().Add(-24 * time.Hour)
@@ -452,8 +438,8 @@ func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *
 	assert.Contains(t, jsonStr, "to")
 }
 
-func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFiltersInSingleIndexMode(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, true)
+func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFilters(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -544,7 +530,7 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 		http.Error(w, "unexpected request", http.StatusInternalServerError)
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -570,7 +556,7 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 }
 
 func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, false)
+	b, ts := setupBackendWithHandler(t, nil)
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -606,7 +592,7 @@ func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -654,7 +640,7 @@ func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T)
 		}
 	]`, earlier.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
+	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{

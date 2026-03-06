@@ -224,9 +224,8 @@ func run() {
 		logrus.Fatalf("Invalid backend type: %s", cfg.Backend)
 	}
 
-	// Policy activity always uses the single-index backend regardless of the configured backend strategy,
-	// consolidating all clusters into one index to reduce overall index count.
-	policyBackend = policybackend.NewSingleIndexBackend(esClient, defaultInitializer, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
+	// Policy activity always uses a single index, consolidating all clusters to reduce index count.
+	policyBackend = policybackend.NewBackend(esClient, defaultInitializer, cfg.PolicyActivityCacheCleanupInterval, cfg.PolicyActivityCacheCleanupTTL, index.WithBaseIndexName(cfg.ElasticClientConfig.ElasticPolicyActivityBaseIndexName))
 
 	// Ensure the policy backend background routines (cache cleanup)
 	// are stopped when the server shuts down.

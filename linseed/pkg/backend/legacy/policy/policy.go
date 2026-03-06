@@ -28,11 +28,10 @@ import (
 
 // policyBackend implements the PolicyBackend interface for storing and querying policy activity logs.
 type policyBackend struct {
-	esClient    *elastic.Client
-	lmaclient   lmaelastic.Client
-	templates   bapi.IndexInitializer
-	singleIndex bool
-	index       bapi.Index
+	esClient  *elastic.Client
+	lmaclient lmaelastic.Client
+	templates bapi.IndexInitializer
+	index     bapi.Index
 
 	cancelCleanup context.CancelFunc
 
@@ -43,31 +42,13 @@ type policyBackend struct {
 	dedupWindow time.Duration
 }
 
-// NewBackend creates a new policyBackend for multi-index mode.
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, cleanupInterval, cleanupTTL time.Duration) bapi.PolicyBackend {
+// NewBackend creates a new policyBackend. Policy activity always uses single-index mode.
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, cleanupInterval, cleanupTTL time.Duration, options ...index.Option) bapi.PolicyBackend {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := &policyBackend{
 		esClient:      c.Backend(),
 		lmaclient:     c,
 		templates:     cache,
-		singleIndex:   false,
-		index:         index.PolicyActivityMultiIndex,
-		dedupWindow:   1 * time.Hour,
-		cancelCleanup: cancel,
-	}
-	go b.StartCacheCleanup(ctx, cleanupInterval, cleanupTTL)
-
-	return b
-}
-
-// NewSingleIndexBackend creates a new policyBackend for single-index mode.
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, cleanupInterval, cleanupTTL time.Duration, options ...index.Option) bapi.PolicyBackend {
-	ctx, cancel := context.WithCancel(context.Background())
-	b := &policyBackend{
-		esClient:      c.Backend(),
-		lmaclient:     c,
-		templates:     cache,
-		singleIndex:   true,
 		index:         index.PolicyActivityIndex(options...),
 		dedupWindow:   1 * time.Hour,
 		cancelCleanup: cancel,
@@ -82,17 +63,13 @@ type logWithExtras struct {
 	Tenant            string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a log in a document that includes the cluster and tenant if
-// the backend is configured to write to a single index.
+// prepareForWrite wraps a log in a document that includes the cluster and tenant.
 func (b *policyBackend) prepareForWrite(i bapi.ClusterInfo, l v1.PolicyActivity) any {
 	l.Cluster = i.Cluster
-	if b.singleIndex {
-		return &logWithExtras{
-			PolicyActivity: l,
-			Tenant:         i.Tenant,
-		}
+	return &logWithExtras{
+		PolicyActivity: l,
+		Tenant:         i.Tenant,
 	}
-	return l
 }
 
 // genDeterministicID creates a unique ID based on the content of the log.
@@ -345,11 +322,9 @@ func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.Pol
 		boolQuery.Filter(rangeQuery)
 	}
 
-	if b.singleIndex {
-		boolQuery.Filter(elastic.NewTermQuery("cluster", i.Cluster))
-		if i.Tenant != "" {
-			boolQuery.Filter(elastic.NewTermQuery("tenant", i.Tenant))
-		}
+	boolQuery.Filter(elastic.NewTermQuery("cluster", i.Cluster))
+	if i.Tenant != "" {
+		boolQuery.Filter(elastic.NewTermQuery("tenant", i.Tenant))
 	}
 
 	return boolQuery
