@@ -131,14 +131,14 @@ func main() {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
 
-		// Paths that match the tunnel whitelist but should still be handled by the management
-		// cluster. AuthorizationReviews are handled by ui-apis, which performs the managed
+		// Paths served by management cluster backends rather than the k8s API server.
+		// AuthorizationReviews are handled by ui-apis, which performs the managed
 		// cluster RBAC calculation itself.
-		tunnelExclusions, err := regex.CompileRegexStrings([]string{
+		managementBackendTargets, err := regex.CompileRegexStrings([]string{
 			`^/apis/projectcalico.org/v3/authorizationreviews$`,
 		})
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to parse tunnel exclusions.")
+			log.WithError(err).Fatalf("Failed to parse management backend targets.")
 		}
 
 		kibanaURL, err := url.Parse(cfg.KibanaEndpoint)
@@ -202,7 +202,7 @@ func main() {
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithTunnelExclusions(tunnelExclusions),
+			server.WithManagementBackendTargets(managementBackendTargets),
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(
 				cfg.CheckManagedClusterAuthorizationBeforeProxy,

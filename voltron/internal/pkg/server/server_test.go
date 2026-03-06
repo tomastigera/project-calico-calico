@@ -294,6 +294,9 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
+			managementBackendTargets, err := regex.CompileRegexStrings([]string{`^/apis/projectcalico.org/v3/authorizationreviews$`})
+			Expect(err).ShouldNot(HaveOccurred())
+
 			srv, voltronServerAddr, _, voltronTunnelAddr, srvWg = createAndStartServer(
 				mockClient, config, mockAuthenticator, clusterNS,
 				server.WithTunnelSigningCreds(voltronTunnelCert),
@@ -303,6 +306,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				server.WithDefaultProxy(defaultProxy),
 				server.WithKubernetesAPITargets(k8sTargets),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithManagementBackendTargets(managementBackendTargets),
 				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 0, mockAuthorizer),
 			)
 		})
@@ -417,6 +421,18 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
 			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(impersonatedUser))
 			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal(impersonatedGroup))
+		})
+
+		It("should not add impersonation headers for management backend targets", func() {
+			req, err := http.NewRequest("POST", fmt.Sprintf("https://%s%s", voltronServerAddr, "/apis/projectcalico.org/v3/authorizationreviews"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(BeEmpty())
+			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(BeEmpty())
 		})
 
 		Context("A single cluster is registered", func() {

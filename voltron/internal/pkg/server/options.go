@@ -168,12 +168,12 @@ func WithTunnelTargetWhitelist(tgts []regexp.Regexp) Option {
 	}
 }
 
-// WithTunnelExclusions sets paths that should never be tunneled to managed clusters, even if they
-// match the tunnel target whitelist. Requests matching these patterns are always handled by the
-// management cluster's default proxy.
-func WithTunnelExclusions(tgts []regexp.Regexp) Option {
+// WithManagementBackendTargets sets paths that are served by management cluster backend services
+// (e.g., ui-apis) rather than the Kubernetes API server. These paths bypass both tunnel routing
+// and k8s impersonation so they are proxied directly to the management cluster backend.
+func WithManagementBackendTargets(tgts []regexp.Regexp) Option {
 	return func(s *Server) error {
-		s.tunnelExclusions = tgts
+		s.managementBackendTargets = tgts
 		return nil
 	}
 }
