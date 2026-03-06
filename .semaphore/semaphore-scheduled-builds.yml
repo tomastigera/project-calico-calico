@@ -794,6 +794,17 @@ blocks:
       env_vars:
         - name: BUILD_CACHE_GROUP
           value: "e2e-tests"
+      secrets:
+        # Since we create a local kind cluster, we need the test license.
+        - name: test-customer-license
+      prologue:
+        commands:
+          # Log in to GCR - deploying the kind cluster currently requires pulling
+          # private elastic / kibana images from unique-caldron-775.
+          - docker login -u _json_key -p "$(cat ~/secrets/docker_auth.json)" https://gcr.io
+          # We need to log in to GCP in order to build intrusion detection.
+          - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+          - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
       agent:
         machine:
           type: f1-standard-4
