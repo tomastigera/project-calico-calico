@@ -57,7 +57,7 @@ func AnnounceTestedHashrelease(cfg *slack.Config, path string, passed bool, test
 		Product:            product,
 		Stream:             hashrel.Hashrelease.Stream,
 		ProductVersion:     hashrel.Hashrelease.ProductVersion,
-		OperatorVersion:    hashrel.Hashrelease.OperatorVersion,
+		OperatorVersion:    hashrel.Hashrelease.Operator.Version,
 		ReleaseType:        "hashrelease",
 		CIURL:              hashrel.CIURL,
 		TestResultURL:      testCIURL,

@@ -365,14 +365,14 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}
 	return &hashreleaseserver.EnterpriseHashrelease{
 		Hashrelease: hashreleaseserver.Hashrelease{
-			Name:            pinnedVersion.ReleaseName,
-			Hash:            pinnedVersion.Hash,
-			Note:            pinnedVersion.Note,
-			Stream:          version.DeterminePublishStream(productBranch, pinnedVersion.Title),
-			ProductVersion:  pinnedVersion.Title,
-			OperatorVersion: pinnedVersion.TigeraOperator.Version,
-			Source:          hashreleaseSrc,
-			Latest:          latest,
+			Name:           pinnedVersion.ReleaseName,
+			Hash:           pinnedVersion.Hash,
+			Note:           pinnedVersion.Note,
+			Stream:         version.DeterminePublishStream(productBranch, pinnedVersion.Title),
+			ProductVersion: pinnedVersion.Title,
+			Operator:       pinnedVersion.TigeraOperator,
+			Source:         hashreleaseSrc,
+			Latest:         latest,
 		},
 		ChartVersion:   pinnedVersion.HelmRelease,
 		ManagerVersion: pinnedVersion.Components[managerComponentName].Version,
