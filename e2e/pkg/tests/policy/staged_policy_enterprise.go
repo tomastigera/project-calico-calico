@@ -36,6 +36,7 @@ import (
 // DOCS_URL: https://docs.tigera.io/calico-enterprise/latest/reference/resources/stagednetworkpolicy
 // PRECONDITIONS:
 var _ = describe.EnterpriseDescribe(
+	describe.WithSerial(),
 	describe.WithTeam(describe.EV),
 	describe.WithCategory(describe.Policy),
 	"staged network policy",
@@ -509,13 +510,10 @@ var _ = describe.EnterpriseDescribe(
 	})
 
 func initializeSetup(f *framework.Framework) *elastic.Client {
-	// set up pods to generate network flow
 	esclient := elasticsearch.InitClient(f)
 
-	// Ensure a clean starting environment before each test.
 	cli, err := client.New(f.ClientConfig())
 	Expect(err).NotTo(HaveOccurred())
-	Expect(utils.CleanDatastore(cli)).ShouldNot(HaveOccurred())
 
 	felixConfig := v3.NewFelixConfiguration()
 	err = cli.Get(context.TODO(), ctrlclient.ObjectKey{Name: "default"}, felixConfig)
