@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -305,6 +305,7 @@ func (slc *ServiceLookupsCache) onServiceUpdate(update api.Update, k model.Resou
 	} else {
 		slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
 	}
+	gaugeServicesCacheLength.Set(float64(len(slc.suh.services)))
 }
 
 func (slc *ServiceLookupsCache) onEndpointSliceUpdate(update api.Update, k model.ResourceKey) {
