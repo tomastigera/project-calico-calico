@@ -231,6 +231,10 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 				o := operator.NewManager(
 					operator.WithOperatorDirectory(filepath.Join(cfg.TmpDir, operator.DefaultRepoName)),
 					operator.IsHashRelease(),
+					operator.WithImage(hashrel.Operator.Image),
+					operator.WithRegistry(hashrel.Operator.Registry),
+					operator.WithVersion(hashrel.Operator.Version),
+					operator.WithCalicoVersion(hashrel.ProductVersion),
 					operator.WithArchitectures(c.StringSlice(archFlag.Name)),
 					operator.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				)
@@ -244,7 +248,7 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 					calico.WithRepoRoot(cfg.RepoRootDir),
 					calico.IsHashRelease(),
 					calico.WithVersion(hashrel.ProductVersion),
-					calico.WithOperatorVersion(hashrel.OperatorVersion),
+					calico.WithOperatorVersion(hashrel.Operator.Version),
 					calico.WithGithubOrg(c.String(orgFlag.Name)),
 					calico.WithRepoName(c.String(repoFlag.Name)),
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
