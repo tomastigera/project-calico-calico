@@ -68,7 +68,7 @@ func DumpFelixDiags() {
 
 		// Get the last 2 minutes of Felix container logs.
 		logsOutput, err := e2ekubectl.RunKubectl("calico-system",
-			"logs", podName, "-c", "felix", "--since=2m")
+			"logs", podName, "-c", "felix", "--since=10m")
 		if err != nil {
 			logrus.WithError(err).Warnf("[DIAGS] Failed to get Felix logs from %s", podName)
 		} else {

@@ -152,18 +152,18 @@ var _ = describe.CalicoDescribe(
 				defer cp.Stop()
 
 				By("checking flow log file on client node")
-				Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
-					clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+					clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 				By("checking flow log file on server node")
-				Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
-					server.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+					server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 				By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 					validateFlowLogs(esclient,
 						esQuery("src"),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 
@@ -172,7 +172,7 @@ var _ = describe.CalicoDescribe(
 						esQuery("dst"),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 			})
@@ -218,15 +218,15 @@ var _ = describe.CalicoDescribe(
 					defer cp.Stop()
 
 					By("checking flow log file on client node")
-					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
-						clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
 							esQuery("src"),
 							flowExpectation{
 								action: "deny",
-								policy: fmt.Sprintf("default|%s/default.deny-client-egress|deny", f.Namespace.Name),
+								policy: fmt.Sprintf("default|np:%s/default.deny-client-egress|deny", f.Namespace.Name),
 							})
 					})
 				})
@@ -273,18 +273,18 @@ var _ = describe.CalicoDescribe(
 					defer cp.Stop()
 
 					By("checking flow log file on client node")
-					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
-						clientPod.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 					By("checking flow log file on server node")
-					Eventually(testFlowLogsPresent, 60*time.Second, 10*time.Second).WithArguments(
-						server.Pod().Spec.NodeName, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+						server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
 							esQuery("src"),
 							flowExpectation{
 								action: "allow",
-								policy: ".kns." + f.Namespace.Name + "|allow",
+								policy: "pro:kns." + f.Namespace.Name + "|allow",
 							})
 					})
 
@@ -293,7 +293,7 @@ var _ = describe.CalicoDescribe(
 							esQuery("dst"),
 							flowExpectation{
 								action: "deny",
-								policy: fmt.Sprintf("default|%s/default.deny-server-ingress|deny", f.Namespace.Name),
+								policy: fmt.Sprintf("default|np:%s/default.deny-server-ingress|deny", f.Namespace.Name),
 							})
 					})
 				})
@@ -316,11 +316,11 @@ func windowsFlowLogQuery(namespace, clientBaseName, serverBaseName string, targe
 		elastic.NewTermsQuery("reporter", reporter))
 }
 
-// testFlowLogsPresent checks if flow log entries containing both searchStr1 and searchStr2
-// exist in the flows.log file on the given node. Reads only the tail of the file to avoid
-// transferring the entire flows.log (which can be 8MB+). Splits on "start_time" to handle
-// multi-line flow log entries where source and dest IPs may be on different lines.
-func testFlowLogsPresent(nodeName, searchStr1, searchStr2 string) bool {
+// testFlowLogsPresent checks if flow log entries containing the namespace and both searchStr1
+// and searchStr2 exist in the flows.log file on the given node. Reads only the tail of the file
+// to avoid transferring the entire flows.log (which can be 8MB+). Splits on "start_time" to
+// handle multi-line flow log entries where source and dest IPs may be on different lines.
+func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) bool {
 	// Find the calico-node-windows pod on this node.
 	getPodArgs := []string{
 		"get", "pod",
@@ -353,8 +353,8 @@ func testFlowLogsPresent(nodeName, searchStr1, searchStr2 string) bool {
 	// Split on "start_time" to get per-entry chunks, since flow log entries may
 	// span multiple lines.
 	for _, entry := range strings.Split(output, "start_time") {
-		if strings.Contains(entry, searchStr1) && strings.Contains(entry, searchStr2) {
-			logrus.Infof("Found flow log entry on %s containing %q and %q", nodeName, searchStr1, searchStr2)
+		if strings.Contains(entry, namespace) && strings.Contains(entry, searchStr1) && strings.Contains(entry, searchStr2) {
+			logrus.Infof("Found flow log entry on %s containing %q, %q and %q", nodeName, namespace, searchStr1, searchStr2)
 			return true
 		}
 	}

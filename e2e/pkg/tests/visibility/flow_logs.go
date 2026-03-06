@@ -192,7 +192,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "deny",
-							policy: fmt.Sprintf("default|%s/default.deny-client-egress|deny", f.Namespace.Name),
+							policy: fmt.Sprintf("default|np:%s/default.deny-client-egress|deny", f.Namespace.Name),
 						})
 				})
 			})
@@ -243,7 +243,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "deny",
-							policy: fmt.Sprintf("default|%s/default.deny-server-ingress|deny", f.Namespace.Name),
+							policy: fmt.Sprintf("default|np:%s/default.deny-server-ingress|deny", f.Namespace.Name),
 						})
 				})
 			})
@@ -291,7 +291,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: fmt.Sprintf("default|%s/default.allow-server-ingress|allow", f.Namespace.Name),
+							policy: fmt.Sprintf("default|np:%s/default.allow-server-ingress|allow", f.Namespace.Name),
 						})
 				})
 			})
