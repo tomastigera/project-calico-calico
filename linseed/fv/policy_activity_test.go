@@ -3,7 +3,6 @@
 package fv_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -13,24 +12,14 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 
 func RunPolicyActivityTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
-	t.Run(fmt.Sprintf("%s [MultiIndex]", name), func(t *testing.T) {
+	// Policy activity always uses single-index backend regardless of the configured backend strategy
+	// (see linseed/cmd/main.go), so we only test with single-index.
+	t.Run(name, func(t *testing.T) {
 		args := DefaultLinseedArgs()
-		defer setupAndTeardown(t, args, nil, index.PolicyActivityMultiIndex)()
-		testFn(t, index.PolicyActivityMultiIndex)
-	})
-
-	t.Run(fmt.Sprintf("%s [SingleIndex]", name), func(t *testing.T) {
-		confArgs := &RunConfigureElasticArgs{
-			PolicyActivityBaseIndexName: index.PolicyActivityIndex().Name(bapi.ClusterInfo{}),
-			PolicyActivityPolicyName:    index.PolicyActivityIndex().ILMPolicyName(),
-		}
-		args := DefaultLinseedArgs()
-		args.Backend = config.BackendTypeSingleIndex
-		defer setupAndTeardown(t, args, confArgs, index.PolicyActivityIndex())()
+		defer setupAndTeardown(t, args, nil, index.PolicyActivityIndex())()
 		testFn(t, index.PolicyActivityIndex())
 	})
 }
