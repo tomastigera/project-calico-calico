@@ -54,7 +54,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			{
 				Policy:        v1.PolicyInfo{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns"},
 				Rule:          "1|egress|0",
-				LastEvaluated: now.Add(-1 * time.Minute),
+				LastEvaluated: now,
 			},
 		}
 
