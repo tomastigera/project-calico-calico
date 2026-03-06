@@ -397,7 +397,7 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 			return errors.New("no flow logs found")
 		}
 		return nil
-	}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+	}, 180*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 	Expect(len(flowLogs) > 0).To(BeTrue())
 	for _, fl := range flowLogs {

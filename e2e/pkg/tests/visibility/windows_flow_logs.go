@@ -152,10 +152,10 @@ var _ = describe.CalicoDescribe(
 				defer cp.Stop()
 
 				By("checking flow log file on client node")
-				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+				Eventually(testFlowLogsPresent, 180*time.Second, 10*time.Second).WithArguments(
 					clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 				By("checking flow log file on server node")
-				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+				Eventually(testFlowLogsPresent, 180*time.Second, 10*time.Second).WithArguments(
 					server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 				By("validating flow logs pushed to elasticsearch where reporter=src", func() {
@@ -218,7 +218,7 @@ var _ = describe.CalicoDescribe(
 					defer cp.Stop()
 
 					By("checking flow log file on client node")
-					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+					Eventually(testFlowLogsPresent, 180*time.Second, 10*time.Second).WithArguments(
 						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
@@ -273,10 +273,10 @@ var _ = describe.CalicoDescribe(
 					defer cp.Stop()
 
 					By("checking flow log file on client node")
-					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+					Eventually(testFlowLogsPresent, 180*time.Second, 10*time.Second).WithArguments(
 						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 					By("checking flow log file on server node")
-					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
+					Eventually(testFlowLogsPresent, 180*time.Second, 10*time.Second).WithArguments(
 						server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {

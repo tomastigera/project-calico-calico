@@ -189,8 +189,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the NetworkPolicy", func() {
 					blockedService = "yahoo.com"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"example.com", "www.example.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
 					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
@@ -214,8 +214,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the NetworkPolicy", func() {
 					blockedService = "google.co.uk"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"*.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"*.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
 					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
@@ -239,8 +239,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the NetworkSet", func() {
 					blockedService = "yahoo.com"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"example.com", "www.example.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
 					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
@@ -264,8 +264,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the NetworkSet", func() {
 					blockedService = "google.co.uk"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"*.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"*.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
 					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
@@ -431,8 +431,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the GlobalNetworkPolicy", func() {
 					blockedService = "yahoo.com"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"example.com", "www.example.com"}
 
 					// Call hostTestCaseSetup.
 					hostTestCaseSetup()
@@ -454,8 +454,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the GlobalNetworkPolicy", func() {
 					blockedService = "google.co.uk"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"*.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"*.com"}
 
 					hostTestCaseSetup()
 
@@ -476,8 +476,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the GlobalNetworkSet", func() {
 					blockedService = "yahoo.com"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"hmpg.net", "www.hmpg.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"example.com", "www.example.com"}
 
 					hostTestCaseSetup()
 
@@ -499,8 +499,8 @@ var _ = describe.CalicoDescribe(
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the GlobalNetworkSet", func() {
 					blockedService = "google.co.uk"
-					externalService = "hmpg.net"
-					allowedDomains := []string{"*.net"}
+					externalService = "example.com"
+					allowedDomains := []string{"*.com"}
 
 					hostTestCaseSetup()
 
