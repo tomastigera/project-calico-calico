@@ -203,6 +203,23 @@ these adjustments:
 
 For multiple PRs, separate each with `---` and `**Title** (projectcalico/calico#PR)`.
 
+**Section 2.5 — Conflict resolution notes (only if conflicts were resolved):**
+
+If any conflicts were resolved during the cherry-pick, add a section after the
+original body documenting what was resolved and how. This helps reviewers
+understand what changed beyond the original PR. Format:
+
+```
+**Conflicts resolved:**
+- `path/to/file.go`: Copyright year — took 2026
+- `path/to/other.go`: Enterprise-only code adjacent to changed lines — kept both
+- `path/to/test.go`: Type name difference (`fooBar` → `FooBar`) — enterprise exports this type
+```
+
+Keep it concise — one line per file or group of files with the same resolution.
+If all conflicts were the same type (e.g., all copyright years), a single line
+is fine: "Copyright year conflicts in 5 files — took 2026 for all."
+
 **Section 3 — Metadata (in a details expander):**
 
 ```html
