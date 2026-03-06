@@ -137,7 +137,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 
@@ -146,7 +146,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 			})
@@ -234,7 +234,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 
@@ -282,7 +282,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 
@@ -328,7 +328,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 
@@ -337,7 +337,7 @@ var _ = describe.CalicoDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: ".kns." + f.Namespace.Name + "|allow",
+							policy: "pro:kns." + f.Namespace.Name + "|allow",
 						})
 				})
 			})
