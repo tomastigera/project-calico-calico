@@ -327,16 +327,19 @@ E2E_SKIP ?= "\[sig-calico\].*staged"
 E2E_PROCS ?= 4
 K8S_NETPOL_SUPPORTED_FEATURES ?= "ClusterNetworkPolicy"
 K8S_NETPOL_UNSUPPORTED_FEATURES ?= ""
+CLUSTER_ROUTING ?= BIRD
+
+## Create a kind cluster and run all e2e tests.
 e2e-test:
 	$(MAKE) -C e2e build
-	$(MAKE) -C node kind-k8st-setup
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) -C node kind-k8st-setup
 	$(MAKE) e2e-run-test
 	# Disabling k8s CNP conformance test since its CRD it not installed by default.
 	#$(MAKE) e2e-run-cnp-test
 
 e2e-test-clusternetworkpolicy:
 	$(MAKE) -C e2e build
-	$(MAKE) -C node kind-k8st-setup
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) -C node kind-k8st-setup
 	$(MAKE) e2e-run-cnp-test
 
 ## Run the general e2e tests against a pre-existing kind cluster.

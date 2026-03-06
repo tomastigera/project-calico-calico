@@ -731,6 +731,7 @@ kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl $(TEST_LICENSE) $(CHARTS) kind-clust
 	CALICO_API_GROUP=$(CALICO_API_GROUP) \
 	TSEE_TEST_LICENSE=$(TEST_LICENSE) \
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) \
 	./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
