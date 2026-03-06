@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -165,71 +166,52 @@ var _ = Describe("Syncer", func() {
 		)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		numberOfCallsToOnUpdate := 0
-		expectedCallsToOnUpdate := 8
+		// allReceived accumulates all CacheRequests across dispatches, since
+		// the syncer may batch them differently depending on timing.
+		var mu sync.Mutex
+		var allReceived []dispatcher.CacheRequest
 		mockDispatcher.On("Dispatch", ctx1, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
 				defer GinkgoRecover()
-				numberOfCallsToOnUpdate++
-				for _, c := range mockDispatcher.ExpectedCalls {
-					if c.Method == "Dispatch" {
-						cacheReq := args.Get(1).([]dispatcher.CacheRequest)
-						switch numberOfCallsToOnUpdate {
-						case 1:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVNew))
-							Expect(cacheReq[1].UpdateType).Should(Equal(bapi.UpdateTypeKVNew))
-							expectedKeys := []model.Key{
-								model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name1)),
-								model.WorkloadEndpointKey{
-									Hostname:       "127.0.0.1",
-									OrchestratorID: "k8s",
-									WorkloadID:     "test-dpi/pod1",
-									EndpointID:     "eth0",
-								},
-							}
-							Expect(cacheReq[0].KVPair.Key).Should(BeElementOf(expectedKeys))
-							Expect(cacheReq[1].KVPair.Key).Should(BeElementOf(expectedKeys))
-						case 2:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVNew))
-							Expect(cacheReq[0].KVPair.Key).Should(BeEquivalentTo(model.WorkloadEndpointKey{
-								Hostname:       "127.0.0.1",
-								OrchestratorID: "k8s",
-								WorkloadID:     "test-dpi/pod2",
-								EndpointID:     "eth0",
-							}))
+				cacheReq := args.Get(1).([]dispatcher.CacheRequest)
+				mu.Lock()
+				allReceived = append(allReceived, cacheReq...)
+				mu.Unlock()
+			})
 
-						case 3:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVNew))
-							Expect(cacheReq[0].KVPair.Key).Should(Equal(model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name2))))
-						case 4:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVUpdated))
-							Expect(cacheReq[0].KVPair.Key).Should(Equal(model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name2))))
-						case 5:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVDeleted))
-							Expect(cacheReq[0].KVPair.Key).Should(BeEquivalentTo(model.WorkloadEndpointKey{
-								Hostname:       "127.0.0.1",
-								OrchestratorID: "k8s",
-								WorkloadID:     "test-dpi/pod1",
-								EndpointID:     "eth0",
-							}))
-						case 6:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVDeleted))
-							Expect(cacheReq[0].KVPair.Key).Should(Equal(model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name1))))
-						case 7:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVDeleted))
-							Expect(cacheReq[0].KVPair.Key).Should(BeEquivalentTo(model.WorkloadEndpointKey{
-								Hostname:       "127.0.0.1",
-								OrchestratorID: "k8s",
-								WorkloadID:     "test-dpi/pod2",
-								EndpointID:     "eth0",
-							}))
-						case 8:
-							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVDeleted))
-							Expect(cacheReq[0].KVPair.Key).Should(Equal(model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name2))))
-						}
-					}
+		dpiKey1 := model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name1))
+		dpiKey2 := model.KeyFromDefaultPath(fmt.Sprintf("/calico/resources/v3/projectcalico.org/deeppacketinspections/%s/%s", namespace, name2))
+		wepKey1 := model.WorkloadEndpointKey{
+			Hostname:       "127.0.0.1",
+			OrchestratorID: "k8s",
+			WorkloadID:     "test-dpi/pod1",
+			EndpointID:     "eth0",
+		}
+		wepKey2 := model.WorkloadEndpointKey{
+			Hostname:       "127.0.0.1",
+			OrchestratorID: "k8s",
+			WorkloadID:     "test-dpi/pod2",
+			EndpointID:     "eth0",
+		}
+
+		// Helper to find received entries matching a key and update type.
+		findReceived := func(key model.Key, updateType bapi.UpdateType) []dispatcher.CacheRequest {
+			mu.Lock()
+			defer mu.Unlock()
+			var matched []dispatcher.CacheRequest
+			for _, r := range allReceived {
+				if r.KVPair.Key == key && r.UpdateType == updateType {
+					matched = append(matched, r)
 				}
-			}).Times(8)
+			}
+			return matched
+		}
+
+		receivedLen := func() int {
+			mu.Lock()
+			defer mu.Unlock()
+			return len(allReceived)
+		}
 
 		s := syncer.NewSyncerCallbacks(healthCh)
 		typhaConfig := syncclientutils.ReadTyphaConfig([]string{"DPI_"})
@@ -244,7 +226,11 @@ var _ = Describe("Syncer", func() {
 			defer syncerClient.Stop()
 		}
 		go s.Sync(ctx1, mockDispatcher)
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(1))
+
+		By("checking initial sync delivers DPI and WEP")
+		Eventually(receivedLen).Should(BeNumerically(">=", 2))
+		Expect(findReceived(dpiKey1, bapi.UpdateTypeKVNew)).To(HaveLen(1))
+		Expect(findReceived(wepKey1, bapi.UpdateTypeKVNew)).To(HaveLen(1))
 
 		By("creating WEP and checking updates are received by dispatcher")
 		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &internalapi.WorkloadEndpoint{
@@ -261,7 +247,7 @@ var _ = Describe("Syncer", func() {
 			},
 		}, options.SetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(2))
+		Eventually(func() int { return len(findReceived(wepKey2, bapi.UpdateTypeKVNew)) }).Should(Equal(1))
 
 		By("creating DPI and checking updates are received by syncerCallbacks")
 		dpi, err := calicoClient.DeepPacketInspections().Create(
@@ -273,9 +259,10 @@ var _ = Describe("Syncer", func() {
 			options.SetOptions{},
 		)
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(3))
+		Eventually(func() int { return len(findReceived(dpiKey2, bapi.UpdateTypeKVNew)) }).Should(Equal(1))
 
 		By("creating WEP for non-local node and checking updates are not sent to syncerCallbacks")
+		prevLen := receivedLen()
 		tempNode := "tempnode"
 		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &internalapi.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", tempNode)},
@@ -291,7 +278,7 @@ var _ = Describe("Syncer", func() {
 			},
 		}, options.SetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(3))
+		Consistently(receivedLen).Should(Equal(prevLen))
 
 		By("updating DPI and checking updates are received by syncerCallbacks")
 		_, err = calicoClient.DeepPacketInspections().Update(
@@ -303,24 +290,24 @@ var _ = Describe("Syncer", func() {
 			options.SetOptions{},
 		)
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(4))
+		Eventually(func() int { return len(findReceived(dpiKey2, bapi.UpdateTypeKVUpdated)) }).Should(Equal(1))
 
 		By("deleting WEP & DPI resource and checking updates are received by dispatcher")
 		_, err = calicoClient.WorkloadEndpoints().Delete(ctx1, namespace, fmt.Sprintf("%s-k8s-pod1-eth0", nodename), options.DeleteOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(5))
+		Eventually(func() int { return len(findReceived(wepKey1, bapi.UpdateTypeKVDeleted)) }).Should(Equal(1))
 
 		_, err = calicoClient.DeepPacketInspections().Delete(ctx1, namespace, name1, options.DeleteOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(6))
+		Eventually(func() int { return len(findReceived(dpiKey1, bapi.UpdateTypeKVDeleted)) }).Should(Equal(1))
 
 		_, err = calicoClient.WorkloadEndpoints().Delete(ctx1, namespace, fmt.Sprintf("%s-k8s-pod2-eth0", nodename), options.DeleteOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(7))
+		Eventually(func() int { return len(findReceived(wepKey2, bapi.UpdateTypeKVDeleted)) }).Should(Equal(1))
 
 		_, err = calicoClient.DeepPacketInspections().Delete(ctx1, namespace, name2, options.DeleteOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(expectedCallsToOnUpdate))
+		Eventually(func() int { return len(findReceived(dpiKey2, bapi.UpdateTypeKVDeleted)) }).Should(Equal(1))
 
 		mockDispatcher.On("Close").Return()
 		// StopGeneratingEventsForWEP the syncerCallbacks by cancelling the context
