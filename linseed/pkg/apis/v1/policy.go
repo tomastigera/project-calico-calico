@@ -24,10 +24,10 @@ type PolicyInfo struct {
 	Name      string `json:"name"`
 }
 
-// PolicyActivityRequest is the request type for the /policy_activity endpoint.
+// PolicyActivityParams is the request type for the /policy_activity endpoint.
 // It accepts a list of policies (with generation) and returns aggregated policy
 // activity data with per-rule details.
-type PolicyActivityRequest struct {
+type PolicyActivityParams struct {
 	From     *time.Time                  `json:"from,omitempty"`
 	To       *time.Time                  `json:"to,omitempty"`
 	Policies []PolicyActivityQueryPolicy `json:"policies" validate:"dive"`
@@ -60,7 +60,7 @@ type PolicyActivityRuleResult struct {
 	LastEvaluated time.Time `json:"last_evaluated"`
 }
 
-func (r *PolicyActivityRequest) Valid() error {
+func (r *PolicyActivityParams) Valid() error {
 	if r.From != nil && r.To != nil && r.To.Before(*r.From) {
 		return fmt.Errorf("invalid time range: 'to' %q is before 'from' %q", r.To, r.From)
 	}

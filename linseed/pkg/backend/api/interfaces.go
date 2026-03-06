@@ -127,7 +127,7 @@ type PolicyBackend interface {
 	// Create creates the given logs.
 	Create(context.Context, ClusterInfo, []v1.PolicyActivity) (*v1.BulkResponse, error)
 	// GetPolicyActivities returns aggregated policy activity data for the given policies.
-	GetPolicyActivities(context.Context, ClusterInfo, *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error)
+	GetPolicyActivities(context.Context, ClusterInfo, *v1.PolicyActivityParams) (*v1.PolicyActivityResponse, error)
 	// Close shutdowns the cache cleanup go routine.
 	Close()
 }

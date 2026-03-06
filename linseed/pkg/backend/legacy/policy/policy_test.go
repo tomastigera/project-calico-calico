@@ -281,7 +281,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, handler, false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 3},
 		},
@@ -314,7 +314,7 @@ func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing
 	b, ts := setupBackendWithHandler(t, nil, false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{Policies: []v1.PolicyActivityQueryPolicy{}}
+	req := &v1.PolicyActivityParams{Policies: []v1.PolicyActivityQueryPolicy{}}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
 	resp, err := b.GetPolicyActivities(context.Background(), info, req)
@@ -331,7 +331,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing
 	b, ts := setupBackendWithHandler(t, handler, false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
 		},
@@ -368,7 +368,7 @@ func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *te
 	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "GlobalNetworkPolicy", Name: "gnp1", Generation: 2},
 			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
@@ -410,7 +410,7 @@ func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t
 	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
 		},
@@ -431,7 +431,7 @@ func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *
 	from := time.Now().Add(-24 * time.Hour)
 	to := time.Now()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		From: &from,
 		To:   &to,
 		Policies: []v1.PolicyActivityQueryPolicy{
@@ -456,7 +456,7 @@ func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFiltersInSingleIndexMo
 	b, ts := setupBackendWithHandler(t, nil, true)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 5},
 		},
@@ -547,7 +547,7 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, handler, false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
 			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p2", Generation: 1},
@@ -573,7 +573,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, nil, false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
 		},
@@ -609,7 +609,7 @@ func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
 	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
 		},
@@ -657,7 +657,7 @@ func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T)
 	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil), false)
 	defer ts.Close()
 
-	req := &v1.PolicyActivityRequest{
+	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
 			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
 		},

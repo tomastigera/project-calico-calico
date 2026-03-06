@@ -28,7 +28,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 	RunPolicyActivityTest(t, "should return empty items when no activity exists for queried policies", func(t *testing.T, idx bapi.Index) {
 		from := time.Now().Add(-5 * time.Second)
 		to := time.Now()
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
@@ -68,7 +68,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 
 		from := now.Add(-5 * time.Second)
 		to := now.Add(5 * time.Second)
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
@@ -114,7 +114,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 
 		from := now.Add(-5 * time.Second)
 		to := now.Add(5 * time.Second)
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
@@ -149,7 +149,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 		// Query a time window that does NOT include the document's last_evaluated.
 		from := now.Add(-30 * time.Minute)
 		to := now
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
@@ -165,7 +165,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 	RunPolicyActivityTest(t, "should return error when to is before from", func(t *testing.T, idx bapi.Index) {
 		from := time.Now()
 		to := from.Add(-1 * time.Hour)
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
@@ -179,7 +179,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 	})
 
 	RunPolicyActivityTest(t, "should return error when policy kind is empty", func(t *testing.T, idx bapi.Index) {
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			Policies: []v1.PolicyActivityQueryPolicy{
 				{Kind: "", Namespace: "default", Name: "allow-dns", Generation: 1},
 			},
@@ -191,7 +191,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 	})
 
 	RunPolicyActivityTest(t, "should return error when generation is not positive", func(t *testing.T, idx bapi.Index) {
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			Policies: []v1.PolicyActivityQueryPolicy{
 				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 0},
 			},
@@ -223,7 +223,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 
 		from := now.Add(-5 * time.Second)
 		to := now.Add(5 * time.Second)
-		req := &v1.PolicyActivityRequest{
+		req := &v1.PolicyActivityParams{
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{

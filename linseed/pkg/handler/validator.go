@@ -48,7 +48,7 @@ type RequestParams interface {
 		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
 		v1.RuntimeReportParams | v1.IPSetThreatFeedParams |
 		v1.DomainNameSetThreatFeedParams | v1.EventStatisticsParams |
-		v1.PolicyActivityRequest
+		v1.PolicyActivityParams
 }
 
 // BulkRequestParams is the collection of request parameters types

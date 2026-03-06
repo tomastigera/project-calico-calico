@@ -275,7 +275,7 @@ func (b *policyBackend) Close() {
 }
 
 // GetPolicyActivities returns aggregated policy activity data for the given policies.
-func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterInfo, req *v1.PolicyActivityRequest) (*v1.PolicyActivityResponse, error) {
+func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterInfo, req *v1.PolicyActivityParams) (*v1.PolicyActivityResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	if err := i.Valid(); err != nil {
@@ -315,7 +315,7 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 
 // buildPolicyActivityQuery constructs an ES bool query that matches docs for
 // any of the requested policies, filtered by generation prefix on the rule field.
-func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.PolicyActivityRequest) *elastic.BoolQuery {
+func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.PolicyActivityParams) *elastic.BoolQuery {
 	shouldClauses := make([]elastic.Query, 0, len(req.Policies))
 	for _, p := range req.Policies {
 		policyQuery := elastic.NewBoolQuery().
@@ -391,7 +391,7 @@ func translateRuleIndex(idx string) string {
 
 // aggregatePolicyActivity groups ES hits by policy, parses rule strings, computes
 // per-policy last_evaluated, and returns results in the same order as the request.
-func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityRequest, hits []*elastic.SearchHit) *v1.PolicyActivityResponse {
+func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityParams, hits []*elastic.SearchHit) *v1.PolicyActivityResponse {
 	resultMap := make(map[policyKey]*policyActivityEntry)
 
 	for _, hit := range hits {

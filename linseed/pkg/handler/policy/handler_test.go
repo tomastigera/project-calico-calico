@@ -227,7 +227,7 @@ func policyHandlerWithMock(t *testing.T, response *v1.PolicyActivityResponse, ba
 		mockBackend.On("GetPolicyActivities",
 			mock.Anything,
 			mock.AnythingOfType("api.ClusterInfo"),
-			mock.AnythingOfType("*v1.PolicyActivityRequest"),
+			mock.AnythingOfType("*v1.PolicyActivityParams"),
 		).Return(response, backendErr)
 	}
 

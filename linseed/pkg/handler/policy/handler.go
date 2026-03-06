@@ -22,13 +22,13 @@ const (
 )
 
 type policy struct {
-	logs    handler.RWHandler[v1.PolicyActivity, v1.PolicyActivityRequest, v1.PolicyActivity]
+	logs    handler.RWHandler[v1.PolicyActivity, v1.PolicyActivityParams, v1.PolicyActivity]
 	backend bapi.PolicyBackend
 }
 
 func New(b bapi.PolicyBackend) *policy {
 	return &policy{
-		logs:    handler.NewRWHandler[v1.PolicyActivity, v1.PolicyActivityRequest](b.Create, nil),
+		logs:    handler.NewRWHandler[v1.PolicyActivity, v1.PolicyActivityParams](b.Create, nil),
 		backend: b,
 	}
 }
@@ -57,7 +57,7 @@ func (h policy) GetPolicyActivities() http.HandlerFunc {
 			"method": req.Method,
 		})
 
-		reqParams, httpErr := handler.DecodeAndValidateReqParams[v1.PolicyActivityRequest](w, req)
+		reqParams, httpErr := handler.DecodeAndValidateReqParams[v1.PolicyActivityParams](w, req)
 		if httpErr != nil {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				body, err := handler.ReadBody(w, req)
