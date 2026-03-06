@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v3"
