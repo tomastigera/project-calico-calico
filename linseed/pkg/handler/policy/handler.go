@@ -94,7 +94,7 @@ func (h policy) GetPolicyActivities() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), v1.DefaultTimeOut)
+		ctx, cancel := context.WithTimeout(req.Context(), v1.DefaultTimeOut)
 		defer cancel()
 
 		response, err := h.backend.GetPolicyActivities(ctx, clusterInfo, reqParams)
