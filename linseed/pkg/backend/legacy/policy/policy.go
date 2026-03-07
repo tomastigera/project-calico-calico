@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -275,6 +276,7 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 	scroll := b.esClient.Scroll(b.index.Index(i)).
 		Size(10000).
 		Query(query)
+	defer scroll.Clear(ctx) // Release the scroll context in ES when done.
 	for {
 		results, err := scroll.Do(ctx)
 		if err == io.EOF {
@@ -421,6 +423,12 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityParams, hi
 		for _, r := range entry.rules {
 			rules = append(rules, r)
 		}
+		sort.Slice(rules, func(i, j int) bool {
+			if rules[i].Direction != rules[j].Direction {
+				return rules[i].Direction < rules[j].Direction
+			}
+			return rules[i].Index < rules[j].Index
+		})
 		items = append(items, v1.PolicyActivityResult{
 			Policy:        entry.policy,
 			LastEvaluated: entry.lastEvaluated,

@@ -55,8 +55,12 @@ type PolicyActivityResult struct {
 
 // PolicyActivityRuleResult contains activity details for a single rule within a policy.
 type PolicyActivityRuleResult struct {
-	Direction     string    `json:"direction"`
-	Index         string    `json:"index"`
+	Direction string `json:"direction"`
+	// Index is the rule's position within the policy. It is typically a numeric
+	// string ("0", "1", …) but may also be a special sentinel: "implicit_deny"
+	// when the packet was denied by the policy's implicit default, or "unknown"
+	// when the rule index could not be determined.
+	Index string `json:"index"`
 	LastEvaluated time.Time `json:"last_evaluated"`
 }
 

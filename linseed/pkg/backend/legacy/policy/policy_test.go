@@ -286,14 +286,14 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	assert.Equal(t, now, *item.LastEvaluated) // max of now and earlier
 	assert.Len(t, item.Rules, 2)
 
-	// Verify rule parsing.
-	assert.Equal(t, "ingress", item.Rules[0].Direction)
-	assert.Equal(t, "0", item.Rules[0].Index)
-	assert.Equal(t, now, item.Rules[0].LastEvaluated)
+	// Verify rule parsing. Rules are sorted by direction then index.
+	assert.Equal(t, "egress", item.Rules[0].Direction)
+	assert.Equal(t, "1", item.Rules[0].Index)
+	assert.Equal(t, earlier, item.Rules[0].LastEvaluated)
 
-	assert.Equal(t, "egress", item.Rules[1].Direction)
-	assert.Equal(t, "1", item.Rules[1].Index)
-	assert.Equal(t, earlier, item.Rules[1].LastEvaluated)
+	assert.Equal(t, "ingress", item.Rules[1].Direction)
+	assert.Equal(t, "0", item.Rules[1].Index)
+	assert.Equal(t, now, item.Rules[1].LastEvaluated)
 }
 
 func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing.T) {
