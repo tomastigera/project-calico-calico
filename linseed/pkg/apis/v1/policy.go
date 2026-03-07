@@ -60,7 +60,7 @@ type PolicyActivityRuleResult struct {
 	// string ("0", "1", …) but may also be a special sentinel: "implicit_deny"
 	// when the packet was denied by the policy's implicit default, or "unknown"
 	// when the rule index could not be determined.
-	Index string `json:"index"`
+	Index         string    `json:"index"`
 	LastEvaluated time.Time `json:"last_evaluated"`
 }
 
