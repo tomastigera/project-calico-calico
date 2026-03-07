@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -24,6 +23,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -271,22 +271,43 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 
 	query := b.buildPolicyActivityQuery(i, req)
 
-	// Use scroll to handle result sets that may exceed the 10k max_result_window.
-	var allHits []*elastic.SearchHit
-	scroll := b.esClient.Scroll(b.index.Index(i)).
-		Size(10000).
-		Query(query)
-	defer scroll.Clear(ctx) // Release the scroll context in ES when done.
-	for {
-		results, err := scroll.Do(ctx)
-		if err == io.EOF {
-			break
+	// Use search_after with a Point In Time (PIT) to paginate through result
+	// sets that may exceed the 10k max_result_window. This is preferred over
+	// the scroll API as it uses fewer cluster resources.
+	pitID, err := logtools.OpenPointInTime(ctx, b.esClient, b.index.Index(i))
+	if err != nil {
+		log.WithError(err).Error("Failed to open point in time for GetPolicyActivities")
+		return nil, fmt.Errorf("failed to open point in time: %w", err)
+	}
+	defer func() {
+		if _, err := b.esClient.ClosePointInTime(pitID).Do(ctx); err != nil {
+			log.WithError(err).Warn("Failed to close point in time")
 		}
+	}()
+
+	var allHits []*elastic.SearchHit
+	var searchAfter []any
+	for {
+		search := b.esClient.Search().
+			Size(10000).
+			Query(query).
+			Sort("_shard_doc", true).
+			PointInTime(elastic.NewPointInTimeWithKeepAlive(pitID, "10s"))
+		if searchAfter != nil {
+			search.SearchAfter(searchAfter...)
+		}
+
+		results, err := search.Do(ctx)
 		if err != nil {
-			log.WithError(err).Error("Elasticsearch scroll failed for GetPolicyActivities")
+			log.WithError(err).Error("Elasticsearch search failed for GetPolicyActivities")
 			return nil, fmt.Errorf("elasticsearch search failed: %w", err)
 		}
+		if len(results.Hits.Hits) == 0 {
+			break
+		}
 		allHits = append(allHits, results.Hits.Hits...)
+		lastHit := results.Hits.Hits[len(results.Hits.Hits)-1]
+		searchAfter = lastHit.Sort
 	}
 
 	return aggregatePolicyActivity(log, req, allHits), nil

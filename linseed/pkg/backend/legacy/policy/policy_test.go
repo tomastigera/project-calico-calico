@@ -209,27 +209,54 @@ func TestCreate_Deduplication(t *testing.T) {
 	assert.Greater(t, esHits, 0, "Write after window expiry should hit ES")
 }
 
-// scrollHandler wraps a response body so the first request (initial search) returns hits
-// with a _scroll_id, and the follow-up scroll request returns an empty result to signal EOF.
-func scrollHandler(_ *testing.T, hitsJSON string, validateBody func(string)) http.HandlerFunc {
-	scrolled := false
+// searchAfterHandler mocks the PIT + search_after pagination pattern.
+// The first _search request returns the provided hits, and the second returns
+// empty hits to signal completion. PIT open/close are acknowledged.
+func searchAfterHandler(_ *testing.T, hitsJSON string, validateBody func(string)) http.HandlerFunc {
+	searched := false
 	return func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "_search/scroll") {
-			// Follow-up scroll request: return empty hits to signal done.
-			_, _ = fmt.Fprint(w, `{"_scroll_id":"test","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
+		// Handle PIT open.
+		if r.Method == "POST" && strings.Contains(r.URL.Path, "_pit") {
+			_, _ = fmt.Fprint(w, `{"id":"test-pit-id"}`)
 			return
 		}
-		if strings.Contains(r.URL.Path, "_search") && !scrolled {
-			scrolled = true
-			if validateBody != nil {
-				body, _ := io.ReadAll(r.Body)
-				validateBody(string(body))
+		// Handle PIT close.
+		if r.Method == "DELETE" && r.URL.Path == "/_pit" {
+			_, _ = fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
+			return
+		}
+		// Handle search requests.
+		if r.Method == "POST" && r.URL.Path == "/_search" {
+			if !searched {
+				searched = true
+				if validateBody != nil {
+					body, _ := io.ReadAll(r.Body)
+					validateBody(string(body))
+				}
+				// Add sort values to each hit so search_after can use them.
+				_, _ = fmt.Fprintf(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":%s}}`, addSortValues(hitsJSON))
+				return
 			}
-			_, _ = fmt.Fprintf(w, `{"_scroll_id":"test","hits":{"total":{"value":0,"relation":"eq"},"hits":%s}}`, hitsJSON)
+			// Second search: return empty to signal done.
+			_, _ = fmt.Fprint(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
 			return
 		}
-		http.Error(w, "unexpected request", http.StatusInternalServerError)
+		http.Error(w, "unexpected request: "+r.Method+" "+r.URL.Path, http.StatusInternalServerError)
 	}
+}
+
+// addSortValues injects a "sort" field into each hit in the JSON array so the
+// search_after pagination loop can extract lastHit.Sort.
+func addSortValues(hitsJSON string) string {
+	var hits []map[string]any
+	if err := json.Unmarshal([]byte(hitsJSON), &hits); err != nil {
+		return hitsJSON
+	}
+	for i := range hits {
+		hits[i]["sort"] = []any{i}
+	}
+	out, _ := json.Marshal(hits)
+	return string(out)
 }
 
 func TestGetPolicyActivity_FullFlow(t *testing.T) {
@@ -255,7 +282,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 		}
 	]`, now.Format(time.RFC3339Nano), earlier.Format(time.RFC3339Nano))
 
-	handler := scrollHandler(t, hitsJSON, func(bodyStr string) {
+	handler := searchAfterHandler(t, hitsJSON, func(bodyStr string) {
 		assert.Contains(t, bodyStr, "policy.kind")
 		assert.Contains(t, bodyStr, "NetworkPolicy")
 		assert.Contains(t, bodyStr, "policy.name")
@@ -310,7 +337,7 @@ func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing
 
 func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		// Return error for all requests including scroll.
+		// Return error for all requests including PIT open.
 		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
 	}
 
@@ -326,7 +353,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing
 
 	_, err := b.GetPolicyActivities(context.Background(), info, req)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "elasticsearch search failed")
+	assert.Contains(t, err.Error(), "failed to open point in time")
 }
 
 func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *testing.T) {
@@ -351,7 +378,7 @@ func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *te
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -393,7 +420,7 @@ func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -465,23 +492,62 @@ func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFilters(t *testing.T) 
 	assert.Contains(t, jsonStr, "5|")
 }
 
-func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
+func TestGetPolicyActivity_SearchAfterPagination(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 
-	// Simulate two scroll pages: each returns a batch of hits, then a third call returns empty.
-	page := 0
+	// Simulate two search_after pages: first returns 2 hits, second returns 1 hit, third returns empty.
+	searchCount := 0
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "_search/scroll") {
-			page++
-			if page == 1 {
-				// Second page of results.
+		// Handle PIT open.
+		if r.Method == "POST" && strings.Contains(r.URL.Path, "_pit") {
+			_, _ = fmt.Fprint(w, `{"id":"test-pit-id"}`)
+			return
+		}
+		// Handle PIT close.
+		if r.Method == "DELETE" && r.URL.Path == "/_pit" {
+			_, _ = fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
+			return
+		}
+		if r.Method == "POST" && r.URL.Path == "/_search" {
+			searchCount++
+			if searchCount == 1 {
+				// First page of results.
 				response := fmt.Sprintf(`{
-					"_scroll_id": "test2",
+					"pit_id": "test-pit-id",
 					"hits": {
 						"total": {"value": 0, "relation": "eq"},
 						"hits": [
 							{
-								"_id": "3",
+								"_id": "1", "sort": [0],
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+									"rule": "1|ingress|0",
+									"last_evaluated": %q
+								}
+							},
+							{
+								"_id": "2", "sort": [1],
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+									"rule": "1|egress|0",
+									"last_evaluated": %q
+								}
+							}
+						]
+					}
+				}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+				_, _ = fmt.Fprint(w, response)
+				return
+			}
+			if searchCount == 2 {
+				// Second page of results.
+				response := fmt.Sprintf(`{
+					"pit_id": "test-pit-id",
+					"hits": {
+						"total": {"value": 0, "relation": "eq"},
+						"hits": [
+							{
+								"_id": "3", "sort": [2],
 								"_source": {
 									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p2"},
 									"rule": "1|egress|0",
@@ -494,37 +560,8 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 				_, _ = fmt.Fprint(w, response)
 				return
 			}
-			// Third call: empty hits to signal EOF.
-			_, _ = fmt.Fprint(w, `{"_scroll_id":"test3","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
-			return
-		}
-		if strings.Contains(r.URL.Path, "_search") {
-			// Initial search: first page of results.
-			response := fmt.Sprintf(`{
-				"_scroll_id": "test1",
-				"hits": {
-					"total": {"value": 0, "relation": "eq"},
-					"hits": [
-						{
-							"_id": "1",
-							"_source": {
-								"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
-								"rule": "1|ingress|0",
-								"last_evaluated": %q
-							}
-						},
-						{
-							"_id": "2",
-							"_source": {
-								"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
-								"rule": "1|egress|0",
-								"last_evaluated": %q
-							}
-						}
-					]
-				}
-			}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
-			_, _ = fmt.Fprint(w, response)
+			// Third search: empty hits to signal done.
+			_, _ = fmt.Fprint(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
 			return
 		}
 		http.Error(w, "unexpected request", http.StatusInternalServerError)
@@ -551,8 +588,8 @@ func TestGetPolicyActivity_ScrollPagination(t *testing.T) {
 	assert.Equal(t, "p2", resp.Items[1].Policy.Name)
 	assert.Len(t, resp.Items[1].Rules, 1)
 
-	// Verify all scroll pages were consumed.
-	assert.Equal(t, 2, page, "Should have made 2 follow-up scroll requests")
+	// Verify all pages were fetched (2 with data + 1 empty).
+	assert.Equal(t, 3, searchCount, "Should have made 3 search requests")
 }
 
 func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
@@ -592,7 +629,7 @@ func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
 		}
 	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
@@ -640,7 +677,7 @@ func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T)
 		}
 	]`, earlier.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
 
-	b, ts := setupBackendWithHandler(t, scrollHandler(t, hitsJSON, nil))
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
 	req := &v1.PolicyActivityParams{
