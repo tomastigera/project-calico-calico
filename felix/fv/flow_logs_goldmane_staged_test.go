@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -350,6 +350,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ goldmane flow log with stag
 			Consistently(bpfDumpPolicy(tc.Felixes[0], ep1_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "ingress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
 			Consistently(bpfDumpPolicy(tc.Felixes[1], ep2_1.InterfaceName, "egress"), "5s", "1s").ShouldNot(ContainSubstring("staged"))
+		}
+
+		// Wait for Felix's service lookup cache to be populated with the test service. Without this, the
+		// first flow log flush interval may force-report flows before the service is correlated, resulting
+		// in duplicate flows that differ only in DstService. We check for >= 2 because the
+		// kubernetes.default service is always present — we need the test service on top of that.
+		for _, f := range tc.Felixes {
+			Eventually(func() (int, error) {
+				return f.PromMetric("felix_collector_lookupcache_services").Int()
+			}, "10s", "1s").Should(BeNumerically(">=", 2), "Expected test service to appear in collector lookup cache")
 		}
 
 		if !bpfEnabled {
