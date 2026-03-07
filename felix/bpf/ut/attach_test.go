@@ -47,6 +47,7 @@ import (
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/calc"
 	linux "github.com/projectcalico/calico/felix/dataplane/linux"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
@@ -92,7 +93,7 @@ func newBPFTestEpMgr(
 		"DROP",
 		false,
 		nil,
-		nil,
+		&environment.Features{},
 		1500,
 		nil,
 		nil,
