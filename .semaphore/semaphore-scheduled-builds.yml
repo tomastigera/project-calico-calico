@@ -819,7 +819,7 @@ blocks:
             - name: CLUSTER_ROUTING
               value: "FELIX"
             - name: E2E_SKIP
-              value: "BGP"
+              value: '"BGP|\[sig-calico\].*staged"'
             - name: STORE_BUILD_CACHE
               value: "true"
   - name: Envoy Gateway
