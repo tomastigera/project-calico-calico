@@ -299,9 +299,6 @@ var _ = describe.CalicoDescribe(
 				cli, err = cclient.New(f.ClientConfig())
 				Expect(err).NotTo(HaveOccurred())
 
-				// Ensure a clean starting environment before each test.
-				Expect(utils.CleanDatastore(cli)).ShouldNot(HaveOccurred())
-
 				By("Starting a client pod that can curl")
 				startCurlPodHost(namespace)
 

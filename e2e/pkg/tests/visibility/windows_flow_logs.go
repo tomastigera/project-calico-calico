@@ -56,9 +56,6 @@ var _ = describe.CalicoDescribe(
 			cli, err = cclient.New(f.ClientConfig())
 			Expect(err).NotTo(HaveOccurred())
 
-			// Clean datastore to ensure a clean starting environment.
-			Expect(utils.CleanDatastore(cli)).ShouldNot(HaveOccurred())
-
 			// Set up ES port forwarding and client.
 			cancelFunc = esutil.PortForward()
 			esclient = esutil.InitClient(f)

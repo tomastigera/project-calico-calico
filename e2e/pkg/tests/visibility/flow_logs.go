@@ -53,9 +53,6 @@ var _ = describe.CalicoDescribe(
 			cli, err = cclient.New(f.ClientConfig())
 			Expect(err).NotTo(HaveOccurred())
 
-			// Clean datastore to ensure a clean starting environment.
-			Expect(utils.CleanDatastore(cli)).ShouldNot(HaveOccurred())
-
 			// Configure Felix for flow log testing.
 			originalFC := v3.NewFelixConfiguration()
 			err = cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
