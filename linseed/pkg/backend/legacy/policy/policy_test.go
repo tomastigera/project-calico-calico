@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,7 +75,7 @@ func (m *mockLMAClient) SearchCompositeAggregations(
 	return buckets, errs
 }
 
-func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc, singleIndex bool) (*policyBackend, *httptest.Server) {
+func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc) (*policyBackend, *httptest.Server) {
 	ts := httptest.NewServer(handlerFunc)
 
 	client, err := elastic.NewClient(
@@ -87,13 +88,7 @@ func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc, singleI
 	lmaClient := &mockLMAClient{esClient: client}
 	mockInit := &mockIndexInitializer{}
 
-	var b bapi.PolicyBackend
-	if singleIndex {
-		b = NewSingleIndexBackend(lmaClient, mockInit, 1000, false, 10*time.Minute, 2*time.Hour)
-	} else {
-		b = NewBackend(lmaClient, mockInit, 1000, false, 10*time.Minute, 2*time.Hour)
-	}
-
+	b := NewBackend(lmaClient, mockInit, 10*time.Minute, 2*time.Hour)
 	pb := b.(*policyBackend)
 	pb.dedupWindow = 1 * time.Hour
 
@@ -111,23 +106,15 @@ func TestGenDeterministicID(t *testing.T) {
 }
 
 func TestPrepareForWrite(t *testing.T) {
-	// Single Index Mode
-	pbSingle, _ := setupBackendWithHandler(t, nil, true)
+	pb, _ := setupBackendWithHandler(t, nil)
 	info := bapi.ClusterInfo{Cluster: "c1", Tenant: "t1"}
 	log := v1.PolicyActivity{Rule: "r1"}
 
-	resSingle := pbSingle.prepareForWrite(info, log)
-	lwe, ok := resSingle.(*logWithExtras)
+	res := pb.prepareForWrite(info, log)
+	lwe, ok := res.(*logWithExtras)
 	require.True(t, ok)
 	assert.Equal(t, "c1", lwe.Cluster)
 	assert.Equal(t, "t1", lwe.Tenant)
-
-	// Multi Index Mode
-	pbMulti, _ := setupBackendWithHandler(t, nil, false)
-	resMulti := pbMulti.prepareForWrite(info, log)
-	lOrig, ok := resMulti.(v1.PolicyActivity)
-	require.True(t, ok)
-	assert.Equal(t, "c1", lOrig.Cluster)
 }
 
 func TestCreate_FullFlow(t *testing.T) {
@@ -156,7 +143,7 @@ func TestCreate_FullFlow(t *testing.T) {
 		http.Error(w, "unexpected request", http.StatusInternalServerError)
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	logs := []v1.PolicyActivity{
@@ -198,7 +185,7 @@ func TestCreate_Deduplication(t *testing.T) {
 		}
 	}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
 	_, err := b.Create(context.Background(), info, []v1.PolicyActivity{logItem})
@@ -222,99 +209,491 @@ func TestCreate_Deduplication(t *testing.T) {
 	assert.Greater(t, esHits, 0, "Write after window expiry should hit ES")
 }
 
-func TestList_Integration(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		bodyStr := string(body)
-
-		assert.Contains(t, bodyStr, "term")
-		assert.Contains(t, bodyStr, "policy.name")
-		assert.Contains(t, bodyStr, "test-policy")
-
-		// Return Mock Hits
-		response := `{
-            "hits": {
-                "total": { "value": 1, "relation": "eq" },
-                "hits": [
-                    { "_id": "123", "_source": { "rule": "allow-all" }, "sort": [12345] }
-                ]
-            }
-        }`
-		_, _ = fmt.Fprint(w, response)
+// searchAfterHandler mocks the PIT + search_after pagination pattern.
+// The first _search request returns the provided hits, and the second returns
+// empty hits to signal completion. PIT open/close are acknowledged.
+func searchAfterHandler(_ *testing.T, hitsJSON string, validateBody func(string)) http.HandlerFunc {
+	searched := false
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Handle PIT open.
+		if r.Method == "POST" && strings.Contains(r.URL.Path, "_pit") {
+			_, _ = fmt.Fprint(w, `{"id":"test-pit-id"}`)
+			return
+		}
+		// Handle PIT close.
+		if r.Method == "DELETE" && r.URL.Path == "/_pit" {
+			_, _ = fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
+			return
+		}
+		// Handle search requests.
+		if r.Method == "POST" && r.URL.Path == "/_search" {
+			if !searched {
+				searched = true
+				if validateBody != nil {
+					body, _ := io.ReadAll(r.Body)
+					validateBody(string(body))
+				}
+				// Add sort values to each hit so search_after can use them.
+				_, _ = fmt.Fprintf(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":%s}}`, addSortValues(hitsJSON))
+				return
+			}
+			// Second search: return empty to signal done.
+			_, _ = fmt.Fprint(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
+			return
+		}
+		http.Error(w, "unexpected request: "+r.Method+" "+r.URL.Path, http.StatusInternalServerError)
 	}
+}
 
-	b, ts := setupBackendWithHandler(t, handler, false)
+// addSortValues injects a "sort" field into each hit in the JSON array so the
+// search_after pagination loop can extract lastHit.Sort.
+func addSortValues(hitsJSON string) string {
+	var hits []map[string]any
+	if err := json.Unmarshal([]byte(hitsJSON), &hits); err != nil {
+		return hitsJSON
+	}
+	for i := range hits {
+		hits[i]["sort"] = []any{i}
+	}
+	out, _ := json.Marshal(hits)
+	return string(out)
+}
+
+func TestGetPolicyActivity_FullFlow(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	earlier := now.Add(-1 * time.Hour)
+
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+				"rule": "3|ingress|0",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "default", "name": "allow-dns"},
+				"rule": "3|egress|1",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), earlier.Format(time.RFC3339Nano))
+
+	handler := searchAfterHandler(t, hitsJSON, func(bodyStr string) {
+		assert.Contains(t, bodyStr, "policy.kind")
+		assert.Contains(t, bodyStr, "NetworkPolicy")
+		assert.Contains(t, bodyStr, "policy.name")
+		assert.Contains(t, bodyStr, "allow-dns")
+		assert.Contains(t, bodyStr, "prefix")
+		assert.Contains(t, bodyStr, "3|")
+	})
+
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
-	params := &v1.PolicyActivityParams{
-		Policy: v1.PolicyInfo{Name: "test-policy"},
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 3},
+		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	list, err := b.List(context.Background(), info, params)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
-	assert.Equal(t, int64(1), list.TotalHits)
-	assert.Equal(t, "123", list.Items[0].ID)
+	require.Len(t, resp.Items, 1)
+
+	item := resp.Items[0]
+	assert.Equal(t, "NetworkPolicy", item.Policy.Kind)
+	assert.Equal(t, "default", item.Policy.Namespace)
+	assert.Equal(t, "allow-dns", item.Policy.Name)
+	assert.NotNil(t, item.LastEvaluated)
+	assert.Equal(t, now, *item.LastEvaluated) // max of now and earlier
+	assert.Len(t, item.Rules, 2)
+
+	// Verify rule parsing. Rules are sorted by direction then index.
+	assert.Equal(t, "egress", item.Rules[0].Direction)
+	assert.Equal(t, "1", item.Rules[0].Index)
+	assert.Equal(t, earlier, item.Rules[0].LastEvaluated)
+
+	assert.Equal(t, "ingress", item.Rules[1].Direction)
+	assert.Equal(t, "0", item.Rules[1].Index)
+	assert.Equal(t, now, item.Rules[1].LastEvaluated)
 }
 
-func TestList_ElasticError(t *testing.T) {
+func TestGetPolicyActivity_ReturnsEmptyResultsWhenNoPoliciesRequested(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{Policies: []v1.PolicyActivityQueryPolicy{}}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	assert.Empty(t, resp.Items)
+}
+
+func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		// Return error for all requests including PIT open.
 		http.Error(w, "ES unavailable", http.StatusServiceUnavailable)
 	}
-	b, ts := setupBackendWithHandler(t, handler, false)
+
+	b, ts := setupBackendWithHandler(t, handler)
 	defer ts.Close()
 
-	_, err := b.List(context.Background(), bapi.ClusterInfo{Cluster: "c1"}, &v1.PolicyActivityParams{})
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	_, err := b.GetPolicyActivities(context.Background(), info, req)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "elasticsearch search failed")
+	assert.Contains(t, err.Error(), "failed to open point in time")
 }
 
-func TestBuildQuery_Complex(t *testing.T) {
-	b, ts := setupBackendWithHandler(t, nil, false)
+func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "GlobalNetworkPolicy", "namespace": "", "name": "gnp1"},
+				"rule": "2|egress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
 	defer ts.Close()
 
-	now := time.Now()
-	opts := &v1.PolicyActivityParams{
-		Selector:      "\"policy.namespace\" = 'frontend'",
-		Rules:         []string{"r1", "r2"},
-		Policy:        v1.PolicyInfo{Kind: "GlobalNetworkPolicy", Name: "gnp1"},
-		LastEvaluated: now,
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "GlobalNetworkPolicy", Name: "gnp1", Generation: 2},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
+		},
 	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
 
-	q, err := b.buildQuery(bapi.ClusterInfo{Cluster: "c1"}, opts)
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
 	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
 
+	// Verify results are in request order.
+	assert.Equal(t, "gnp1", resp.Items[0].Policy.Name)
+	assert.Equal(t, "p1", resp.Items[1].Policy.Name)
+}
+
+func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "bad-format",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.Len(t, resp.Items[0].Rules, 1) // Only the valid rule
+	assert.Equal(t, "ingress", resp.Items[0].Rules[0].Direction)
+}
+
+func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil)
+	defer ts.Close()
+
+	from := time.Now().Add(-24 * time.Hour)
+	to := time.Now()
+
+	req := &v1.PolicyActivityParams{
+		From: &from,
+		To:   &to,
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	q := b.buildPolicyActivityQuery(info, req)
 	src, err := q.Source()
 	require.NoError(t, err)
 
 	jsonBytes, _ := json.Marshal(src)
 	jsonStr := string(jsonBytes)
 
-	assert.Contains(t, jsonStr, "frontend")
-	assert.Contains(t, jsonStr, "policy.namespace")
-	assert.Contains(t, jsonStr, "r1")
-	assert.Contains(t, jsonStr, "gnp1")
+	assert.Contains(t, jsonStr, "last_evaluated")
+	assert.Contains(t, jsonStr, "from")
+	assert.Contains(t, jsonStr, "to")
 }
 
-func TestList_UnmarshalError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		// We send valid JSON structure but the content inside _source makes Unmarshal fail
-		// if we were strictly checking types, but standard json.Unmarshal usually tolerates extra fields.
-		// To force an unmarshal error on the struct, we send a type mismatch.
-		responseMismatch := `{
-			"hits": {
-				"hits": [ { "_source": "this_should_be_an_object_but_is_string" } ]
-			}
-		}`
-		_, _ = fmt.Fprint(w, responseMismatch)
-	}
-
-	b, ts := setupBackendWithHandler(t, handler, false)
+func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFilters(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil)
 	defer ts.Close()
 
-	list, err := b.List(context.Background(), bapi.ClusterInfo{Cluster: "c1"}, &v1.PolicyActivityParams{})
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 5},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1", Tenant: "t1"}
 
-	// The code logs the error and continues, effectively returning empty list.
-	require.NoError(t, err) // It doesn't return error, it just skips the item.
-	assert.Equal(t, 0, len(list.Items))
+	q := b.buildPolicyActivityQuery(info, req)
+	src, err := q.Source()
+	require.NoError(t, err)
+
+	jsonBytes, _ := json.Marshal(src)
+	jsonStr := string(jsonBytes)
+
+	// Should include cluster and tenant filters in single-index mode.
+	assert.Contains(t, jsonStr, `"cluster"`)
+	assert.Contains(t, jsonStr, "c1")
+	assert.Contains(t, jsonStr, `"tenant"`)
+	assert.Contains(t, jsonStr, "t1")
+	// Should include generation prefix.
+	assert.Contains(t, jsonStr, "5|")
+}
+
+func TestGetPolicyActivity_SearchAfterPagination(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	// Simulate two search_after pages: first returns 2 hits, second returns 1 hit, third returns empty.
+	searchCount := 0
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		// Handle PIT open.
+		if r.Method == "POST" && strings.Contains(r.URL.Path, "_pit") {
+			_, _ = fmt.Fprint(w, `{"id":"test-pit-id"}`)
+			return
+		}
+		// Handle PIT close.
+		if r.Method == "DELETE" && r.URL.Path == "/_pit" {
+			_, _ = fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
+			return
+		}
+		if r.Method == "POST" && r.URL.Path == "/_search" {
+			searchCount++
+			if searchCount == 1 {
+				// First page of results.
+				response := fmt.Sprintf(`{
+					"pit_id": "test-pit-id",
+					"hits": {
+						"total": {"value": 0, "relation": "eq"},
+						"hits": [
+							{
+								"_id": "1", "sort": [0],
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+									"rule": "1|ingress|0",
+									"last_evaluated": %q
+								}
+							},
+							{
+								"_id": "2", "sort": [1],
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p1"},
+									"rule": "1|egress|0",
+									"last_evaluated": %q
+								}
+							}
+						]
+					}
+				}`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+				_, _ = fmt.Fprint(w, response)
+				return
+			}
+			if searchCount == 2 {
+				// Second page of results.
+				response := fmt.Sprintf(`{
+					"pit_id": "test-pit-id",
+					"hits": {
+						"total": {"value": 0, "relation": "eq"},
+						"hits": [
+							{
+								"_id": "3", "sort": [2],
+								"_source": {
+									"policy": {"kind": "NetworkPolicy", "namespace": "ns1", "name": "p2"},
+									"rule": "1|egress|0",
+									"last_evaluated": %q
+								}
+							}
+						]
+					}
+				}`, now.Format(time.RFC3339Nano))
+				_, _ = fmt.Fprint(w, response)
+				return
+			}
+			// Third search: empty hits to signal done.
+			_, _ = fmt.Fprint(w, `{"pit_id":"test-pit-id","hits":{"total":{"value":0,"relation":"eq"},"hits":[]}}`)
+			return
+		}
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}
+
+	b, ts := setupBackendWithHandler(t, handler)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p2", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
+
+	// p1 should have 2 rules (from page 1), p2 should have 1 rule (from page 2).
+	assert.Equal(t, "p1", resp.Items[0].Policy.Name)
+	assert.Len(t, resp.Items[0].Rules, 2)
+	assert.Equal(t, "p2", resp.Items[1].Policy.Name)
+	assert.Len(t, resp.Items[1].Rules, 1)
+
+	// Verify all pages were fetched (2 with data + 1 empty).
+	assert.Equal(t, 3, searchCount, "Should have made 3 search requests")
+}
+
+func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
+	b, ts := setupBackendWithHandler(t, nil)
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: ""} // Invalid - empty cluster
+
+	_, err := b.GetPolicyActivities(context.Background(), info, req)
+	assert.Error(t, err)
+}
+
+func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|__IMPLICIT_DENIED__",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|egress|__UNKNOWN__",
+				"last_evaluated": %q
+			}
+		}
+	]`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	require.Len(t, resp.Items[0].Rules, 2)
+
+	rulesByDirection := map[string]v1.PolicyActivityRuleResult{}
+	for _, r := range resp.Items[0].Rules {
+		rulesByDirection[r.Direction] = r
+	}
+
+	assert.Equal(t, "implicit_deny", rulesByDirection["ingress"].Index)
+	assert.Equal(t, "unknown", rulesByDirection["egress"].Index)
+}
+
+func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	earlier := now.Add(-1 * time.Hour)
+
+	// Two hits for the same rule (same policy, direction, index) with different timestamps.
+	hitsJSON := fmt.Sprintf(`[
+		{
+			"_id": "1",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		},
+		{
+			"_id": "2",
+			"_source": {
+				"policy": {"kind": "NetworkPolicy", "namespace": "ns", "name": "p1"},
+				"rule": "1|ingress|0",
+				"last_evaluated": %q
+			}
+		}
+	]`, earlier.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+
+	b, ts := setupBackendWithHandler(t, searchAfterHandler(t, hitsJSON, nil))
+	defer ts.Close()
+
+	req := &v1.PolicyActivityParams{
+		Policies: []v1.PolicyActivityQueryPolicy{
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+		},
+	}
+	info := bapi.ClusterInfo{Cluster: "c1"}
+
+	resp, err := b.GetPolicyActivities(context.Background(), info, req)
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+
+	// Should deduplicate to a single rule with the latest timestamp.
+	require.Len(t, resp.Items[0].Rules, 1)
+	assert.Equal(t, "ingress", resp.Items[0].Rules[0].Direction)
+	assert.Equal(t, "0", resp.Items[0].Rules[0].Index)
+	assert.Equal(t, now, resp.Items[0].Rules[0].LastEvaluated)
 }

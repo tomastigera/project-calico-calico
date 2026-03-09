@@ -1,9 +1,8 @@
 package v1
 
 import (
+	"fmt"
 	"time"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type PolicyActivity struct {
@@ -25,38 +24,49 @@ type PolicyInfo struct {
 	Name      string `json:"name"`
 }
 
+// PolicyActivityParams is the request type for the /policy_activity endpoint.
+// It accepts a list of policies (with generation) and returns aggregated policy
+// activity data with per-rule details.
 type PolicyActivityParams struct {
-	QueryParams `json:",inline" validate:"required"`
+	From     *time.Time                  `json:"from,omitempty"`
+	To       *time.Time                  `json:"to,omitempty"`
+	Policies []PolicyActivityQueryPolicy `json:"policies" validate:"dive"`
+}
 
-	Cluster string     `json:"cluster,omitempty"`
-	Tenant  string     `json:"tenant,omitempty"`
-	Policy  PolicyInfo `json:"policy"`
-	Rules   []string   `json:"rules,omitempty"`
+// PolicyActivityQueryPolicy identifies a specific policy and generation to query.
+type PolicyActivityQueryPolicy struct {
+	Kind       string `json:"kind" validate:"required"`
+	Namespace  string `json:"namespace"`
+	Name       string `json:"name" validate:"required"`
+	Generation int64  `json:"generation" validate:"gt=0"`
+}
 
+// PolicyActivityResponse is the response type for the /policy_activity endpoint.
+type PolicyActivityResponse struct {
+	Items []PolicyActivityResult `json:"items"`
+}
+
+// PolicyActivityResult contains aggregated policy activity for a single policy.
+type PolicyActivityResult struct {
+	Policy        PolicyInfo                 `json:"policy"`
+	LastEvaluated *time.Time                 `json:"last_evaluated,omitempty"`
+	Rules         []PolicyActivityRuleResult `json:"rules"`
+}
+
+// PolicyActivityRuleResult contains activity details for a single rule within a policy.
+type PolicyActivityRuleResult struct {
+	Direction string `json:"direction"`
+	// Index is the rule's position within the policy. It is typically a numeric
+	// string ("0", "1", …) but may also be a special sentinel: "implicit_deny"
+	// when the packet was denied by the policy's implicit default, or "unknown"
+	// when the rule index could not be determined.
+	Index         string    `json:"index"`
 	LastEvaluated time.Time `json:"last_evaluated"`
-	// Sort configures the sorting of results.
-	Sort []SearchRequestSortBy `json:"sort"`
-
-	Limit  int `json:"limit,omitempty"`
-	Offset int `json:"offset,omitempty"`
-
-	QuerySortParams `json:",inline"`
-	Selector        string `json:"selector"`
 }
 
-func (w *PolicyActivityParams) SetSelector(s string) {
-	w.Selector = s
-}
-
-func (w *PolicyActivityParams) GetSelector() string {
-	return w.Selector
-}
-
-func (w *PolicyActivityParams) SetPermissions(verbs []v3.AuthorizedResourceVerbs) {
-	// Intentionally left empty.
-	// This method is a placeholder for interface implementation and is not currently used.
-}
-
-func (w *PolicyActivityParams) GetPermissions() []v3.AuthorizedResourceVerbs {
+func (r *PolicyActivityParams) Valid() error {
+	if r.From != nil && r.To != nil && r.To.Before(*r.From) {
+		return fmt.Errorf("invalid time range: 'to' %q is before 'from' %q", r.To, r.From)
+	}
 	return nil
 }

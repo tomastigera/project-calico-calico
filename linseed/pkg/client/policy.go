@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -10,9 +9,8 @@ import (
 )
 
 type PolicyActivityInterface interface {
-	ListSummary(context.Context, v1.Params) (*v1.List[v1.PolicyActivity], error)
-	ListInto(context.Context, v1.Params, v1.Listable) error
 	Create(context.Context, []v1.PolicyActivity) (*v1.BulkResponse, error)
+	GetPolicyActivities(context.Context, *v1.PolicyActivityParams) (*v1.PolicyActivityResponse, error)
 }
 
 type PolicyActivityLogs struct {
@@ -25,31 +23,6 @@ func newPolicyActivityLogs(c Client, cluster string) PolicyActivityInterface {
 		restClient: c.RESTClient(),
 		clusterID:  cluster,
 	}
-}
-
-func (p *PolicyActivityLogs) ListSummary(ctx context.Context, params v1.Params) (*v1.List[v1.PolicyActivity], error) {
-	logs := v1.List[v1.PolicyActivity]{}
-	err := p.ListInto(ctx, params, &logs)
-	return &logs, err
-}
-
-// ListInto gets the policy activity for the given input params.
-func (p *PolicyActivityLogs) ListInto(ctx context.Context, params v1.Params, l v1.Listable) error {
-	if l == nil {
-		return fmt.Errorf("list cannot be nil")
-	}
-
-	err := p.restClient.Post().
-		Path("/policy_activity/logs").
-		Params(params).
-		Cluster(p.clusterID).
-		Do(ctx).
-		Into(l)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *PolicyActivityLogs) Create(ctx context.Context, logs []v1.PolicyActivity) (*v1.BulkResponse, error) {
@@ -76,6 +49,17 @@ func (p *PolicyActivityLogs) Create(ctx context.Context, logs []v1.PolicyActivit
 		Cluster(p.clusterID).
 		BodyJSON(body).
 		ContentType(rest.ContentTypeMultilineJSON).
+		Do(ctx).
+		Into(&resp)
+	return &resp, err
+}
+
+func (p *PolicyActivityLogs) GetPolicyActivities(ctx context.Context, req *v1.PolicyActivityParams) (*v1.PolicyActivityResponse, error) {
+	resp := v1.PolicyActivityResponse{}
+	err := p.restClient.Post().
+		Path("/policy_activity").
+		Params(req).
+		Cluster(p.clusterID).
 		Do(ctx).
 		Into(&resp)
 	return &resp, err

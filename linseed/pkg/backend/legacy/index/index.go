@@ -25,7 +25,6 @@ var (
 	DNSLogMultiIndex              bapi.Index = multiIndex{baseName: "tigera_secure_ee_dns", dataType: bapi.DNSLogs, hasLifeCycleEnabled: true}
 	FlowLogMultiIndex             bapi.Index = multiIndex{baseName: "tigera_secure_ee_flows", dataType: bapi.FlowLogs, hasLifeCycleEnabled: true}
 	RuntimeReportMultiIndex       bapi.Index = multiIndex{baseName: "tigera_secure_ee_runtime", dataType: bapi.RuntimeReports, hasLifeCycleEnabled: true}
-	PolicyActivityMultiIndex      bapi.Index = multiIndex{baseName: "tigera_secure_ee_policy_activity", dataType: bapi.PolicyActivity, hasLifeCycleEnabled: false}
 )
 
 // Single index - these all use a single index for all clusters and tenants.

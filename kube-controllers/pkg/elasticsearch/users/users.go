@@ -476,7 +476,13 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 						Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 						Indices: []elasticsearch.RoleIndex{
 							{
-								Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*")},
+								// "calico_policy_activity.*" grants Linseed access to the policy
+								// activity index where per-rule evaluation timestamps are stored.
+								// This name is hardcoded here because kube-controllers cannot import
+								// the linseed package. If the base index name changes in
+								// linseed/pkg/backend/legacy/index.PolicyActivityIndex(), it must
+								// be updated here as well.
+								Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), "calico_policy_activity.*"},
 								Privileges: []string{"create_index", "write", "manage", "read"},
 							},
 						},
