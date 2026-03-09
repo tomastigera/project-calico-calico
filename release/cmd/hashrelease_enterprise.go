@@ -399,7 +399,7 @@ func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("postrelease-hashrelease-validation.log")
 
-			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise", "smoke")
+			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise", "e2e")
 			args := []string{
 				"--format=testname",
 				"--", "-v", "./...",

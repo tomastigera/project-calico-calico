@@ -62,7 +62,7 @@ blocks:
         - name: Build and publish hashrelease
           commands:
             - make hashrelease
-            - artifact push workflow release/_output/hashrelease/hashrelease.yaml
+            - artifact push workflow _output/hashrelease/hashrelease.yaml
       prologue:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
@@ -84,7 +84,7 @@ blocks:
         - name: banzai-secrets
       prologue:
         commands:
-          - artifact pull workflow release/_output/hashrelease/hashrelease.yaml
+          - artifact pull workflow _output/hashrelease/hashrelease.yaml -d release/_output/hashrelease/hashrelease.yaml
       jobs:
         - name: "Run hashrelease enterprise smoke tests"
           execution_time_limit:

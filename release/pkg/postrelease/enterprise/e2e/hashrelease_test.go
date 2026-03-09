@@ -1,4 +1,4 @@
-package smoke
+package e2e
 
 import (
 	"flag"
@@ -20,7 +20,6 @@ const (
 	k8sE2EFlags      = `--ginkgo.focus=(\[SmokeTest\]) --ginkgo.skip=(\[Disabled\]|\[Slow\]|\[Disruptive\])`
 	enableSkimble    = "false"
 	functionalArea   = "smoke"
-	releaseStream    = "master"
 	useHashRelease   = "true"
 	useLatestRelease = "false"
 	provisionerType  = "gcp-kubeadm"
@@ -45,7 +44,6 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	t.Setenv("K8S_E2E_FLAGS", k8sE2EFlags)
 	t.Setenv("ENABLE_SKIMBLE", enableSkimble)
 	t.Setenv("FUNCTIONAL_AREA", functionalArea)
-	t.Setenv("RELEASE_STREAM", releaseStream)
 	t.Setenv("USE_HASH_RELEASE", useHashRelease)
 	t.Setenv("USE_LATEST_RELEASE", useLatestRelease)
 	t.Setenv("PROVISIONER", provisionerType)
@@ -60,6 +58,7 @@ func TestHashreleaseSmokeTests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load hashrelease metadata from %s: %v", hashreleaseMetadataFile, err)
 	}
+	t.Setenv("RELEASE_STREAM", metadata.Hashrelease.Stream)
 	url := strings.TrimRight(metadata.HashreleaseURL, "/")
 	t.Setenv("RELEASE_ARTIFACTS_URL", url+"/")
 	t.Setenv("DOCS_MANIFEST_URL", url+"/manifests")
