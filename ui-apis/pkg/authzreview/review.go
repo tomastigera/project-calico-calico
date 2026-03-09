@@ -54,6 +54,22 @@ type Reviewer interface {
 	ReviewForLogs(ctx context.Context, usr user.Info, cluster string) ([]v3.AuthorizedResourceVerbs, error)
 }
 
+type csFactoryContextKey struct{}
+
+// ContextWithClientSetFactory returns a new context carrying the given ClientSetFactory. When
+// the reviewer falls back to the AuthorizationReview CRD for managed clusters, it prefers this
+// factory over the static one configured at construction time. This allows callers (e.g., the
+// dashboard in Calico Cloud mode) to supply a per-request factory that authenticates as the end
+// user rather than the application service account.
+func ContextWithClientSetFactory(ctx context.Context, f lmak8s.ClientSetFactory) context.Context {
+	return context.WithValue(ctx, csFactoryContextKey{}, f)
+}
+
+func clientSetFactoryFromContext(ctx context.Context) lmak8s.ClientSetFactory {
+	f, _ := ctx.Value(csFactoryContextKey{}).(lmak8s.ClientSetFactory)
+	return f
+}
+
 // reviewer is the concrete implementation that wraps an rbac.Calculator for the local
 // (management) cluster and optionally a ClientSetFactory for reaching managed clusters.
 type reviewer struct {
@@ -108,6 +124,20 @@ func (r *reviewer) Review(
 	if kerrors.IsForbidden(err) || kerrors.IsUnauthorized(err) {
 		log.WithError(err).WithField("cluster", cluster).Info("Calculator returned permission error, falling back to API server implementation")
 
+		// Prefer a per-request factory from the context if one was provided. In Calico Cloud,
+		// the dashboard's per-request factory authenticates as the end user (via JWT bearer
+		// token), which is required because voltron/guardian won't allow the application SA
+		// to impersonate or be impersonated through the tunnel. If no context factory is
+		// available, fall back to the static application-identity factory.
+		fallbackFactory := clientSetFactoryFromContext(ctx)
+		if fallbackFactory == nil {
+			fallbackFactory = r.csFactory
+		}
+		fallbackCS, csErr := fallbackFactory.NewClientSetForApplication(cluster)
+		if csErr != nil {
+			return nil, fmt.Errorf("failed to create fallback client set for cluster %q: %w", cluster, csErr)
+		}
+
 		review := &v3.AuthorizationReview{
 			Spec: v3.AuthorizationReviewSpec{
 				ResourceAttributes: attrs,
@@ -117,7 +147,7 @@ func (r *reviewer) Review(
 			},
 		}
 
-		out, crdErr := cs.ProjectcalicoV3().AuthorizationReviews().Create(ctx, review, metav1.CreateOptions{})
+		out, crdErr := fallbackCS.ProjectcalicoV3().AuthorizationReviews().Create(ctx, review, metav1.CreateOptions{})
 		if crdErr != nil {
 			return nil, fmt.Errorf("failed to create AuthorizationReview on cluster %q: %w", cluster, crdErr)
 		}

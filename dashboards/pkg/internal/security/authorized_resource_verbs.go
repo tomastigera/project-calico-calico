@@ -70,7 +70,12 @@ func (a *authorizedResourcesVerbsCacheEntry) Revalidate(ctx Context, logger logg
 		if cacheItem.isStale(revalidateTTL) {
 			revalidateStart := time.Now()
 			var authorizedResourceVerbs []v3.AuthorizedResourceVerbs
-			authorizedResourceVerbs, err = cacheItem.reviewer.Review(ctx, ctx.UserInfo(), resource, dashboardReviewAttrs)
+			// Inject the per-request ClientSetFactory into the context so the reviewer
+			// can use it for the CRD fallback path on managed clusters. In Calico Cloud,
+			// this factory authenticates as the end user (JWT bearer token) rather than
+			// the application SA.
+			reviewCtx := authzreview.ContextWithClientSetFactory(ctx, ctx.ClientSetFactory())
+			authorizedResourceVerbs, err = cacheItem.reviewer.Review(reviewCtx, ctx.UserInfo(), resource, dashboardReviewAttrs)
 			logger.DebugC(ctx, "AuthorizationReview cache entry revalidated",
 				logging.Any("authorizedResourceVerbs", authorizedResourceVerbs),
 				logging.Error(err),

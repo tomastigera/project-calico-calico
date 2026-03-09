@@ -547,6 +547,7 @@ var _ = Describe("AuthorizationReviewHandler", func() {
 				// The local (management) calculator should NOT have been called.
 				Expect(calc.capturedUser).To(BeNil())
 
+				// Without a context-injected factory, the fallback reuses the static factory.
 				mockCSFactory.AssertCalled(GinkgoT(), "NewClientSetForApplication", "managed-01")
 			})
 		})

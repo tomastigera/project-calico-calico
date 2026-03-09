@@ -54,7 +54,7 @@ GCP_PROJECT ?= tigera-tesla
 TAG_NAME ?= $(if $(git-release-tag-for-current-commit),$(git-release-tag-for-current-commit),$(shell git describe --always --tags --long))
 DOCKERFILE=Dockerfile
 
-docker-build: $(BINDIR)/dashboard-api-$(ARCH)
+image docker-build: $(BINDIR)/dashboard-api-$(ARCH)
 	$(DOCKER_BUILD) \
 		--file ./$(DOCKERFILE) \
 		-t "gcr.io/$(GCP_PROJECT)/tigera/$(PROJECT_NAME):$(TAG_NAME)" .
