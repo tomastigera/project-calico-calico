@@ -718,6 +718,8 @@ rules:
       - projectcalico.org
     resourceNames:
       - calico-system.*
+      # allow-tigera is the old name for the calico-system tier. The operator needs
+      # permission to delete policies in this tier during upgrade.
       - allow-tigera.*
     resources:
       - tier.networkpolicies
@@ -743,6 +745,8 @@ rules:
       - projectcalico.org
     resourceNames:
       - calico-system
+      # allow-tigera is the old name for the calico-system tier. The operator needs
+      # permission to delete this tier during upgrade.
       - allow-tigera
     resources:
       - tiers
