@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 
 package flows
 
@@ -46,6 +46,11 @@ func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, builders ...func(v1.P
 			query, err := build(m)
 			if err != nil {
 				return nil, err
+			}
+			if query == nil {
+				// No match possible for this builder (e.g., a legacy query for a
+				// policy name pattern that couldn't exist in older flow logs).
+				continue
 			}
 			b.Should(query)
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 
 package flows
 
@@ -19,6 +19,9 @@ func allPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 	matchString, err := CompileLegacyStringMatch(m)
 	if err != nil {
 		return nil, err
+	}
+	if matchString == "" {
+		return nil, nil
 	}
 
 	b := elastic.NewBoolQuery()
@@ -42,6 +45,9 @@ func enforcedPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 	if err != nil {
 		return nil, err
 	}
+	if matchString == "" {
+		return nil, nil
+	}
 
 	return elastic.NewWildcardQuery("policies.enforced_policies", matchString), nil
 }
@@ -51,6 +57,9 @@ func pendingPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 	if err != nil {
 		return nil, err
 	}
+	if matchString == "" {
+		return nil, nil
+	}
 
 	return elastic.NewWildcardQuery("policies.pending_policies", matchString), nil
 }
@@ -59,6 +68,9 @@ func transitPolicyQueryLegacy(m v1.PolicyMatch) (elastic.Query, error) {
 	matchString, err := CompileLegacyStringMatch(m)
 	if err != nil {
 		return nil, err
+	}
+	if matchString == "" {
+		return nil, nil
 	}
 
 	return elastic.NewWildcardQuery("policies.transit_policies", matchString), nil
@@ -79,6 +91,12 @@ func CompileLegacyStringMatch(m v1.PolicyMatch) (string, error) {
 	tier, nameMatch, err := calculateTierAndNameMatch(m.Type, name, namespace, m.Tier, m.Staged != nil && *m.Staged)
 	if err != nil {
 		return "", err
+	}
+	if tier == "" && nameMatch == "" {
+		// No possible match in the legacy format (e.g., policy name contains a dot
+		// prefix that doesn't match the tier — this pattern never existed in older
+		// versions of Calico).
+		return "", nil
 	}
 
 	// Set the action if an action is provided, otherwise action should be set to `*` to match against all actions
@@ -140,11 +158,19 @@ func calculateCalicoPolicyTierAndName(staged bool, name, namespace, tier string)
 		tier = "*"
 	}
 	if name != "*" {
-		// Split the tier from the name, if it is present. We need to do this because in newer versions of Calico, we no longer
-		// prefix the tier to the policy name, but in older versions we did. So newer requests may show up with name=tier.name, and we need
-		// to pick them apart to match older logs correctly.
+		// In older versions of Calico, policy names were always prefixed with the tier
+		// (e.g., "platform.loadgenerator" in tier "platform"). Newer versions treat the
+		// name as opaque, so a request might include the tier prefix or not.
+		//
+		// If the name contains a dot and the prefix matches the tier, strip it so we can
+		// reconstruct the legacy format below. If the prefix does NOT match the tier, this
+		// policy could never have existed in the legacy format, so there's nothing to match.
 		splits := strings.SplitN(nameMatch, ".", 2)
 		if len(splits) == 2 {
+			if tier != "*" && splits[0] != tier {
+				// The dot-prefix doesn't match the tier — impossible in legacy flow logs.
+				return "", "", nil
+			}
 			nameMatch = splits[1]
 		}
 	}

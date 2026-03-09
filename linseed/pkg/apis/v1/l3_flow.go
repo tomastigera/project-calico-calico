@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 
 package v1
 
@@ -119,9 +119,10 @@ type PolicyMatch struct {
 	// The action taken by the policy.
 	Action *FlowAction `json:"action,omitempty" validate:"omitempty"`
 
-	// Namespace and name of the policy.
+	// Namespace and name of the policy. Name may contain dots since policy names
+	// are opaque strings (the tier prefix is no longer part of the name).
 	Namespace *string `json:"namespace,omitempty" validate:"omitempty,excludesall=.:/"`
-	Name      *string `json:"name,omitempty" validate:"omitempty,excludesall=.:/"`
+	Name      *string `json:"name,omitempty" validate:"omitempty,excludesall=:/"`
 }
 
 type PolicyType string
