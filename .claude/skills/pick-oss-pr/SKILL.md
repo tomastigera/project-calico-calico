@@ -101,27 +101,37 @@ Common conflicts:
 
 For multiple PRs, cherry-pick each merge commit in sequence.
 
-**Empty cherry-pick (changes already present):**
+**Cherry-pick not applicable (empty commit or files don't exist):**
 
-If after resolving conflicts `git cherry-pick --continue` reports the commit is
-empty, the enterprise repo already contains all the changes from that OSS PR.
-Skip it with `git cherry-pick --skip` and label that specific PR:
+A cherry-pick is "not applicable" when either:
+- `git cherry-pick --continue` reports the commit is empty (changes already
+  present in enterprise), or
+- All changed files from the OSS PR don't exist in the enterprise repo (e.g.,
+  OSS-only CI pipelines, OSS-only components). You can check this before
+  attempting the cherry-pick by comparing the OSS PR's changed files against
+  the enterprise tree.
+
+In either case, skip the PR and **always label it** on the OSS side:
 
 ```bash
 gh pr edit <PR> --repo projectcalico/calico --add-label "skip-bot-cherry-pick"
 ```
 
+For empty cherry-picks, also run `git cherry-pick --skip`.
+
 **For multi-PR picks**, track which PRs were skipped vs successfully picked.
 Continue cherry-picking the remaining PRs in sequence. At the end:
 
-- **All PRs empty**: clean up the branch, do not create a calico-private PR,
-  and report which PRs were skipped and why.
-- **Some PRs empty, some picked**: proceed with the normal workflow (steps 4–6)
-  for the successfully picked PRs. Exclude the skipped PRs from the branch
-  name, PR title, and PR body. Mention the skipped PRs in the PR body as a
-  note (e.g., "Skipped projectcalico/calico#NNNN — already present in
-  enterprise"). Label only the skipped OSS PRs with `skip-bot-cherry-pick`.
-- **Single PR empty**: clean up the branch, do not create a calico-private PR.
+- **All PRs skipped**: clean up the branch, do not create a calico-private PR,
+  label all OSS PRs with `skip-bot-cherry-pick`, and report which PRs were
+  skipped and why.
+- **Some PRs skipped, some picked**: proceed with the normal workflow
+  (steps 4–6) for the successfully picked PRs. Exclude the skipped PRs from
+  the branch name, PR title, and PR body. Mention the skipped PRs in the PR
+  body as a note (e.g., "Skipped projectcalico/calico#NNNN — already present
+  in enterprise"). Label the skipped OSS PRs with `skip-bot-cherry-pick`.
+- **Single PR skipped**: clean up the branch, do not create a calico-private
+  PR, label the OSS PR with `skip-bot-cherry-pick`.
 
 In all cases, tell the user which PRs were skipped and why.
 
@@ -139,16 +149,21 @@ If hits are found in Go files, replace `github.com/projectcalico/api` with
 `github.com/tigera/api` in those files. This commonly shows up in import
 paths and `go.mod`/`go.sum`.
 
-If the cherry-picked changes touch anything that feeds into code generation
-(API types, protobuf, helm charts, CI templates), run the relevant `make`
-target to regenerate:
+After fixing module references, always check what files changed and run the
+appropriate generation targets. Use `git diff HEAD~1 --name-only` to get the
+list of changed files, then apply **all** matching rules:
 
-| Changed files | Regenerate with |
+| Changed files match | Run |
 |---|---|
-| `api/` types or CRDs | `make -C api gen-files` |
-| `.proto` files | `make protobuf` |
+| `api/` | `make -C api gen-files` |
+| `*.proto` | `make protobuf` |
 | `charts/` | `make gen-manifests` |
 | `.semaphore/semaphore.yml.d/` | `make gen-semaphore-yaml` |
+
+If **any** of the above matched, also run `make generate` as a catch-all to
+pick up anything the individual targets might miss (e.g., cross-component
+codegen dependencies). This is cheap compared to debugging CI failures from
+stale generated files.
 
 Commit any fixups (module path replacements, regenerated files) as separate
 commits on top of the cherry-pick.
