@@ -3,9 +3,6 @@
 package winfv_test
 
 import (
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +12,10 @@ import (
 	"github.com/tigera/windows-networking/pkg/testutils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/felix/collector/flowlog"
+	"github.com/projectcalico/calico/felix/collector/types/endpoint"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	. "github.com/projectcalico/calico/felix/fv/winfv"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
@@ -38,38 +39,18 @@ func init() {
 //                                              nginx
 //
 
-type aggregation int
-
-const (
-	AggrNone         aggregation = 0
-	AggrBySourcePort aggregation = 1
-	AggrByPodPrefix  aggregation = 2
-)
-
-type expectation struct {
-	labels                bool
-	policies              bool
-	aggregationForAllowed aggregation
-	aggregationForDenied  aggregation
-}
-
 var _ = Describe("Windows flow logs test", func() {
 	var (
-		expectation                    expectation
-		flowLogsReaders                []flowlogs.FlowLogReader
 		porter, client, clientB, nginx string
 		fv                             *WinFV
 		err                            error
 	)
 
 	BeforeEach(func() {
-		Skip("Temporarily skip failing flow log tests on HPC") //TODO
 		fv, err = NewWinFV(winutils.GetHostPath("c:\\CalicoWindows"),
 			winutils.GetHostPath("c:\\TigeraCalico\\flowlogs"),
 			winutils.GetHostPath("c:\\TigeraCalico\\felix-dns-cache.txt"))
 		Expect(err).NotTo(HaveOccurred())
-
-		flowLogsReaders = []flowlogs.FlowLogReader{fv}
 
 		// Get Pod IPs.
 		client = testutils.InfraPodIP("client", "demo")
@@ -85,151 +66,67 @@ var _ = Describe("Windows flow logs test", func() {
 		Expect(nginx).NotTo(BeEmpty())
 	})
 
-	AfterEach(func() {
-		err := fv.RestoreConfig()
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	checkFlowLogs := func() {
-		// Within 60s we should see the complete set of expected allow and deny
-		// flow logs.
+	checkFlowLogs := func(expectedFlows []flowlog.FlowLog) {
+		// Within 120s we should see the complete set of expected allow and deny
+		// flow logs. Traffic is generated on each iteration because on Windows,
+		// ETW events for allowed connections fire only on the first packet; if
+		// Felix is still restarting when traffic is first sent, it will miss
+		// those events entirely. The long timeout accounts for slow HPC Felix
+		// restarts triggered by config changes.
 		Eventually(func() error {
-			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, expectation.labels, expectation.policies, 80)
-			err := flowTester.PopulateFromFlowLogs()
-			if err != nil {
+			testutils.InfraInitiateTraffic()
+			flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+				ExpectLabels:           true,
+				ExpectEnforcedPolicies: true,
+				MatchEnforcedPolicies:  true,
+				Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(80)},
+			})
+			if err := flowTester.PopulateFromFlowLogs(fv); err != nil {
 				return err
 			}
-
-			// Only report errors at the end.
-			var errs []string
-
-			// Now we tick off each FlowMeta that we expect, and check that
-			// the log(s) for each one are present and as expected.
-			switch expectation.aggregationForAllowed {
-			case AggrNone:
-				err = flowTester.CheckFlow(
-					"wep demo client client", client,
-					"wep demo porter porter", porter,
-					flowlogs.NoService, 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "dst",
-							Action:           "allow",
-							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 1: %v", err))
-				}
-				err = flowTester.CheckFlow(
-					"wep demo porter porter", porter,
-					"wep demo nginx nginx", nginx,
-					"demo nginx - 80", 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "src",
-							Action:           "allow",
-							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
-				}
-			case AggrByPodPrefix:
-				err = flowTester.CheckFlow(
-					"wep demo - client", "",
-					"wep demo - porter", "",
-					flowlogs.NoService, 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "dst",
-							Action:           "allow",
-							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-client|allow|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 1: %v", err))
-				}
-				err = flowTester.CheckFlow(
-					"wep demo - porter", "",
-					"wep demo - nginx", "",
-					"demo nginx - 80", 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "src",
-							Action:           "allow",
-							EnforcedPolicies: []string{"0|default|demo/knp.default.allow-nginx|allow|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
-				}
+			for _, fl := range expectedFlows {
+				flowTester.CheckFlow(fl)
 			}
-			switch expectation.aggregationForDenied {
-			case AggrNone:
-				err = flowTester.CheckFlow(
-					"wep demo client-b client-b", clientB,
-					"wep demo porter porter", porter,
-					flowlogs.NoService, 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "dst",
-							Action:           "deny",
-							EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
-				}
-			case AggrBySourcePort:
-				err = flowTester.CheckFlow(
-					"wep demo client-b client-b", clientB,
-					"wep demo porter porter", porter,
-					flowlogs.NoService, 1, 1,
-					[]flowlogs.ExpectedPolicy{
-						{
-							Reporter:         "dst",
-							Action:           "deny",
-							EnforcedPolicies: []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"},
-						},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
-				}
-			}
-
-			// Finally check that there are no remaining flow logs that we did not expect.
-			err = flowTester.CheckAllFlowsAccountedFor()
-			if err != nil {
-				errs = append(errs, err.Error())
-			}
-
-			if len(errs) == 0 {
-				return nil
-			}
-
-			return errors.New(strings.Join(errs, "\n==============\n"))
-
-		}, "60s", "10s").ShouldNot(HaveOccurred())
+			return flowTester.Finish()
+		}, "120s", "10s").ShouldNot(HaveOccurred())
 	}
 
-	Context("File flow logs only", func() {
+	Context("File flow logs only", Ordered, ContinueOnFailure, func() {
+		// Dump Felix logs on failure BEFORE AfterAll restarts Felix,
+		// so we capture logs from the correct Felix instance.
+		AfterEach(func() {
+			if CurrentSpecReport().Failed() {
+				cmd := `c:\k\kubectl.exe --kubeconfig=c:\k\config -n calico-system logs -l k8s-app=calico-node-windows -c felix --since=5m`
+				out, _ := testutils.Powershell(cmd)
+				log.Infof("=== Felix logs (last 5m) ===\n%s", out)
+			}
+		})
+
+		AfterAll(func() {
+			err := fv.RestoreConfig()
+			Expect(err).NotTo(HaveOccurred())
+
+			// On HPC, RestoreConfig triggers a Felix restart via datastore
+			// config change. Wait for it to complete so the next test starts
+			// with a settled Felix.
+			if IsRunningHPC() {
+				log.Info("Waiting for Felix to settle after config restore...")
+				time.Sleep(40 * time.Second)
+			}
+		})
+
 		setupAndRunFelix := func(config map[string]any) {
 			err := fv.AddConfigItems(config)
 			Expect(err).NotTo(HaveOccurred())
 
 			fv.RestartFelix()
 
-			// Initiate traffic.
-			testutils.InfraInitiateTraffic()
+			// Set a cutoff so we only read flow logs generated from now on,
+			// ignoring stale entries from previous Felix instances.
+			fv.SnapshotFlowLogOffset()
 		}
 
 		It("should get expected flow logs with no aggregation", func() {
-			expectation.labels = true
-			expectation.policies = true
-			expectation.aggregationForAllowed = AggrNone
-			expectation.aggregationForDenied = AggrNone
-
 			zero := 0
 			var tenSeconds metav1.Duration
 			tenSeconds.Duration = 10 * time.Second
@@ -240,15 +137,52 @@ var _ = Describe("Windows flow logs test", func() {
 			}
 			setupAndRunFelix(config)
 
-			checkFlowLogs()
+			clientIP := utils.IpStrTo16Byte(client)
+			clientBIP := utils.IpStrTo16Byte(clientB)
+			porterIP := utils.IpStrTo16Byte(porter)
+			nginxIP := utils.IpStrTo16Byte(nginx)
+
+			checkFlowLogs([]flowlog.FlowLog{
+				// client → porter: allowed by knp allow-client
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(clientIP, porterIP, 6, flowlogs.SourcePortIsIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "client", AggregatedName: "client"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "porter", AggregatedName: "porter"},
+						DstService: flowlog.EmptyService,
+						Action:     flowlog.ActionAllow,
+						Reporter:   flowlog.ReporterDst,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|knp:demo/allow-client|allow|0": {}},
+				},
+				// porter → nginx: allowed by knp allow-nginx
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(porterIP, nginxIP, 6, flowlogs.SourcePortIsIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "porter", AggregatedName: "porter"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "nginx", AggregatedName: "nginx"},
+						DstService: flowlog.FlowService{Namespace: "demo", Name: "nginx", PortName: "-", PortNum: 80},
+						Action:     flowlog.ActionAllow,
+						Reporter:   flowlog.ReporterSrc,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|knp:demo/allow-nginx|allow|0": {}},
+				},
+				// client-b → porter: denied (no matching policy)
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(clientBIP, porterIP, 6, flowlogs.SourcePortIsIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "client-b", AggregatedName: "client-b"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "porter", AggregatedName: "porter"},
+						DstService: flowlog.EmptyService,
+						Action:     flowlog.ActionDeny,
+						Reporter:   flowlog.ReporterDst,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|__PROFILE__|pro:__NO_MATCH__|deny|0": {}},
+				},
+			})
 		})
 
 		It("should get expected flow logs with default aggregation", func() {
-			expectation.labels = true
-			expectation.policies = true
-			expectation.aggregationForAllowed = AggrByPodPrefix
-			expectation.aggregationForDenied = AggrBySourcePort
-
 			one := 1
 			two := 2
 			var tenSeconds metav1.Duration
@@ -260,7 +194,51 @@ var _ = Describe("Windows flow logs test", func() {
 			}
 			setupAndRunFelix(config)
 
-			checkFlowLogs()
+			clientBIP := utils.IpStrTo16Byte(clientB)
+			porterIP := utils.IpStrTo16Byte(porter)
+
+			// Aggregation kinds >= 1 (FlowSourcePort, FlowPrefixName) set the
+			// source port to -1 internally, which serializes as null in the
+			// JSON flow log file. When deserialized, null becomes 0, so the
+			// flow tester sees SourcePortIsNotIncluded for all aggregated flows.
+			checkFlowLogs([]flowlog.FlowLog{
+				// client → porter: allowed, aggregated by pod prefix (no IPs, no names, no source port)
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(flowlog.EmptyIP, flowlog.EmptyIP, 6, flowlogs.SourcePortIsNotIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: flowlog.FieldNotIncluded, AggregatedName: "client"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: flowlog.FieldNotIncluded, AggregatedName: "porter"},
+						DstService: flowlog.EmptyService,
+						Action:     flowlog.ActionAllow,
+						Reporter:   flowlog.ReporterDst,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|knp:demo/allow-client|allow|0": {}},
+				},
+				// porter → nginx: allowed, aggregated by pod prefix (no source port)
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(flowlog.EmptyIP, flowlog.EmptyIP, 6, flowlogs.SourcePortIsNotIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: flowlog.FieldNotIncluded, AggregatedName: "porter"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: flowlog.FieldNotIncluded, AggregatedName: "nginx"},
+						DstService: flowlog.FlowService{Namespace: "demo", Name: "nginx", PortName: "-", PortNum: 80},
+						Action:     flowlog.ActionAllow,
+						Reporter:   flowlog.ReporterSrc,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|default|knp:demo/allow-nginx|allow|0": {}},
+				},
+				// client-b → porter: denied, aggregated by source port (no source port)
+				{
+					FlowMeta: flowlog.FlowMeta{
+						Tuple:      tuple.Make(clientBIP, porterIP, 6, flowlogs.SourcePortIsNotIncluded, 80),
+						SrcMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "client-b", AggregatedName: "client-b"},
+						DstMeta:    endpoint.Metadata{Type: endpoint.Wep, Namespace: "demo", Name: "porter", AggregatedName: "porter"},
+						DstService: flowlog.EmptyService,
+						Action:     flowlog.ActionDeny,
+						Reporter:   flowlog.ReporterDst,
+					},
+					FlowEnforcedPolicySet: flowlog.FlowPolicySet{"0|__PROFILE__|pro:__NO_MATCH__|deny|0": {}},
+				},
+			})
 		})
 	})
 })
