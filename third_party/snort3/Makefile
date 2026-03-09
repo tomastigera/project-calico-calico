@@ -1,4 +1,4 @@
-# Copyright 2024 Tigera Inc. All rights reserved.
+# Copyright 2024-2026 Tigera Inc. All rights reserved.
 
 include ../../metadata.mk
 
@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 SNORT3_IMAGE ?= snort
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
-SNORT3_VERSION = 3.10.0.0
+SNORT3_VERSION = 3.10.2.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
