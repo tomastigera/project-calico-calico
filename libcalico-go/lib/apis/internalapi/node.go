@@ -26,6 +26,9 @@ const (
 	CalicoNodeIP = "CalicoNodeIP"
 	InternalIP   = "InternalIP"
 	ExternalIP   = "ExternalIP"
+
+	NodeLBMaintenanceExcludeLocalBackends = "ExcludeLocalBackends"
+	NodeLBMaintenanceNone                 = "None"
 )
 
 // +genclient
@@ -64,6 +67,9 @@ type NodeSpec struct {
 
 	// Wireguard configuration for this node.
 	Wireguard *NodeWireguardSpec `json:"wireguard,omitempty" validate:"omitempty"`
+
+	// LoadBalancer configuration for this node.
+	LoadBalancer *NodeLoadBalancerSpec `json:"loadBalancer,omitempty" validate:"omitempty"`
 
 	// Addresses list address that a client can reach the node at.
 	Addresses []NodeAddress `json:"addresses,omitempty" validate:"omitempty"`
@@ -133,6 +139,13 @@ type NodeWireguardSpec struct {
 
 	// InterfaceIPv6Address is the IP address for the IPv6 Wireguard interface.
 	InterfaceIPv6Address string `json:"interfaceIPv6Address,omitempty" validate:"omitempty,ipv6"`
+}
+
+// NodeLoadBalancerSpec contains the specification for the Node load balancer configuration.
+type NodeLoadBalancerSpec struct {
+	// Maintenance specifies the load balancer maintenance mode for this node.
+	// Possible values are "ExcludeLocalBackends" or "None".
+	Maintenance string `json:"maintenance,omitempty" validate:"omitempty,oneof=None ExcludeLocalBackends"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

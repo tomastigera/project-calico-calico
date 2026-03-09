@@ -628,12 +628,18 @@ message WireguardStatusUpdate {
 message DataplaneInSync {
 }
 
+enum LoadbalancerMaintenance {
+  LB_MAINT_NONE = 0;
+  LB_MAINT_EXCLUDE_LOCAL_BACKENDS = 1;
+}
+
 message HostMetadataV4V6Update {
   string hostname = 1;
   string ipv4_addr = 2;
   string ipv6_addr = 3;
   string asnumber = 4;
   map<string, string> labels = 5;
+  LoadbalancerMaintenance loadbalancer_maintenance = 6;
 }
 
 message HostMetadataV4V6Remove {

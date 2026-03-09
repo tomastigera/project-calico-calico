@@ -17,6 +17,7 @@ package proxy_test
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -1257,6 +1258,156 @@ var _ = Describe("BPF Syncer", func() {
 
 	})
 
+	Describe("Maintenance node filtering", func() {
+		var (
+			svcKey = k8sp.ServicePortName{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "service",
+				},
+			}
+			svcKey2 = k8sp.ServicePortName{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "service2",
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			svcs = newMockNATMap()
+			eps = newMockNATBackendMap()
+			mgEps = newMockMaglevMap()
+			aff = newMockAffinityMap()
+			rt = proxy.NewRTCache()
+			s, _ = proxy.NewSyncer(4, nodeIPs, svcs, eps, mgEps, aff, rt, nil, maglevLUTSize)
+		})
+
+		type testCase struct {
+			service              k8sp.ServicePortMap
+			endpoints            k8sp.EndpointsMap
+			maintenanceEndpoints []proxy.MaintenanceEndpointKey // endpoints on maintenance nodes
+			expectBack           []string                       // expected backend IPs after filtering
+		}
+
+		DescribeTable("endpoint selection with maintenance nodes",
+			func(tc testCase) {
+				me := proxy.NewMaintenanceEndpoints()
+				for _, hp := range tc.maintenanceEndpoints {
+					me.Add(hp)
+				}
+
+				state := proxy.DPSyncerState{
+					SvcMap:               tc.service,
+					EpsMap:               tc.endpoints,
+					MaintenanceEndpoints: me,
+				}
+
+				err := s.Apply(state)
+				Expect(err).NotTo(HaveOccurred())
+
+				var backendIPs []string
+				for _, v := range eps.m {
+					backendIPs = append(backendIPs, v.Addr().String())
+				}
+				Expect(backendIPs).To(ConsistOf(tc.expectBack))
+
+				maglevIPSet := make(map[string]struct{})
+				for _, v := range mgEps.m {
+					maglevIPSet[v.Addr().String()] = struct{}{}
+				}
+				maglevIPsFound := make([]string, 0)
+				// Turn the map into a list to avail of convenient Ginkgo method.
+				for ep := range maglevIPSet {
+					maglevIPsFound = append(maglevIPsFound, ep)
+				}
+
+				Expect(maglevIPsFound).To(ConsistOf(tc.expectBack))
+			},
+			Entry("filters out endpoints on a maintenance node", testCase{
+				service: k8sp.ServicePortMap{
+					svcKey: svc("10.0.0.60", 8080).maglev().build(),
+				},
+				endpoints: k8sp.EndpointsMap{
+					svcKey: []k8sp.Endpoint{
+						ep("10.60.0.1", 8081).build(),
+						ep("10.60.0.2", 8082).build(), // on maintenance node
+						ep("10.60.0.3", 8083).build(),
+					},
+				},
+				maintenanceEndpoints: []proxy.MaintenanceEndpointKey{
+					{ServiceName: svcKey.NamespacedName, EndpointAddr: addr("10.60.0.2")}},
+				expectBack: []string{"10.60.0.1", "10.60.0.3"},
+			}),
+			Entry("passes all endpoints through when no maintenance nodes are set", testCase{
+				service: k8sp.ServicePortMap{
+					svcKey: svc("10.0.0.61", 8080).maglev().build(),
+				},
+				endpoints: k8sp.EndpointsMap{
+					svcKey: []k8sp.Endpoint{
+						ep("10.61.0.1", 8081).build(),
+						ep("10.61.0.2", 8082).build(),
+					},
+				},
+				maintenanceEndpoints: []proxy.MaintenanceEndpointKey{},
+				expectBack:           []string{"10.61.0.1", "10.61.0.2"},
+			}),
+			Entry("failsafe: passes all endpoints through when no endpoints would be left after filtering", testCase{
+				service: k8sp.ServicePortMap{
+					svcKey: svc("10.0.0.62", 8080).maglev().build(),
+				},
+				endpoints: k8sp.EndpointsMap{
+					svcKey: []k8sp.Endpoint{
+						ep("10.62.0.1", 8081).build(),
+						ep("10.62.0.2", 8082).build(),
+					},
+				},
+				maintenanceEndpoints: []proxy.MaintenanceEndpointKey{
+					{ServiceName: svcKey.NamespacedName, EndpointAddr: addr("10.62.0.2")},
+					{ServiceName: svcKey.NamespacedName, EndpointAddr: addr("10.62.0.1")},
+				},
+				expectBack: []string{"10.62.0.1", "10.62.0.2"},
+			}),
+			Entry("same maintenance endpoint backing two services: should filter it", testCase{
+				service: k8sp.ServicePortMap{
+					svcKey:  svc("10.0.0.63", 8080).maglev().build(),
+					svcKey2: svc("10.0.0.64", 8080).maglev().build(),
+				},
+				endpoints: k8sp.EndpointsMap{
+					svcKey: []k8sp.Endpoint{
+						ep("10.63.0.1", 8081).build(),
+						ep("10.63.0.2", 8082).build(),
+					},
+					svcKey2: []k8sp.Endpoint{
+						ep("10.63.0.1", 8081).build(),
+						ep("10.63.0.3", 8081).build(),
+					},
+				},
+				maintenanceEndpoints: []proxy.MaintenanceEndpointKey{
+					{ServiceName: svcKey.NamespacedName, EndpointAddr: addr("10.63.0.1")},
+					{ServiceName: svcKey2.NamespacedName, EndpointAddr: addr("10.63.0.1")},
+				},
+				expectBack: []string{"10.63.0.2", "10.63.0.3"},
+			}),
+			Entry("transient case: two endpoints share the same address: both should be filtered if one is under maintenance", testCase{
+				service: k8sp.ServicePortMap{
+					svcKey: svc("10.0.0.63", 8080).maglev().build(),
+				},
+				endpoints: k8sp.EndpointsMap{
+					svcKey: []k8sp.Endpoint{
+						ep("10.63.0.1", 8081).build(),
+						ep("10.63.0.1", 8081).build(),
+						ep("10.63.0.2", 8081).build(),
+					},
+				},
+				maintenanceEndpoints: []proxy.MaintenanceEndpointKey{
+					{ServiceName: svcKey.NamespacedName, EndpointAddr: addr("10.63.0.1")},
+				},
+				expectBack: []string{"10.63.0.2"},
+			}),
+		)
+	})
+
 	Describe("Topology-aware routing and traffic distribution integration", func() {
 		var (
 			svcKeyTopo = k8sp.ServicePortName{
@@ -1806,6 +1957,11 @@ func (s *svcBuilder) topology(mode string) *svcBuilder {
 	return s
 }
 
+func (s *svcBuilder) maglev() *svcBuilder {
+	s.opts = append(s.opts, proxy.K8sSvcWithMaglev())
+	return s
+}
+
 func (s *svcBuilder) build() k8sp.ServicePort {
 	return proxy.NewK8sServicePort(
 		s.ip,
@@ -1851,4 +2007,8 @@ func (e *epBuilder) zones(zones ...string) *epBuilder {
 
 func (e *epBuilder) build() k8sp.Endpoint {
 	return proxy.NewEndpointInfo(e.ip, e.port, e.opts...)
+}
+
+func addr(ip string) netip.Addr {
+	return netip.MustParseAddr(ip)
 }

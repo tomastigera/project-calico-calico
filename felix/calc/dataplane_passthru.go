@@ -147,6 +147,12 @@ func (h *DataplanePassthru) OnUpdate(update api.Update) (filterOut bool) {
 				bgpIp4net := &net.IPNet{} // required for print in event sequencer
 				bgpIp6net := &net.IPNet{} // required for print in event sequencer
 				asnumber := ""
+
+				lbMaintenance := proto.LoadbalancerMaintenance_LB_MAINT_NONE
+				if node.Spec.LoadBalancer != nil && node.Spec.LoadBalancer.Maintenance == internalapi.NodeLBMaintenanceExcludeLocalBackends {
+					lbMaintenance = proto.LoadbalancerMaintenance_LB_MAINT_EXCLUDE_LOCAL_BACKENDS
+				}
+
 				if node.Spec.BGP != nil {
 					ip4, ip4net, _ := net.ParseCIDR(node.Spec.BGP.IPv4Address)
 					ip6, ip6net, _ := net.ParseCIDR(node.Spec.BGP.IPv6Address)
@@ -162,7 +168,7 @@ func (h *DataplanePassthru) OnUpdate(update api.Update) (filterOut bool) {
 						asnumber = node.Spec.BGP.ASNumber.String()
 					}
 				}
-				h.callbacks.OnHostMetadataUpdate(hostname, bgpIp4net, bgpIp6net, asnumber, node.Labels)
+				h.callbacks.OnHostMetadataUpdate(hostname, bgpIp4net, bgpIp6net, asnumber, lbMaintenance, node.Labels)
 				if node.Spec.BGP != nil {
 					if node.Spec.BGP.IPv6Address != "" {
 						ip, _, _ := net.ParseCIDR(node.Spec.BGP.IPv6Address)

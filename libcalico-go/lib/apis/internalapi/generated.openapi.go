@@ -51,6 +51,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeBGPSpec":                schema_libcalico_go_lib_apis_internalapi_NodeBGPSpec(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeInterface":              schema_libcalico_go_lib_apis_internalapi_NodeInterface(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeList":                   schema_libcalico_go_lib_apis_internalapi_NodeList(ref),
+		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeLoadBalancerSpec":       schema_libcalico_go_lib_apis_internalapi_NodeLoadBalancerSpec(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeSpec":                   schema_libcalico_go_lib_apis_internalapi_NodeSpec(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeStatus":                 schema_libcalico_go_lib_apis_internalapi_NodeStatus(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeWireguardSpec":          schema_libcalico_go_lib_apis_internalapi_NodeWireguardSpec(ref),
@@ -1224,6 +1225,26 @@ func schema_libcalico_go_lib_apis_internalapi_NodeList(ref common.ReferenceCallb
 	}
 }
 
+func schema_libcalico_go_lib_apis_internalapi_NodeLoadBalancerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeLoadBalancerSpec contains the specification for the Node load balancer configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"maintenance": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maintenance specifies the load balancer maintenance mode for this node. Possible values are \"ExcludeLocalBackends\" or \"None\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_internalapi_NodeSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1285,6 +1306,12 @@ func schema_libcalico_go_lib_apis_internalapi_NodeSpec(ref common.ReferenceCallb
 							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeWireguardSpec"),
 						},
 					},
+					"loadBalancer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancer configuration for this node.",
+							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeLoadBalancerSpec"),
+						},
+					},
 					"addresses": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Addresses list address that a client can reach the node at.",
@@ -1317,7 +1344,7 @@ func schema_libcalico_go_lib_apis_internalapi_NodeSpec(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeAddress", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeBGPSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeInterface", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeWireguardSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.OrchRef"},
+			"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeAddress", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeBGPSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeInterface", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeLoadBalancerSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.NodeWireguardSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi.OrchRef"},
 	}
 }
 

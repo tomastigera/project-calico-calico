@@ -649,6 +649,9 @@ func (s *Syncer) apply(state DPSyncerState) error {
 			log.Debugf("Topology Aware Routing applied for service %s, mode %s.", sname, topologyMode)
 		}
 
+		// Remove endpoints that live on nodes with a maintenance annotation.
+		eps = FilterEpsByNodeMaintenance(sname, eps, state.MaintenanceEndpoints)
+
 		var maglevEPs []k8sp.Endpoint
 		if svc.UseMaglev() {
 			ch := s.newConsistentHash()
@@ -1627,5 +1630,12 @@ func K8sSvcWithReapTerminatingUDP() K8sServicePortOption {
 func K8sSvcWithTopologyMode(value string) K8sServicePortOption {
 	return func(s interface{}) {
 		s.(*servicePort).topologyMode = value
+	}
+}
+
+// K8sSvcWithMaglev marks the service as using Maglev consistent hashing.
+func K8sSvcWithMaglev() K8sServicePortOption {
+	return func(s interface{}) {
+		s.(*servicePort).useMaglev = true
 	}
 }

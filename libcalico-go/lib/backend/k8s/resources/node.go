@@ -59,6 +59,12 @@ const (
 	nodeInterfacesAnnotation              = "projectcalico.org/Interfaces"
 	providerIDSep                         = "://"
 
+	NodeLBMaintenanceAnnotation = "lb.projectcalico.org/maintenance"
+
+	// Load balancer maintenance values - K8s node annotation format.
+	NodeLBMaintenanceExcludeLocalBackends = "exclude-local-backends"
+	NodeLBMaintenanceNone                 = "none"
+
 	RouteReflectorClusterIDAnnotation = "projectcalico.org/RouteReflectorClusterID"
 )
 
@@ -274,6 +280,14 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node, usePodCIDR bool) (*model.KVPair, erro
 	calicoNode.Spec.IPv6VXLANTunnelAddr = getAnnotation(k8sNode, nodeBgpIpv6VXLANTunnelAddrAnnotation, validatorv3.ValidateIPv6Network)
 	calicoNode.Spec.VXLANTunnelMACAddrV6 = getAnnotation(k8sNode, nodeBgpVXLANTunnelMACAddrV6Annotation, validatorv3.ValidateMAC)
 
+	// Set the load balancer maintenance mode from annotation and convert to Calico format.
+	// If the annotation is empty or invalid, skip initializing the LoadBalancer field altogether.
+	if maint := convertLBMaintenanceAnnotationToCalico(getAnnotation(k8sNode, NodeLBMaintenanceAnnotation, validatorv3.ValidateK8sLBMaintenanceAnnotation)); maint != "" {
+		calicoNode.Spec.LoadBalancer = &internalapi.NodeLoadBalancerSpec{
+			Maintenance: maint,
+		}
+	}
+
 	calicoNode.Spec.OrchRefs = []internalapi.OrchRef{
 		{
 			Orchestrator: k8sOrchestratorName,
@@ -482,6 +496,19 @@ func mergeCalicoNodeIntoK8sNode(calicoNode *internalapi.Node, k8sNode *kapiv1.No
 		delete(k8sNode.Annotations, nodeWireguardPublicKeyV6Annotation)
 	}
 
+	// Handle Load Balancer maintenance mode.
+	if calicoNode.Spec.LoadBalancer != nil && calicoNode.Spec.LoadBalancer.Maintenance != "" {
+		// Convert from Calico format to annotation format.
+		annotationValue := convertLBMaintenanceCalicoToAnnotation(calicoNode.Spec.LoadBalancer.Maintenance)
+		if annotationValue != "" {
+			k8sNode.Annotations[NodeLBMaintenanceAnnotation] = annotationValue
+		} else {
+			delete(k8sNode.Annotations, NodeLBMaintenanceAnnotation)
+		}
+	} else {
+		delete(k8sNode.Annotations, NodeLBMaintenanceAnnotation)
+	}
+
 	// Handle detected interfaces
 	if calicoNode.Spec.Interfaces != nil {
 		interfaces, err := json.Marshal(calicoNode.Spec.Interfaces)
@@ -611,4 +638,28 @@ func getAnnotation(n *kapiv1.Node, key string, validator validatorFunc) string {
 		return ""
 	}
 	return value
+}
+
+// convertLBMaintenanceAnnotationToCalico converts the annotation format to the Calico Node format.
+func convertLBMaintenanceAnnotationToCalico(annotationValue string) string {
+	switch annotationValue {
+	case NodeLBMaintenanceExcludeLocalBackends:
+		return internalapi.NodeLBMaintenanceExcludeLocalBackends
+	case NodeLBMaintenanceNone:
+		return internalapi.NodeLBMaintenanceNone
+	default:
+		return ""
+	}
+}
+
+// convertLBMaintenanceCalicoToAnnotation converts the Calico Node format to the annotation format.
+func convertLBMaintenanceCalicoToAnnotation(calicoValue string) string {
+	switch calicoValue {
+	case internalapi.NodeLBMaintenanceExcludeLocalBackends:
+		return NodeLBMaintenanceExcludeLocalBackends
+	case internalapi.NodeLBMaintenanceNone:
+		return NodeLBMaintenanceNone
+	default:
+		return ""
+	}
 }

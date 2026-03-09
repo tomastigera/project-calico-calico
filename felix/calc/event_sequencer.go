@@ -142,6 +142,8 @@ type hostInfo struct {
 	ip6Addr  *net.IPNet
 	labels   map[string]string
 	asnumber string
+
+	lbMaintenance proto.LoadbalancerMaintenance
 }
 
 type serviceID struct {
@@ -739,16 +741,17 @@ func (buf *EventSequencer) flushHostIPv6Deletes() {
 	}
 }
 
-func (buf *EventSequencer) OnHostMetadataUpdate(hostname string, ip4 *net.IPNet, ip6 *net.IPNet, asnumber string, labels map[string]string) {
+func (buf *EventSequencer) OnHostMetadataUpdate(hostname string, ip4 *net.IPNet, ip6 *net.IPNet, asnumber string, lbMaintenance proto.LoadbalancerMaintenance, labels map[string]string) {
 	log.WithFields(log.Fields{
-		"hostname": hostname,
-		"ip4":      ip4,
-		"ip6":      ip6,
-		"labels":   labels,
-		"asnumber": asnumber,
+		"hostname":      hostname,
+		"ip4":           ip4,
+		"ip6":           ip6,
+		"labels":        labels,
+		"asnumber":      asnumber,
+		"lbMaintenance": lbMaintenance,
 	}).Debug("Host update")
 	buf.pendingHostMetadataDeletes.Discard(hostname)
-	buf.pendingHostMetadataUpdates[hostname] = &hostInfo{ip4Addr: ip4, ip6Addr: ip6, labels: labels, asnumber: asnumber}
+	buf.pendingHostMetadataUpdates[hostname] = &hostInfo{ip4Addr: ip4, ip6Addr: ip6, labels: labels, asnumber: asnumber, lbMaintenance: lbMaintenance}
 }
 
 func (buf *EventSequencer) flushHostUpdates() {
@@ -761,11 +764,12 @@ func (buf *EventSequencer) flushHostUpdates() {
 			ip6str = hostInfo.ip6Addr.String()
 		}
 		buf.Callback(&proto.HostMetadataV4V6Update{
-			Hostname: hostname,
-			Ipv4Addr: ip4str,
-			Ipv6Addr: ip6str,
-			Asnumber: hostInfo.asnumber,
-			Labels:   hostInfo.labels,
+			Hostname:                hostname,
+			Ipv4Addr:                ip4str,
+			Ipv6Addr:                ip6str,
+			Asnumber:                hostInfo.asnumber,
+			Labels:                  hostInfo.labels,
+			LoadbalancerMaintenance: hostInfo.lbMaintenance,
 		})
 		buf.sentHosts.Add(hostname)
 		delete(buf.pendingHostMetadataUpdates, hostname)

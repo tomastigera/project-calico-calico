@@ -2726,6 +2726,20 @@ func init() {
 			WireguardPublicKey: "foobar",
 		}, false),
 
+		// LoadBalancer maintenance mode tests
+		Entry("should accept node with valid LoadBalancer maintenance ExcludeLocalBackends", internalapi.NodeSpec{LoadBalancer: &internalapi.NodeLoadBalancerSpec{
+			Maintenance: "ExcludeLocalBackends",
+		}}, true),
+		Entry("should accept node with valid LoadBalancer maintenance None", internalapi.NodeSpec{LoadBalancer: &internalapi.NodeLoadBalancerSpec{
+			Maintenance: "None",
+		}}, true),
+		Entry("should accept node with valid LoadBalancer maintenance empty", internalapi.NodeSpec{LoadBalancer: &internalapi.NodeLoadBalancerSpec{
+			Maintenance: "",
+		}}, true),
+		Entry("should reject node with invalid LoadBalancer maintenance value", internalapi.NodeSpec{LoadBalancer: &internalapi.NodeLoadBalancerSpec{
+			Maintenance: "InvalidValue",
+		}}, false),
+
 		// AWS source-destination-check.
 		Entry("should accept a valid AWSSrcDstCheck value 'DoNothing'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckDoNothing}, true),
 		Entry("should accept a valid AWSSrcDstCheck value 'Enable'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckEnable}, true),

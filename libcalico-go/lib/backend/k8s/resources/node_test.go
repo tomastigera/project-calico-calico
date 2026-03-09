@@ -673,6 +673,185 @@ var _ = Describe("Test Node conversion", func() {
 			{Address: "192.168.1.100", Type: internalapi.ExternalIP},
 		}))
 	})
+
+	It("should parse a k8s Node with LoadBalancer maintenance annotation to a Calico Node", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					NodeLBMaintenanceAnnotation: NodeLBMaintenanceExcludeLocalBackends,
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+				},
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Ensure we got the correct value in Calico format.
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer).NotTo(BeNil())
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer.Maintenance).To(Equal(internalapi.NodeLBMaintenanceExcludeLocalBackends))
+	})
+
+	It("should parse a k8s Node with 'none' LoadBalancer maintenance annotation to a Calico Node", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					NodeLBMaintenanceAnnotation: NodeLBMaintenanceNone,
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+				},
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Ensure we got the correct value in Calico format.
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer).NotTo(BeNil())
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer.Maintenance).To(Equal(internalapi.NodeLBMaintenanceNone))
+	})
+
+	It("should not set LoadBalancer maintenance when no annotation is present", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations:     map[string]string{},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+				},
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+
+		// LoadBalancer spec should be nil when no annotation is present.
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer).To(BeNil())
+	})
+
+	It("should ignore invalid LoadBalancer maintenance annotation values", func() {
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					NodeLBMaintenanceAnnotation: "invalid-value",
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+				},
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node, false)
+		Expect(err).NotTo(HaveOccurred())
+
+		// LoadBalancer spec should be nil when annotation has invalid value.
+		Expect(n.Value.(*internalapi.Node).Spec.LoadBalancer).To(BeNil())
+	})
+
+	It("should merge Calico Node with LoadBalancer maintenance into K8s Node", func() {
+		k8sNode := &k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations:     make(map[string]string),
+			},
+		}
+
+		calicoNode := internalapi.NewNode()
+		calicoNode.Name = "TestNode"
+		calicoNode.ResourceVersion = "1234"
+		calicoNode.Spec.LoadBalancer = &internalapi.NodeLoadBalancerSpec{
+			Maintenance: internalapi.NodeLBMaintenanceExcludeLocalBackends,
+		}
+
+		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(newK8sNode.Annotations[NodeLBMaintenanceAnnotation]).To(Equal(NodeLBMaintenanceExcludeLocalBackends))
+
+		// Convert back to Calico Node and verify the value is preserved
+		newCalicoNode, err := K8sNodeToCalico(newK8sNode, false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(newCalicoNode.Value.(*internalapi.Node).Spec.LoadBalancer).NotTo(BeNil())
+		Expect(newCalicoNode.Value.(*internalapi.Node).Spec.LoadBalancer.Maintenance).To(Equal(internalapi.NodeLBMaintenanceExcludeLocalBackends))
+	})
+
+	It("should merge Calico Node with 'none' LoadBalancer maintenance into K8s Node", func() {
+		k8sNode := &k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations:     make(map[string]string),
+			},
+		}
+
+		calicoNode := internalapi.NewNode()
+		calicoNode.Name = "TestNode"
+		calicoNode.ResourceVersion = "1234"
+		calicoNode.Spec.LoadBalancer = &internalapi.NodeLoadBalancerSpec{
+			Maintenance: internalapi.NodeLBMaintenanceNone,
+		}
+
+		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(newK8sNode.Annotations[NodeLBMaintenanceAnnotation]).To(Equal(NodeLBMaintenanceNone))
+
+		// Convert back to Calico Node and verify the value is preserved
+		newCalicoNode, err := K8sNodeToCalico(newK8sNode, false)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(newCalicoNode.Value.(*internalapi.Node).Spec.LoadBalancer).NotTo(BeNil())
+		Expect(newCalicoNode.Value.(*internalapi.Node).Spec.LoadBalancer.Maintenance).To(Equal(internalapi.NodeLBMaintenanceNone))
+	})
+
+	It("should remove LoadBalancer maintenance annotation when Calico Node has no LoadBalancer spec", func() {
+		k8sNode := &k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					NodeLBMaintenanceAnnotation: NodeLBMaintenanceExcludeLocalBackends,
+				},
+			},
+		}
+
+		calicoNode := internalapi.NewNode()
+		calicoNode.Name = "TestNode"
+		calicoNode.ResourceVersion = "1234"
+		// LoadBalancer is nil — maintenance has been cleared.
+
+		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(newK8sNode.Annotations).NotTo(HaveKey(NodeLBMaintenanceAnnotation))
+	})
 })
 
 var _ = Describe("Node tests with fake clientSet", func() {

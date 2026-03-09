@@ -126,6 +126,9 @@ var (
 	assignIPsRegex          = regexp.MustCompile("^(AllServices|RequestedServicesOnly)$")
 	logLevelRegex           = regexp.MustCompile("^(Trace|Debug|Info|Warning|Error|Fatal)$")
 
+	k8sNodeLBMaintenanceRegex    = regexp.MustCompile("^(exclude-local-backends|none)$")
+	calicoNodeLBMaintenanceRegex = regexp.MustCompile("^(ExcludeLocalBackends|None)$")
+
 	IPSeclogLevelRegex = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
 	IPSecModeRegex     = regexp.MustCompile("^(PSK)$")
 
@@ -743,6 +746,13 @@ func validateMAC(fl validator.FieldLevel) bool {
 func ValidateMAC(mac string) error {
 	_, err := net.ParseMAC(mac)
 	return err
+}
+
+func ValidateK8sLBMaintenanceAnnotation(maintenance string) error {
+	if !k8sNodeLBMaintenanceRegex.MatchString(maintenance) {
+		return fmt.Errorf("Invalid load balancer maintenance value: %s (must be 'exclude-local-backends' or 'none')", maintenance)
+	}
+	return nil
 }
 
 func validateIptablesBackend(fl validator.FieldLevel) bool {

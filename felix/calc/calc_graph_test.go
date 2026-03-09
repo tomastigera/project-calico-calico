@@ -29,6 +29,7 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/internalapi"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -77,6 +78,8 @@ var _ = DescribeTable("Calculation graph pass-through tests",
 			Expect(googleproto.Equal(messageReceived.(*proto.WireguardEndpointUpdate), expUpdate.(*proto.WireguardEndpointUpdate))).To(BeTrue())
 		case *proto.ServiceUpdate:
 			Expect(googleproto.Equal(messageReceived.(*proto.ServiceUpdate), expUpdate.(*proto.ServiceUpdate))).To(BeTrue())
+		case *proto.HostMetadataV4V6Update:
+			Expect(googleproto.Equal(messageReceived.(*proto.HostMetadataV4V6Update), expUpdate.(*proto.HostMetadataV4V6Update))).To(BeTrue())
 		}
 		_, err := extdataplane.WrapPayloadWithEnvelope(messageReceived, 0)
 		Expect(err).To(BeNil())
@@ -187,6 +190,20 @@ var _ = DescribeTable("Calculation graph pass-through tests",
 			InterfaceIpv4Addr: "10.0.0.1",
 		},
 		&proto.WireguardEndpointRemove{Hostname: "localhost"}),
+	Entry("HostMetadataV4V6",
+		model.ResourceKey{Name: "node0", Namespace: "", Kind: internalapi.KindNode},
+		&internalapi.Node{
+			Spec: internalapi.NodeSpec{
+				LoadBalancer: &internalapi.NodeLoadBalancerSpec{
+					Maintenance: internalapi.NodeLBMaintenanceExcludeLocalBackends,
+				},
+			},
+		},
+		&proto.HostMetadataV4V6Update{
+			Hostname:                "node0",
+			LoadbalancerMaintenance: proto.LoadbalancerMaintenance_LB_MAINT_EXCLUDE_LOCAL_BACKENDS,
+		},
+		nil),
 	Entry("Services",
 		model.ResourceKey{Kind: model.KindKubernetesService, Name: "svcname", Namespace: "default"},
 		&kapiv1.Service{

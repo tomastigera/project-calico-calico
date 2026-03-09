@@ -65,10 +65,11 @@ type ProxyFrontend interface {
 
 // DPSyncerState groups the information passed to the DPSyncer's Apply
 type DPSyncerState struct {
-	SvcMap   k8sp.ServicePortMap
-	EpsMap   k8sp.EndpointsMap
-	Hostname string
-	NodeZone string
+	SvcMap               k8sp.ServicePortMap
+	EpsMap               k8sp.EndpointsMap
+	Hostname             string
+	NodeZone             string
+	MaintenanceEndpoints *MaintenanceEndpoints
 }
 
 // DPSyncer is an interface representing the dataplane syncer that applies the
@@ -99,6 +100,11 @@ type proxy struct {
 	epsMap k8sp.EndpointsMap
 
 	hostMetadataByHostname map[string]*proto.HostMetadataV4V6Update
+	// epTracker is similar to the ChangeTrackers above, but retains
+	// and exposes more information about tracked endpoints.
+	// Necessary for matching endpoints to maintenance nodes.
+	epTracker            *EndpointTracker
+	maintenanceEndpoints *MaintenanceEndpoints
 
 	dpSyncer  DPSyncer
 	syncerLck sync.Mutex
@@ -153,6 +159,8 @@ func New(k8s kubernetes.Interface, dp DPSyncer, hostname string, opts ...Option)
 		epsMap:   make(k8sp.EndpointsMap),
 
 		hostMetadataByHostname: make(map[string]*proto.HostMetadataV4V6Update),
+		epTracker:              NewEndpointTracker(),
+		maintenanceEndpoints:   NewMaintenanceEndpoints(),
 
 		recorder: new(loggerRecorder),
 
@@ -275,6 +283,10 @@ func (p *proxy) invokeDPSyncer() error {
 
 	_ = p.svcMap.Update(p.svcChanges)
 	_ = p.epsMap.Update(p.epsChanges)
+	// As with the above change trackers, the runnerLck does not protect p.epTracker (internally locked instead).
+	// TODO: The runnerLck does, however, protect p.hostMetadataByHostname. A dedicated lock would mean the resource is ready
+	// for writing more often, since we only hold the lock until we're done reading, rather than holding it until syncer finishes sync.
+	p.maintenanceEndpoints.Update(p.hostMetadataByHostname, p.epTracker)
 
 	if p.healthzServer != nil && p.svcHealthServer != nil {
 		if err := p.svcHealthServer.SyncServices(p.svcMap.HealthCheckNodePorts()); err != nil {
@@ -291,10 +303,11 @@ func (p *proxy) invokeDPSyncer() error {
 
 	p.syncerLck.Lock()
 	err := p.dpSyncer.Apply(DPSyncerState{
-		SvcMap:   p.svcMap,
-		EpsMap:   p.epsMap,
-		Hostname: p.hostname,
-		NodeZone: p.nodeZone,
+		SvcMap:               p.svcMap,
+		EpsMap:               p.epsMap,
+		Hostname:             p.hostname,
+		NodeZone:             p.nodeZone,
+		MaintenanceEndpoints: p.maintenanceEndpoints,
 	})
 	p.syncerLck.Unlock()
 
@@ -333,6 +346,8 @@ func (p *proxy) OnEndpointSliceAdd(eps *discovery.EndpointSlice) {
 	if p.IPFamily() != eps.AddressType {
 		return
 	}
+
+	p.epTracker.EndpointSliceUpdate(eps, false)
 	if p.epsChanges.EndpointSliceUpdate(eps, false) && p.isInitialized() {
 		p.syncDP()
 	}
@@ -342,6 +357,7 @@ func (p *proxy) OnEndpointSliceUpdate(_, eps *discovery.EndpointSlice) {
 	if p.IPFamily() != eps.AddressType {
 		return
 	}
+	p.epTracker.EndpointSliceUpdate(eps, false)
 	if p.epsChanges.EndpointSliceUpdate(eps, false) && p.isInitialized() {
 		p.syncDP()
 	}
@@ -351,6 +367,7 @@ func (p *proxy) OnEndpointSliceDelete(eps *discovery.EndpointSlice) {
 	if p.IPFamily() != eps.AddressType {
 		return
 	}
+	p.epTracker.EndpointSliceUpdate(eps, true)
 	if p.epsChanges.EndpointSliceUpdate(eps, true) && p.isInitialized() {
 		p.syncDP()
 	}
