@@ -139,7 +139,7 @@ require (
 	github.com/tigera/operator/api v0.0.0-20251112210545-bc4ab6d9c660
 	github.com/tigera/tds-apiserver v0.88.0
 	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
-	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
+	github.com/tigera/windows-networking v0.0.0-20260309182927-2869ff784a49
 	github.com/urfave/cli/v3 v3.5.0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
