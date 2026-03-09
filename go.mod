@@ -521,9 +521,6 @@ replace (
 
 	github.com/tigera/api => ./api
 
-	// TODO: remove this when windows-networking PR merges
-	github.com/tigera/windows-networking => github.com/coutinhop/windows-networking v0.0.0-20260305212403-e68cf4ac652d
-
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
 	// transient imports.
