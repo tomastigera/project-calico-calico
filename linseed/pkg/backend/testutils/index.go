@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 //
 
 package testutils
@@ -113,16 +113,18 @@ func CleanupMulti(ctx context.Context, client *elastic.Client, cluster string) e
 		}
 	}
 
-	templates, err := client.IndexGetTemplate().Do(ctx)
+	tmplResp, err := client.IndexGetIndexTemplate("*").Do(ctx)
 	if err != nil {
-		return err
-	}
-
-	for name := range templates {
-		if strings.Contains(name, cluster) {
-			_, err = client.IndexDeleteTemplate(name).Do(ctx)
-			if err != nil {
-				return err
+		if !elastic.IsNotFound(err) {
+			return err
+		}
+	} else {
+		for _, tmpl := range tmplResp.IndexTemplates {
+			if strings.Contains(tmpl.Name, cluster) {
+				_, err = client.IndexDeleteIndexTemplate(tmpl.Name).Do(ctx)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

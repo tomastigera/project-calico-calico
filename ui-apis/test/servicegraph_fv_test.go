@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025-2026 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -2143,18 +2143,20 @@ func createDefaultFelixConfig(calicoClient *calicoclientset.Clientset) func() {
 func createBulkOptimizeIndexTemplate(esClient *elastic.Client) func() {
 	ctx := context.Background()
 
-	_, err := esClient.IndexPutTemplate("fv-bulk-optimize").
+	_, err := esClient.IndexPutIndexTemplate("fv-bulk-optimize").
 		BodyJson(map[string]any{
 			"index_patterns": []string{"tigera_secure_ee_flows*"},
-			"order":          1000,
-			"settings": map[string]any{
-				"index.number_of_shards": 4,
+			"priority":       1000,
+			"template": map[string]any{
+				"settings": map[string]any{
+					"index.number_of_shards": 4,
+				},
 			},
 		}).Do(ctx)
 	Expect(err).NotTo(HaveOccurred(), "Failed to create bulk optimization index template")
 
 	return func() {
-		_, _ = esClient.IndexDeleteTemplate("fv-bulk-optimize").Do(context.Background())
+		_, _ = esClient.IndexDeleteIndexTemplate("fv-bulk-optimize").Do(context.Background())
 	}
 }
 

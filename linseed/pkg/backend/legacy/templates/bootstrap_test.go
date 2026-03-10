@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 
 package templates_test
 
@@ -139,8 +139,9 @@ func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application
 	if templateNameEndsInDot {
 		templateName = fmt.Sprintf("%s.%s.", indexPrefix, cluster)
 	}
-	templateExists, err := client.IndexTemplateExists(templateName).Do(ctx)
+	templateResp, err := client.IndexGetIndexTemplate(templateName).Do(ctx)
 	require.NoError(t, err)
+	_, templateExists := templateResp.IndexTemplates.ByName(templateName)
 	require.True(t, templateExists)
 
 	// Check that the bootstrap index exists
@@ -363,7 +364,7 @@ func TestMappingsValidity(t *testing.T) {
 			template, err := config.Template()
 			require.NoError(t, err)
 
-			_, err = client.IndexPutTemplate(config.TemplateName()).BodyJson(template).Do(ctx)
+			_, err = client.IndexPutIndexTemplate(config.TemplateName()).BodyJson(template.ComposableBody()).Do(ctx)
 			require.NoError(t, err)
 
 			// Get initial indexInfo

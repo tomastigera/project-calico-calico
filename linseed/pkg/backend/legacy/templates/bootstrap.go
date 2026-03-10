@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 
 package templates
 
@@ -123,7 +123,7 @@ var DefaultBootstrapper Bootstrapper = func(ctx context.Context, client *elastic
 
 	// Create/Update the index template in Elastic. This is idempotent, so we can call it every time.
 	logrus.WithField("name", templateName).Info("Creating index template")
-	_, err = client.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
+	_, err = client.IndexPutIndexTemplate(templateName).BodyJson(template.ComposableBody()).Do(ctx)
 	if err != nil {
 		logrus.WithError(err).Error("failed to create/update index template")
 		return nil, err
