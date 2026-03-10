@@ -5,6 +5,7 @@ in order to trigger CI on changes
 go 1.25.7
 github.com/beorn7/perks v1.0.1
 github.com/cespare/xxhash/v2 v2.3.0
+github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.6.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -20,7 +21,7 @@ github.com/prometheus/client_model v0.6.2
 github.com/prometheus/common v0.67.5
 github.com/prometheus/procfs v0.19.2
 github.com/rivo/uniseg v0.4.7
-github.com/sirupsen/logrus v1.9.3
+github.com/sirupsen/logrus v1.9.4
 github.com/stretchr/objx v0.5.2
 github.com/stretchr/testify v1.10.0
 github.com/vishvananda/netlink v1.3.1
@@ -38,4 +39,4 @@ k8s.io/api v0.34.4
 k8s.io/apimachinery v0.34.4
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
-k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+k8s.io/utils v0.0.0-20251002143259-bc988d571ff4

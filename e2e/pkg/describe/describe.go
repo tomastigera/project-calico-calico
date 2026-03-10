@@ -80,6 +80,7 @@ var features = map[string]bool{
 	"Pods":                true,
 	"QoS":                 true,
 	"Datapath":            true,
+	"EgressGateway":       true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.

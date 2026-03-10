@@ -106,7 +106,7 @@ require (
 	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/nxadm/tail v1.4.11
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/olivere/elastic/v7 v7.0.31
+	github.com/olivere/elastic/v7 v7.0.32
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/oschwald/geoip2-golang v1.13.0
@@ -123,7 +123,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/safchain/ethtool v0.6.2
 	github.com/shirou/gopsutil/v4 v4.25.10
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/slack-go/slack v0.17.3
 	github.com/snowzach/rotatefilehook v0.0.0-20220211133110-53752135082d
 	github.com/spf13/cast v1.10.0
@@ -135,12 +135,12 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.3
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
-	github.com/tigera/api v0.0.0-20251017180206-9d7c2da4f711
-	github.com/tigera/operator/api v0.0.0-20251112210545-bc4ab6d9c660
+	github.com/tigera/api v0.0.0-20260115201458-bce624761bbd
+	github.com/tigera/operator/api v0.0.0-20260120220012-4a3f8a7d8399
 	github.com/tigera/tds-apiserver v0.88.0
 	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
-	github.com/tigera/windows-networking v0.0.0-20260309182927-2869ff784a49
-	github.com/urfave/cli/v3 v3.5.0
+	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
+	github.com/urfave/cli/v3 v3.6.2
 	github.com/vishvananda/netlink v1.3.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -148,7 +148,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.6.5
 	go.etcd.io/etcd/client/v2 v2.305.24
 	go.etcd.io/etcd/client/v3 v3.6.5
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.47.0
 	golang.org/x/mod v0.32.0
@@ -166,7 +166,7 @@ require (
 	// with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.19.0
+	helm.sh/helm/v3 v3.19.5
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
 	k8s.io/api v0.34.4
@@ -180,11 +180,11 @@ require (
 	k8s.io/kube-openapi v0.31.0
 	k8s.io/kubectl v0.34.4
 	k8s.io/kubernetes v1.34.4
-	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	modernc.org/memory v1.11.0
-	sigs.k8s.io/controller-runtime v0.22.4
+	sigs.k8s.io/controller-runtime v0.22.5
 	sigs.k8s.io/gateway-api v1.4.1
-	sigs.k8s.io/kind v0.30.0
+	sigs.k8s.io/kind v0.31.0
 	sigs.k8s.io/knftables v0.0.19
 	sigs.k8s.io/network-policy-api v0.1.8-0.20260212153203-412bf65729a5
 	sigs.k8s.io/yaml v1.6.0
@@ -282,7 +282,7 @@ require (
 	github.com/containerd/typeurl/v2 v2.2.2 // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v28.2.2+incompatible // indirect
@@ -378,7 +378,7 @@ require (
 	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-ciede2000 v0.0.0-20170301095244-782e8c62fec3 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-zglob v0.0.2-0.20190814121620-e3c945676326 // indirect
@@ -423,7 +423,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/pquerna/otp v1.4.0 // indirect
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
@@ -513,6 +513,11 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
+)
+
+require (
+	github.com/satori/go.uuid v1.2.0
+	github.com/tigera/operator v1.41.1
 )
 
 replace (

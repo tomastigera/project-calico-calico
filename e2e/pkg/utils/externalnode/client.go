@@ -8,8 +8,11 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	//nolint:staticcheck // Ignore ST1001: should not use dot imports
+	. "github.com/onsi/ginkgo/v2"
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -228,4 +231,34 @@ func (e *Client) TestCalicoServiceReady(service string) error {
 		return fmt.Errorf("service %s is not active, state=%s", service, output)
 	}
 	return nil
+}
+
+// nginxInstalled tracks whether NGINX has been successfully installed on the
+// external node, so that InstallNGINX() is a no-op on subsequent calls.
+var nginxInstalled atomic.Bool
+
+// InstallNGINX installs NGINX on the external node and creates a large test file.
+// The installation is idempotent and only runs once per test binary invocation.
+func (e *Client) InstallNGINX() {
+	if nginxInstalled.Load() {
+		return
+	}
+	By("installing nginx on the external node")
+	// apt-get install is idempotent so no need to check if it's already installed.
+	Eventually(func() error {
+		out, err := e.ExecTimeout(60, "/bin/bash", "-c", "sudo DEBIAN_FRONTEND=noninteractive apt-get update")
+		if err != nil {
+			return fmt.Errorf("failed to run apt-get update: %w (%s)", err, out)
+		}
+		out, err = e.ExecTimeout(60, "/bin/bash", "-c", "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx")
+		if err != nil {
+			return fmt.Errorf("failed to install nginx: %w (%s)", err, out)
+		}
+		out, err = e.ExecTimeout(60, "/bin/bash", "-c", "seq 1 300000 | sudo tee /var/www/html/large.txt > /dev/null")
+		if err != nil {
+			return fmt.Errorf("failed to create large file: %w (%s)", err, out)
+		}
+		return nil
+	}, "600s" /*long timeout in case an apt cron job fires, blocking us*/, "10s").ShouldNot(HaveOccurred())
+	nginxInstalled.Store(true)
 }

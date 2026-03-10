@@ -34,6 +34,7 @@ github.com/corazawaf/coraza/v3 v3.3.3
 github.com/corazawaf/libinjection-go v0.2.2
 github.com/coreos/go-iptables v0.8.0
 github.com/coreos/go-semver v0.3.1
+github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.6.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/emicklei/go-restful v2.15.0+incompatible
@@ -98,7 +99,7 @@ github.com/prometheus/common v0.67.5
 github.com/prometheus/procfs v0.19.2
 github.com/rivo/uniseg v0.4.7
 github.com/robfig/cron v1.2.0
-github.com/sirupsen/logrus v1.9.3
+github.com/sirupsen/logrus v1.9.4
 github.com/spf13/cobra v1.10.1
 github.com/spf13/pflag v1.0.10
 github.com/stretchr/objx v0.5.2
@@ -118,7 +119,7 @@ go.etcd.io/etcd/client/v3 v3.6.5
 go.opentelemetry.io/otel v1.38.0
 go.opentelemetry.io/otel/trace v1.38.0
 go.uber.org/multierr v1.11.0
-go.uber.org/zap v1.27.0
+go.uber.org/zap v1.27.1
 go.yaml.in/yaml/v2 v2.4.3
 go.yaml.in/yaml/v3 v3.0.4
 golang.org/x/crypto v0.47.0
@@ -152,7 +153,7 @@ k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
 k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
 k8s.io/kubernetes v1.34.4
-k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 kubevirt.io/api v1.7.0
 kubevirt.io/containerized-data-importer-api v1.63.1
 kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90

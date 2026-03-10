@@ -32,6 +32,7 @@ import (
 
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/apis"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/bgp"
+	_ "github.com/projectcalico/calico/e2e/pkg/tests/egw"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/hostendpoints"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/ipam"
 	_ "github.com/projectcalico/calico/e2e/pkg/tests/networking"

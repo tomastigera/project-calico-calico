@@ -16,6 +16,7 @@ package config
 
 import (
 	"flag"
+	"net"
 	"os"
 	"strings"
 
@@ -44,6 +45,7 @@ const (
 	externalNodeIP       = "EXT_IP"
 	externalNodeSSHKey   = "EXT_KEY"
 	externalNodeUsername = "EXT_USER"
+	awsElasticIPs        = "AWS_ELASTIC_IPS"
 )
 
 var allConfigOptions = map[string]*configOption{
@@ -74,6 +76,11 @@ var allConfigOptions = map[string]*configOption{
 		helpText:     "The IP address of the external node.",
 		defaultValue: "",
 	},
+	awsElasticIPs: {
+		envVarName:   awsElasticIPs,
+		helpText:     "For AWS clusters, comma-delimited list if elastic IP addresses for tests to use.",
+		defaultValue: "",
+	},
 }
 
 func RemoteClusterKubeconfig() string {
@@ -90,6 +97,26 @@ func ExtNodeSSHKey() string {
 
 func ExtNodeIP() string {
 	return allConfigOptions[externalNodeIP].actualValue
+}
+
+func AWSElasticIPs() []net.IP {
+	raw := allConfigOptions[awsElasticIPs].actualValue
+	if raw == "" {
+		return nil
+	}
+	var addrs []net.IP
+	for _, chunk := range strings.Split(raw, ",") {
+		chunk := strings.TrimSpace(chunk)
+		if chunk == "" {
+			continue
+		}
+		ip := net.ParseIP(chunk)
+		if len(ip) == 0 {
+			logrus.Fatalf("Bad IP address in %s: %q", awsElasticIPs, chunk)
+		}
+		addrs = append(addrs, ip)
+	}
+	return addrs
 }
 
 func init() {
