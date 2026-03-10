@@ -161,9 +161,12 @@ var _ = infrastructure.DatastoreDescribe(
 			By("Setting up ExternalNetwork routing table on " + egwFelix.Name)
 			egwFelix.Exec("ip", "addr", "add", "192.168.20.20/24", "dev", "eth20")
 			egwFelix.Exec("bash", "-c", fmt.Sprintf("echo %d ext_net_table >> /etc/iproute2/rt_tables", extNetTableIndex))
+			egwFelix.Exec("ip", "neigh", "add", "192.168.20.100", "lladdr", "ee:ee:ee:ee:ee:ee", "dev", "eth20")
 			egwFelix.Exec("ip", "route", "add", "default", "dev", "eth20",
 				"table", fmt.Sprintf("%d", extNetTableIndex))
-			egwFelix.Exec("ip", "neigh", "add", "192.168.20.100", "lladdr", "ee:ee:ee:ee:ee:ee", "dev", "eth20")
+			// Add a fake neighbor for the health probe ping target so the kernel
+			// can resolve the next-hop and actually send the packet on eth20.
+			egwFelix.Exec("ip", "neigh", "add", "10.99.99.99", "lladdr", "ee:ee:ee:ee:ee:ee", "dev", "eth20")
 			egwFelix.Exec("ip", "route", "flush", "cache")
 		}
 
@@ -272,6 +275,28 @@ var _ = infrastructure.DatastoreDescribe(
 					It("should route client traffic via egress gateway and ExternalNetwork interface", func() {
 						waitForIPRule(tc.Felixes[1])
 						checkConnectivity(tc.Felixes[1])
+					})
+
+					It("should route egress gateway pod's own traffic via ExternalNetwork interface (health probes)", func() {
+						egwFelix := tc.Felixes[1]
+						waitForIPRule(egwFelix)
+
+						By("Starting tcpdump on eth20 to capture ICMP from egress gateway pod")
+						dump := egwFelix.AttachTCPDump("eth20")
+						dump.SetLogEnabled(true)
+						dump.AddMatcher("icmp-from-egw", regexp.MustCompile(`172\.25\.154\.1`))
+						dump.Start(infra, "-v", "icmp")
+
+						By("Pinging external IP from egress gateway pod's network namespace")
+						// Ping a non-routable IP. We only need to verify the packet exits
+						// via eth20 (ExternalNetwork table), not that it gets a reply.
+						// Table 920 routes via gateway 192.168.20.100 on eth20.
+						egw.RunCmd("ping", "-c", "3", "-W", "1", "10.99.99.99")
+
+						By("Verifying ICMP packets appeared on eth20 with egress gateway source IP")
+						Eventually(dump.MatchCountFn("icmp-from-egw"), "10s", "330ms").Should(
+							BeNumerically(">=", 1),
+							"Expected egw pod's own ICMP traffic to exit via eth20 (ExternalNetwork interface)")
 					})
 				})
 			}
