@@ -754,6 +754,87 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		})
 	})
 
+	// Standalone mode: no tunnel support, mimics Enterprise standalone deployment.
+	// Validates that managementBackendTargets bypass impersonation even when
+	// no tunnel is configured.
+	Context("Standalone mode (no tunnel)", func() {
+		var (
+			voltronServerAddr string
+			srvWg             *sync.WaitGroup
+			srv               *server.Server
+			defaultServer     *httptest.Server
+		)
+
+		BeforeEach(func() {
+			mockAuthenticator.On("Authenticate", mock.Anything).Return(janeUserInfo, 0, nil)
+
+			defaultServer = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set(authentication.AuthorizationHeader, r.Header.Get(authentication.AuthorizationHeader))
+					w.Header().Set(authnv1.ImpersonateUserHeader, r.Header.Get(authnv1.ImpersonateUserHeader))
+					w.Header().Set(authnv1.ImpersonateGroupHeader, r.Header.Get(authnv1.ImpersonateGroupHeader))
+				}))
+
+			defaultURL, err := url.Parse(defaultServer.URL)
+			Expect(err).NotTo(HaveOccurred())
+
+			defaultProxy, err := proxy.New([]proxy.Target{
+				{Path: "/", Dest: defaultURL},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			managementBackendTargets, err := regex.CompileRegexStrings([]string{`^/apis/projectcalico.org/v3/authorizationreviews$`})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// No WithTunnelSigningCreds, WithTunnelCert, or WithTunnelTargetWhitelist —
+			// this mimics a standalone Enterprise deployment without MCM.
+			srv, voltronServerAddr, _, _, srvWg = createAndStartServer(
+				fakeClient,
+				config,
+				mockAuthenticator,
+				clusterNS,
+				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
+				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
+				server.WithDefaultProxy(defaultProxy),
+				server.WithKubernetesAPITargets(k8sTargets),
+				server.WithManagementBackendTargets(managementBackendTargets),
+			)
+		})
+
+		AfterEach(func() {
+			Expect(srv.Close()).NotTo(HaveOccurred())
+			defaultServer.Close()
+			srvWg.Wait()
+		})
+
+		It("should add impersonation headers for normal k8s API requests", func() {
+			req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", voltronServerAddr, "/apis/projectcalico.org/v3/tiers"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(Equal(janeUserInfo.Name))
+			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(Equal(janeUserInfo.Groups[0]))
+		})
+
+		It("should not add impersonation headers for management backend targets", func() {
+			req, err := http.NewRequest("POST", fmt.Sprintf("https://%s%s", voltronServerAddr, "/apis/projectcalico.org/v3/authorizationreviews"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken.BearerTokenHeader())
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authnv1.ImpersonateUserHeader)).To(BeEmpty())
+			Expect(resp.Header.Get(authnv1.ImpersonateGroupHeader)).To(BeEmpty())
+		})
+	})
+
 	Context("with logging, metrics & auth caching enabled", func() {
 		var (
 			srvWg         *sync.WaitGroup

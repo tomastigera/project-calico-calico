@@ -55,12 +55,24 @@ func main() {
 		log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 	}
 
+	// Paths served by management cluster backends rather than the k8s API server.
+	// AuthorizationReviews are handled by ui-apis, which performs the managed
+	// cluster RBAC calculation itself. This must be set unconditionally (not just
+	// in MCM mode) because ui-apis serves this endpoint in standalone as well.
+	managementBackendTargets, err := regex.CompileRegexStrings([]string{
+		`^/apis/projectcalico.org/v3/authorizationreviews$`,
+	})
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to parse management backend targets.")
+	}
+
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithInternalAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.InternalPort)),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithKubernetesAPITargets(kubernetesAPITargets),
+		server.WithManagementBackendTargets(managementBackendTargets),
 		server.WithInternalMetricsEndpointEnabled(cfg.MetricsEnabled),
 	}
 
@@ -131,16 +143,6 @@ func main() {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
 
-		// Paths served by management cluster backends rather than the k8s API server.
-		// AuthorizationReviews are handled by ui-apis, which performs the managed
-		// cluster RBAC calculation itself.
-		managementBackendTargets, err := regex.CompileRegexStrings([]string{
-			`^/apis/projectcalico.org/v3/authorizationreviews$`,
-		})
-		if err != nil {
-			log.WithError(err).Fatalf("Failed to parse management backend targets.")
-		}
-
 		kibanaURL, err := url.Parse(cfg.KibanaEndpoint)
 		if err != nil {
 			log.WithError(err).Fatalf("failed to parse Kibana endpoint %s", cfg.KibanaEndpoint)
@@ -202,7 +204,6 @@ func main() {
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithManagementBackendTargets(managementBackendTargets),
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(
 				cfg.CheckManagedClusterAuthorizationBeforeProxy,
