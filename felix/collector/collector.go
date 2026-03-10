@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/collector/wafevents"
+	"github.com/projectcalico/calico/felix/config"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
@@ -50,9 +51,6 @@ const (
 	DefaultGroupIP = "0.0.0.0"
 	// perHostPolicySubscription is the subscription type for per-host-policy.
 	perHostPolicySubscription = "per-host-policies"
-	// policyActivityRefreshInterval is how often Felix re-evaluates policies
-	// for long-lived connections to keep last_evaluated timestamps current.
-	policyActivityRefreshInterval = 1 * time.Hour
 )
 
 var (
@@ -146,6 +144,8 @@ type Config struct {
 	FelixHostName        string
 
 	PolicyStoreManager policystore.PolicyStoreManager
+
+	PolicyActivityRefreshInterval time.Duration
 }
 
 // namespacedEpKey is an interface for keys that have namespace information.
@@ -384,8 +384,12 @@ func (c *collector) startStatsCollectionAndReporting() {
 		ctInfoC = c.conntrackInfoReader.ConntrackInfoChan()
 	}
 	if c.policyActivityReporter != nil {
-		log.Infof("Policy activity refresh enabled with interval %v", policyActivityRefreshInterval)
-		c.tickerPolicyActivityRefresh = jitter.NewTicker(policyActivityRefreshInterval*9/10, policyActivityRefreshInterval*1/10)
+		refreshInterval := c.config.PolicyActivityRefreshInterval
+		if refreshInterval == 0 {
+			refreshInterval = config.DefaultPolicyActivityRefreshInterval
+		}
+		log.Infof("Policy activity refresh enabled with interval %v", refreshInterval)
+		c.tickerPolicyActivityRefresh = jitter.NewTicker(refreshInterval*9/10, refreshInterval*1/10)
 		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
 		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
 		go c.loopEvaluatingPolicyActivity(c.policyActivityReporter)
@@ -1304,69 +1308,40 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 // updatePendingRuleTraces evaluates each flow of epStats against the policies in the PolicyStore
 // to get the latest pending rule trace. It replaces the Data's copy if they are different.
-// It snapshots eligible entries first, then acquires the policy store read lock once for the
-// entire batch rather than per-connection.
 func (c *collector) updatePendingRuleTraces() {
-	// Snapshot entries that need evaluation, performing endpoint matching outside the lock.
-	type pendingEntry struct {
-		data *Data
-		flow TupleAsFlow
-	}
-	var entries []pendingEntry
+	// The epStats map may be quite large, so we chose to lock each entry individually to avoid
+	// locking the entire map.
 	for _, data := range c.epStats {
 		if data == nil {
 			continue
 		}
 
-		srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
-		if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
-			continue
-		}
-
-		entries = append(entries, pendingEntry{data: data, flow: TupleAsFlow(data.Tuple)})
+		c.evaluatePendingRuleTraceForLocalEp(data)
 	}
-
-	if len(entries) == 0 {
-		return
-	}
-
-	// Acquire the read lock once and evaluate all entries.
-	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-		for i := range entries {
-			e := &entries[i]
-
-			if e.data.DstEp != nil && !e.data.DstEp.IsHostEndpoint() && e.data.DstEp.IsLocal() {
-				c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, e.data.DstEp, e.flow, &e.data.IngressPendingRuleIDs)
-			}
-
-			if e.data.SrcEp != nil && !e.data.SrcEp.IsHostEndpoint() && e.data.SrcEp.IsLocal() {
-				c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, e.data.SrcEp, e.flow, &e.data.EgressPendingRuleIDs)
-			}
-		}
-	})
 }
 
 func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
+	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
 	flow := TupleAsFlow(data.Tuple)
 
-	srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
-
-	// If endpoints have changed compared to what Data currently holds, skip evaluation.
-	if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
-		return
+	if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
+		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+		})
 	}
 
-	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-		// Evaluate ingress if destination is local workload endpoint
-		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
-			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
-		}
-
-		// Evaluate egress if source is local workload endpoint
-		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
+	if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
+		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
-		}
-	})
+		})
+	}
+}
+
+// isLocalWorkloadEp returns true if the endpoint is a non-nil local workload endpoint.
+func isLocalWorkloadEp(ep calc.EndpointData) bool {
+	return ep != nil && !ep.IsHostEndpoint() && ep.IsLocal()
 }
 
 // evaluatePendingRuleTrace evaluates the pending rule trace for the given direction and endpoint,
@@ -1415,7 +1390,7 @@ func (c *collector) refreshPolicyActivityForActiveConnections() {
 	select {
 	case c.policyActivityRefreshC <- entries:
 	default:
-		log.Debug("Policy activity refresh channel full, skipping this tick")
+		log.Warn("Policy activity refresh channel full, skipping this tick")
 	}
 }
 
@@ -1431,27 +1406,32 @@ func (c *collector) loopEvaluatingPolicyActivity(reporter types.Reporter) {
 				flow := TupleAsFlow(entry.Tuple)
 
 				// Evaluate ingress if destination is a local workload endpoint.
-				if entry.DstEp != nil && !entry.DstEp.IsHostEndpoint() && entry.DstEp.IsLocal() {
-					if protoEp := c.lookupProtoWorkloadEndpoint(ps, entry.DstEp.Key()); protoEp != nil {
-						trace := checker.Evaluate(rules.RuleDirIngress, ps, protoEp, &flow)
-						if len(trace) > 0 {
-							reportPolicyActivityFromEntry(reporter, entry, trace)
-						}
+				if isLocalWorkloadEp(entry.DstEp) {
+					trace := c.evaluateRuleTraceForEp(ps, rules.RuleDirIngress, entry.DstEp, flow)
+					if len(trace) > 0 {
+						reportPolicyActivityFromEntry(reporter, entry, trace)
 					}
 				}
 
 				// Evaluate egress if source is a local workload endpoint.
-				if entry.SrcEp != nil && !entry.SrcEp.IsHostEndpoint() && entry.SrcEp.IsLocal() {
-					if protoEp := c.lookupProtoWorkloadEndpoint(ps, entry.SrcEp.Key()); protoEp != nil {
-						trace := checker.Evaluate(rules.RuleDirEgress, ps, protoEp, &flow)
-						if len(trace) > 0 {
-							reportPolicyActivityFromEntry(reporter, entry, trace)
-						}
+				if isLocalWorkloadEp(entry.SrcEp) {
+					trace := c.evaluateRuleTraceForEp(ps, rules.RuleDirEgress, entry.SrcEp, flow)
+					if len(trace) > 0 {
+						reportPolicyActivityFromEntry(reporter, entry, trace)
 					}
 				}
 			}
 		})
 	}
+}
+
+// evaluateRuleTraceForEp evaluates the rule trace for a single endpoint direction.
+// Must be called with the policy store read lock held.
+func (c *collector) evaluateRuleTraceForEp(ps *policystore.PolicyStore, direction rules.RuleDir, ep calc.EndpointData, flow TupleAsFlow) []*calc.RuleID {
+	if protoEp := c.lookupProtoWorkloadEndpoint(ps, ep.Key()); protoEp != nil {
+		return checker.Evaluate(direction, ps, protoEp, &flow)
+	}
+	return nil
 }
 
 // reportPolicyActivityFromEntry sends a metric.Update to the given reporter from a
@@ -1466,7 +1446,7 @@ func reportPolicyActivityFromEntry(reporter types.Reporter, entry *policyActivit
 		RuleIDs:    ruleIDs,
 	}
 	if err := reporter.Report(mu); err != nil {
-		log.WithError(err).Debug("Failed to report policy activity refresh")
+		log.WithError(err).Warn("Failed to report policy activity refresh")
 	}
 }
 
