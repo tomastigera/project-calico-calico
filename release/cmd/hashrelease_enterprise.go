@@ -385,6 +385,7 @@ func enterpriseMetadataCommand(cfg *Config) *cli.Command {
 		},
 	}
 }
+
 func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "validate",
