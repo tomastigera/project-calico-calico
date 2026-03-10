@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -158,7 +158,11 @@ func (s *SyncClient) sync(ctx context.Context) {
 
 func (s *SyncClient) connectSyncStream(ctx context.Context, updateC chan<- *proto.ToDataplane, retryC chan<- struct{}) {
 	retryFn := func() {
-		<-time.After(PolicySyncRetryTime)
+		select {
+		case <-time.After(PolicySyncRetryTime):
+		case <-ctx.Done():
+			return
+		}
 		retryC <- struct{}{}
 	}
 
