@@ -392,7 +392,7 @@ func (c *collector) startStatsCollectionAndReporting() {
 		c.tickerPolicyActivityRefresh = jitter.NewTicker(refreshInterval*9/10, refreshInterval*1/10)
 		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
 		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
-		go c.loopEvaluatingPolicyActivity(c.policyActivityReporter)
+		go c.evaluatePolicyActivity(c.policyActivityReporter)
 		defer close(c.policyActivityRefreshC)
 	}
 
@@ -434,7 +434,7 @@ func (c *collector) startStatsCollectionAndReporting() {
 		case <-c.tickerPolicyEval.Channel():
 			c.updatePendingRuleTraces()
 		case <-policyActivityRefreshTickC:
-			c.refreshPolicyActivityForActiveConnections()
+			c.refreshLongLivedPolicyActivity()
 		}
 	}
 }
@@ -1359,10 +1359,9 @@ func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *pol
 	}
 }
 
-// refreshPolicyActivityForActiveConnections snapshots active connection data from epStats and sends
-// it to the policyActivityRefreshC channel for asynchronous evaluation. This decouples the main
-// collector loop from the policy store read lock, avoiding lock contention with policy store writers.
-func (c *collector) refreshPolicyActivityForActiveConnections() {
+// refreshLongLivedPolicyActivity collects long-lived connections from epStats and sends them
+// to the policyActivityRefreshC channel for policy activity evaluation.
+func (c *collector) refreshLongLivedPolicyActivity() {
 	var entries []policyActivityEntry
 	for _, data := range c.epStats {
 		// Skip aggregated flow stats; only long-lived connections need re-evaluation.
@@ -1394,40 +1393,40 @@ func (c *collector) refreshPolicyActivityForActiveConnections() {
 	}
 }
 
-// loopEvaluatingPolicyActivity runs in a separate goroutine, reading batches of connection
+// evaluatePolicyActivity runs in a separate goroutine, reading batches of connection
 // snapshots from policyActivityRefreshC. It acquires the policy store read lock once per batch,
 // evaluates all connections, then reports the results. This avoids acquiring/releasing the lock
 // per-connection and reduces contention with policy store writers.
-func (c *collector) loopEvaluatingPolicyActivity(reporter types.Reporter) {
+func (c *collector) evaluatePolicyActivity(reporter types.Reporter) {
 	for entries := range c.policyActivityRefreshC {
 		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			for i := range entries {
 				entry := &entries[i]
 				flow := TupleAsFlow(entry.Tuple)
-				c.evaluateAndReportPolicyActivity(ps, reporter, entry, flow, rules.RuleDirIngress, entry.DstEp)
-				c.evaluateAndReportPolicyActivity(ps, reporter, entry, flow, rules.RuleDirEgress, entry.SrcEp)
+				c.evalPolicyActivityForEp(ps, reporter, entry, flow, rules.RuleDirIngress, entry.DstEp)
+				c.evalPolicyActivityForEp(ps, reporter, entry, flow, rules.RuleDirEgress, entry.SrcEp)
 			}
 		})
 	}
 }
 
-// evaluateAndReportPolicyActivity evaluates the rule trace for a local workload endpoint
+// evalPolicyActivityForEp evaluates the rule trace for a local workload endpoint
 // and reports the result if any rules matched. Must be called with the policy store read lock held.
-func (c *collector) evaluateAndReportPolicyActivity(ps *policystore.PolicyStore, reporter types.Reporter, entry *policyActivityEntry, flow TupleAsFlow, direction rules.RuleDir, ep calc.EndpointData) {
+func (c *collector) evalPolicyActivityForEp(ps *policystore.PolicyStore, reporter types.Reporter, entry *policyActivityEntry, flow TupleAsFlow, direction rules.RuleDir, ep calc.EndpointData) {
 	if !isLocalWorkloadEp(ep) {
 		return
 	}
 	if protoEp := c.lookupProtoWorkloadEndpoint(ps, ep.Key()); protoEp != nil {
 		if trace := checker.Evaluate(direction, ps, protoEp, &flow); len(trace) > 0 {
-			reportPolicyActivityFromEntry(reporter, entry, trace)
+			sendPolicyActivityUpdate(reporter, entry, trace)
 		}
 	}
 }
 
-// reportPolicyActivityFromEntry sends a metric.Update to the given reporter from a
+// sendPolicyActivityUpdate sends a metric.Update to the given reporter from a
 // policyActivityEntry snapshot. The reporter is passed explicitly to avoid unsynchronized
 // access to the collector's policyActivityReporter field from the goroutine.
-func reportPolicyActivityFromEntry(reporter types.Reporter, entry *policyActivityEntry, ruleIDs []*calc.RuleID) {
+func sendPolicyActivityUpdate(reporter types.Reporter, entry *policyActivityEntry, ruleIDs []*calc.RuleID) {
 	mu := metric.Update{
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      entry.Tuple,
