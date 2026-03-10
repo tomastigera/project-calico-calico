@@ -542,12 +542,14 @@ type Config struct {
 	PolicyActivityLogsFileDirectory     string        `config:"string;/var/log/calico/policy"`
 	PolicyActivityLogsFileMaxFiles      int           `config:"int;5"`
 	PolicyActivityLogsFileMaxFileSizeMB int           `config:"int;100"`
-	PolicyActivityRefreshInterval       time.Duration `config:"seconds;3600"`
-	WindowsFlowLogsFileDirectory        string        `config:"string;c:\\TigeraCalico\\flowlogs"`
-	WindowsFlowLogsPositionFilePath     string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
-	WindowsStatsDumpFilePath            string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`
-	WindowsDNSCacheFile                 string        `config:"file;c:\\TigeraCalico\\felix-dns-cache.txt"`
-	WindowsDNSExtraTTL                  time.Duration `config:"seconds;120"`
+	// PolicyActivityRefreshInterval controls how often Felix re-evaluates policies for
+	// long-lived connections to keep policy activity timestamps current. [Default: 3600s]
+	PolicyActivityRefreshInterval   time.Duration `config:"seconds;3600;local"`
+	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
+	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
+	WindowsStatsDumpFilePath        string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`
+	WindowsDNSCacheFile             string        `config:"file;c:\\TigeraCalico\\felix-dns-cache.txt"`
+	WindowsDNSExtraTTL              time.Duration `config:"seconds;120"`
 
 	KubeNodePortRanges    []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange          numorstring.Port   `config:"portrange;"`
