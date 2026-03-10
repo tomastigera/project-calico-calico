@@ -62,6 +62,7 @@ blocks:
         - name: Build and publish hashrelease
           commands:
             - make hashrelease
+            - artifact push workflow _output/hashrelease/hashrelease.yaml
       prologue:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
@@ -75,3 +76,19 @@ blocks:
           value: tigera-windows/dev
         - name: HELM_REGISTRIES
           value: us-central1-docker.pkg.dev/unique-caldron-775/hashrelease-charts
+
+  - name: Smoke Tests
+    dependencies: ["Publish hashrelease"]
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
+        commands:
+          - artifact pull workflow _output/hashrelease/hashrelease.yaml -d release/_output/hashrelease/hashrelease.yaml
+      jobs:
+        - name: "Run hashrelease enterprise smoke tests"
+          execution_time_limit:
+            hours: 4
+          commands:
+            - cd release
+            - make hashrelease-validate

@@ -2,11 +2,9 @@ package tasks
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 
 	"github.com/projectcalico/calico/release/internal/outputs"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
@@ -37,13 +35,9 @@ func AnnounceTestedHashrelease(cfg *slack.Config, path string, passed bool, test
 		return nil
 	}
 	logrus.Info("Updating hashrelease Slack message to indicate tests have passed")
-	b, err := os.ReadFile(path)
+	hashrel, err := outputs.LoadPublishedHashrelease(path)
 	if err != nil {
-		return fmt.Errorf("unable to read hashrelease details from %s: %w", path, err)
-	}
-	var hashrel outputs.PublishedHashrelease
-	if err := yaml.Unmarshal(b, &hashrel); err != nil {
-		return fmt.Errorf("unable to unmarshal hashrelease details from %s: %w", path, err)
+		return fmt.Errorf("unable to load hashrelease details from %s: %w", path, err)
 	}
 	if hashrel.SlackResponse == nil || hashrel.SlackResponse.Timestamp == "" {
 		logrus.Warn("No Slack message to update for hashrelease")

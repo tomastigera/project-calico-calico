@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
@@ -11,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/outputs"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
+	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/manager"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
@@ -22,6 +27,7 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 		enterpriseBuildHashreleaseCommand(cfg),
 		enterprisePublishHashreleaseCommand(cfg),
 		enterpriseMetadataCommand(cfg),
+		enterpriseHashreleaseValidationSubCommand(cfg),
 	}
 }
 
@@ -376,6 +382,58 @@ func enterpriseMetadataCommand(cfg *Config) *cli.Command {
 			}
 			r := calico.NewEnterpriseManager(opts)
 			return r.BuildMetadata(c.String("dir"))
+		},
+	}
+}
+
+func enterpriseHashreleaseValidationSubCommand(cfg *Config) *cli.Command {
+	return &cli.Command{
+		Name:  "validate",
+		Usage: "Post-hashrelease validation (smoke tests)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "hashrelease-metadata-file",
+				Usage: "Path to hashrelease metadata file for setting URL environment variables",
+				Value: filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), "hashrelease.yaml"),
+			},
+		},
+		Action: func(_ context.Context, c *cli.Command) error {
+			configureLogging("postrelease-hashrelease-validation.log")
+
+			postreleaseDir := filepath.Join(cfg.RepoRootDir, utils.ReleaseFolderName, "pkg", "postrelease", "enterprise", "e2e")
+			args := []string{
+				"--format=testname",
+				"--", "-v", "./...",
+				fmt.Sprintf("-hashrelease-metadata-file=%s", c.String("hashrelease-metadata-file")),
+			}
+
+			cmd := exec.Command(filepath.Join(cfg.RepoRootDir, "bin", "gotestsum"), args...)
+			cmd.Dir = postreleaseDir
+			var errb strings.Builder
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
+				// If debug level is enabled, also write to stdout.
+				cmd.Stdout = io.MultiWriter(os.Stdout, logrus.StandardLogger().Out)
+				cmd.Stderr = io.MultiWriter(os.Stderr, &errb)
+			} else {
+				// Otherwise, just capture the output to return.
+				cmd.Stdout = io.MultiWriter(logrus.StandardLogger().Out)
+				cmd.Stderr = io.MultiWriter(&errb)
+			}
+			logTestCmdSecure(postreleaseDir, "gotestsum", args)
+			err := cmd.Run()
+			if err != nil {
+				err = fmt.Errorf("%s: %s", err, strings.TrimSpace(errb.String()))
+			}
+
+			// Update the Slack announcement with smoke test results.
+			metadataFilePath := c.String("hashrelease-metadata-file")
+			if c.Bool(notifyFlag.Name) {
+				if slackErr := tasks.AnnounceTestedHashrelease(slackConfig(c), metadataFilePath, err == nil, ciJobURL(c)); slackErr != nil {
+					logrus.WithError(slackErr).Warn("Failed to update Slack message with smoke test results")
+				}
+			}
+
+			return err
 		},
 	}
 }

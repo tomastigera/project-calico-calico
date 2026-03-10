@@ -42,7 +42,7 @@ ci: static-checks ut
 ###############################################################################
 # Hashrelease
 ###############################################################################
-.PHONY: hashrelease hashrelease-build hashrelease-publish
+.PHONY: hashrelease hashrelease-build hashrelease-publish hashrelease-validate
 hashrelease: hashrelease-build hashrelease-publish
 
 # Ensures helm is in the bin dir relative to repo root
@@ -57,6 +57,10 @@ hashrelease-publish: bin/release var-require-all-GITHUB_TOKEN ../bin/helm ../bin
 
 hashrelease-svr-gc: bin/release
 	@bin/release hashrelease garbage-collect
+
+# Run hashrelease validation (smoke tests)
+hashrelease-validate: bin/release
+	@bin/release hashrelease validate
 
 ###############################################################################
 # Release
