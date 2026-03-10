@@ -652,6 +652,10 @@ syn_force_policy:
 		 * gateways, on the return path, is to forward from destination IPs that
 		 * are not their own IP. */
 		if (EGRESS_GATEWAY) {
+			if (cali_rt_flags_outside_cluster(dst_flags)) {
+				CALI_DEBUG("EGW pod's own traffic to outside cluster\n");
+				ctx->state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
+			}
 			goto nat_outgoing;
 		}
 		if (wep_rpf_check(ctx, src_rt) == RPF_RES_FAIL) {

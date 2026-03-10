@@ -123,8 +123,8 @@ var _ = infrastructure.DatastoreDescribe(
 				extIface = nil
 			}
 			if calicoClient != nil {
-				calicoClient.ExternalNetworks().Delete(context.Background(), "ext-net-920", options.DeleteOptions{})
-				calicoClient.IPPools().Delete(context.Background(), "egress-pool", options.DeleteOptions{})
+				_, _ = calicoClient.ExternalNetworks().Delete(context.Background(), "ext-net-920", options.DeleteOptions{})
+				_, _ = calicoClient.IPPools().Delete(context.Background(), "egress-pool", options.DeleteOptions{})
 			}
 			tc.Stop()
 			infra.Stop()
@@ -291,7 +291,7 @@ var _ = infrastructure.DatastoreDescribe(
 						// Ping a non-routable IP. We only need to verify the packet exits
 						// via eth20 (ExternalNetwork table), not that it gets a reply.
 						// Table 920 routes via gateway 192.168.20.100 on eth20.
-						egw.RunCmd("ping", "-c", "3", "-W", "1", "10.99.99.99")
+						_, _ = egw.RunCmd("ping", "-c", "3", "-W", "1", "10.99.99.99")
 
 						By("Verifying ICMP packets appeared on eth20 with egress gateway source IP")
 						Eventually(dump.MatchCountFn("icmp-from-egw"), "10s", "330ms").Should(
