@@ -357,6 +357,19 @@ func (r *InfoReader) handleFlowEntry(fe *vfpctrl.FlowEntry) {
 	log.Debugf("Collector: Handle FlowEntry tuple %s, IN<%d,%d> OUT <%d,%d> Flow %#v",
 		fe.TupleID, fe.PktsIn, fe.BytesIn, fe.PktsOut, fe.BytesOut, fe)
 
+	// Skip flow entries that have no traffic in either direction, unless the
+	// connection is closed (expired entries must still be forwarded so the
+	// collector can clean up). VFP may return flow table entries created by
+	// policy matches that never accumulate packet counters. Forwarding these
+	// zero-counter entries to the collector would set IsConnection=true with
+	// zero counters, permanently overriding the ETW-based packet counting
+	// for the flow.
+	if !ctInfo.Expired &&
+		ctInfo.Counters.Packets == 0 && ctInfo.Counters.Bytes == 0 &&
+		ctInfo.ReplyCounters.Packets == 0 && ctInfo.ReplyCounters.Bytes == 0 {
+		return
+	}
+
 	if len(r.bufferedConntracks) > maxBufferedConntracks {
 		log.Warnf("VFP info reader reaches maximum number of buffered conntracks.")
 		return
