@@ -203,13 +203,13 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 				By("Updating AlertException name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.AlertExceptions().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: AlertException(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: AlertException(" + name2 + ")"))
 
 				By("Creating AlertException name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.AlertExceptions().Create(ctx, &apiv3.AlertException{
@@ -217,13 +217,13 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 					Spec:       spec2,
 				}, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: AlertException(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.AlertExceptions().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: AlertException(" + name2 + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {

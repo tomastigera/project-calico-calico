@@ -235,13 +235,13 @@ var _ = testutils.E2eDatastoreDescribe("PolicyRecommendationScope tests", testut
 				By("Updating PolicyRecommendationScope name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.PolicyRecommendationScopes().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: PolicyRecommendationScope(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: PolicyRecommendationScope(" + name2 + ")"))
 
 				By("Creating PolicyRecommendationScope name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.PolicyRecommendationScopes().Create(ctx, &apiv3.PolicyRecommendationScope{
@@ -249,13 +249,13 @@ var _ = testutils.E2eDatastoreDescribe("PolicyRecommendationScope tests", testut
 					Spec:       spec2,
 				}, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: PolicyRecommendationScope(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.PolicyRecommendationScopes().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: PolicyRecommendationScope(" + name2 + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {

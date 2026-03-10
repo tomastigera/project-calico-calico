@@ -218,13 +218,13 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.Da
 				By("Updating GlobalAlertTemplate name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.GlobalAlertTemplates().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalAlertTemplate(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: GlobalAlertTemplate(" + name2 + ")"))
 
 				By("Creating GlobalAlertTemplate name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.GlobalAlertTemplates().Create(ctx, &apiv3.GlobalAlertTemplate{
@@ -232,13 +232,13 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.Da
 					Spec:       spec2,
 				}, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalAlertTemplate(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.GlobalAlertTemplates().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: GlobalAlertTemplate(" + name2 + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {

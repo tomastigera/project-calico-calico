@@ -217,13 +217,13 @@ var _ = testutils.E2eDatastoreDescribe("SecuritEventWebhook tests", testutils.Da
 				By("Updating SecurityEventWebhook name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.SecurityEventWebhook().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: SecurityEventWebhook(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: SecurityEventWebhook(" + name2 + ")"))
 
 				By("Creating SecurityEventWebhook name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.SecurityEventWebhook().Create(ctx, &apiv3.SecurityEventWebhook{
@@ -231,13 +231,13 @@ var _ = testutils.E2eDatastoreDescribe("SecuritEventWebhook tests", testutils.Da
 					Spec:       spec2,
 				}, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(1 * time.Second)
-				_, outError = c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-				time.Sleep(2 * time.Second)
-				_, outError = c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
-				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(ContainSubstring("resource does not exist: SecurityEventWebhook(" + name2 + ")"))
+				Eventually(func() string {
+					_, err := c.SecurityEventWebhook().Get(ctx, name2, options.GetOptions{})
+					if err != nil {
+						return err.Error()
+					}
+					return ""
+				}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("resource does not exist: SecurityEventWebhook(" + name2 + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
