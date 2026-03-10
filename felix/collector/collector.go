@@ -1324,14 +1324,14 @@ func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
 	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
 	flow := TupleAsFlow(data.Tuple)
 
-	if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
+	if isLocalWorkloadEp(data.DstEp) {
 		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
 		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
 		})
 	}
 
-	if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
+	if isLocalWorkloadEp(data.SrcEp) {
 		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
 		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
