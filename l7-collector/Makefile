@@ -60,7 +60,7 @@ $(ENVOY_IMAGE_CREATED): register envoy/Dockerfile
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	rm -rf bin report/*.xml
 	rm -f $(L7_COLLECTOR_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(ENVOY_IMAGE) -a -q)
@@ -70,8 +70,9 @@ clean:
 ###############################################################################
 .PHONY: ut
 ut: bin/l7-collector-$(ARCH)
+	mkdir -p report
 	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
-	    ginkgo -r --skip-package deps,fv --focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	    ginkgo --junit-report=l7-collector_ut.xml --output-dir=report/ -r --skip-package deps,fv --focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
 fv: bin/l7-collector-$(ARCH)

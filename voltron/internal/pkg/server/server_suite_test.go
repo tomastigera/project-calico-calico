@@ -14,7 +14,5 @@ func TestServer(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
 	RegisterFailHandler(Fail)
-	suiteConfig, reporterConfig := GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../report/server_suite.xml"
-	RunSpecs(t, "Server Suite", suiteConfig, reporterConfig)
+	RunSpecs(t, "Server Suite")
 }

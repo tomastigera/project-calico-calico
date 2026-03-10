@@ -180,6 +180,7 @@ build-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning
 fv:
 	@echo "No FV tests for CNI plugin"
 
+
 ## Install KubeVirt CRDs for testing (without operator/controllers)
 .PHONY: install-kubevirt-crds
 install-kubevirt-crds:
@@ -210,17 +211,17 @@ ut: $(UT_PREREQS)
 
 ## Run unit tests against etcdv3 with CNI spec 0.3.1.
 ut-etcd: $(UT_PREREQS)
-	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3 CNI_SPEC_VERSION=0.3.1
+	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3 CNI_SPEC_VERSION=0.3.1 JUNIT_REPORT_NAME=cni_plugin_ut_etcd.xml
 
 ## Run unit tests against KDD with CNI spec 1.0.0 (excludes KubeVirt tests).
 ut-kdd: $(UT_PREREQS)
 	$(MAKE) remove-kubevirt-crds
-	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes CNI_SPEC_VERSION=1.0.0 GINKGO_ARGS='--label-filter=!KubeVirt $(GINKGO_ARGS)'
+	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes CNI_SPEC_VERSION=1.0.0 JUNIT_REPORT_NAME=cni_plugin_ut_kdd.xml GINKGO_ARGS='--label-filter=!KubeVirt $(GINKGO_ARGS)'
 
 ## Run KubeVirt-specific unit tests against KDD with CNI spec 1.0.0.
 ut-kubevirt: $(UT_PREREQS)
 	$(MAKE) install-kubevirt-crds
-	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes CNI_SPEC_VERSION=1.0.0 GINKGO_ARGS='--label-filter=KubeVirt $(GINKGO_ARGS)'
+	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes CNI_SPEC_VERSION=1.0.0 JUNIT_REPORT_NAME=cni_plugin_ut_kubevirt.xml GINKGO_ARGS='--label-filter=KubeVirt $(GINKGO_ARGS)'
 
 ut-datastore:
 	# The tests need to run as root
@@ -240,7 +241,21 @@ ut-datastore:
 	-v $(CERTS_PATH):/home/user/certs \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 			cd  /go/src/$(PACKAGE_NAME) && \
-			ginkgo --cover -r --skip-package pkg/install,containernetworking-plugins $(GINKGO_ARGS)'
+			mkdir -p report && \
+			ginkgo --cover -r --junit-report=$(JUNIT_REPORT_NAME) --output-dir=report/ --skip-package pkg/install,containernetworking-plugins $(GINKGO_ARGS)'
+
+## Run the tests in a container (as root) for different CNI spec versions
+## to make sure we don't break backwards compatibility.
+.PHONY: test-cni-versions
+test-cni-versions:
+	for cniversion in "0.2.0" "0.3.1" ; do \
+		if make ut CNI_SPEC_VERSION=$$cniversion; then \
+			echo "CNI version $$cniversion PASSED"; \
+		else \
+			echo "CNI version $$cniversion FAILED"; \
+			exit 1; \
+		fi; \
+	done
 
 ###############################################################################
 # Install test

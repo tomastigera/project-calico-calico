@@ -71,7 +71,8 @@ bin/carrotctl-windows-amd64.exe: bin/carrotctl-windows-amd64
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev.
 ut: $(SRC_FILES)
-	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) go test -v ./... -cover -count 1"
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) gotestsum --junitfile report/licensing_ut.xml -- -v ./... -cover -count 1"
 
 fv st:
 	@echo "No FVs or STs available"

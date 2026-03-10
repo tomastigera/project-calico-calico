@@ -78,7 +78,7 @@ clean:
 .PHONY: ut
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/ui_apis_ut.xml -- $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: build-linseed-image build-apiserver-image run-linseed run-tigera-apiserver k8s-auth
 build-linseed-image:

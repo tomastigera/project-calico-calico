@@ -66,7 +66,7 @@ $(FIREWALL_INTEGRATION_CONTAINER_CREATED): Dockerfile bin/firewall-integration-$
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	rm -rf bin report/*.xml
 	rm -f $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
 	find . -name "*.coverprofile" -type f -delete
 	-docker image rm -f $$(docker images $(FIREWALL_INTEGRATION_IMAGE) -a -q)
@@ -84,7 +84,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ## Run only Unit Tests.
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) --junit-report=firewall-integration_ut.xml --output-dir=report/ -r pkg/*'
 
 #############################################
 # Run FV tests

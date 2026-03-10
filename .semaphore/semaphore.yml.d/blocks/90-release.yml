@@ -13,7 +13,7 @@
       - name: "Release tooling: CI"
         commands:
           - ../.semaphore/run-and-monitor release-ci.log make ci
-          - 'test-results publish --name "Release tool: UT" ./report/*.xml || true'
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
       - name: "Release tooling: build"
         commands:
           - ../.semaphore/run-and-monitor release-build.log make build

@@ -22,7 +22,7 @@ test_pkgs=$(go list -buildvcs=false -f '{{ if .TestGoFiles | or .XTestGoFiles }}
 test ! -z "$test_pkgs"
 echo "Packages with tests: $test_pkgs"
 
-ginkgo --cover -covermode=count -coverpkg=${go_dirs} ${GINKGO_ARGS} -r --skip-package=test/fv
+ginkgo --junit-report=compliance_ut.xml --output-dir=report/ --cover -covermode=count -coverpkg=${go_dirs} ${GINKGO_ARGS} -r --skip-package=test/fv
 gocovmerge $(find . -name '*.coverprofile') > combined.coverprofile
 
 # Print the coverage.  We use sed to remove the verbose prefix and trim down

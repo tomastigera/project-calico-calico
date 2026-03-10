@@ -83,7 +83,7 @@ ut: build
 	mkdir -p report
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go test ./...'
+			gotestsum --junitfile report/key_cert_provisioner_ut.xml -- ./...'
 
 ci: clean static-checks image ut
 

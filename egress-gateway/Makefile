@@ -89,7 +89,7 @@ $(GATEWAY_CONTAINER_CREATED): Dockerfile $(GATEWAY_DAEMON_EXECUTABLE) init-gatew
 ## Run the tests in a container. Useful for CI, Mac dev
 ut: ../felix/proto/felixbackend.pb.go
 	mkdir -p report
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GOTEST_ARGS) ./..."
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) gotestsum --junitfile report/egress_gateway_ut.xml -- -v $(GOTEST_ARGS) ./..."
 
 fv:
 	echo "egress-gateway currently has no FV tests."

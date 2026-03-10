@@ -11,7 +11,6 @@
       - name: "pod2daemon: CI"
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
-          - 'test-results publish ./report/*.xml --name "pod2daemon: UT" || true'
       - name: "pod2daemon: Build multi-arch"
         matrix:
           - env_var: ARCH
@@ -19,3 +18,7 @@
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+    epilogue:
+      always:
+        commands:
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'

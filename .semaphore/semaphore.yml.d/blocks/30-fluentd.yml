@@ -74,7 +74,7 @@
     epilogue:
       always:
         commands:
-          - 'test-results publish ./report/*.xml --name "fluentd: UT" || true'
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
 
 - name: Publish tigera/fluentd-base Windows images
   run:

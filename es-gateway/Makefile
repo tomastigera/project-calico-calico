@@ -51,7 +51,7 @@ $(ES_GATEWAY_CONTAINER_CREATED): Dockerfile bin/es-gateway-$(ARCH)
 
 .PHONY: clean
 clean: stop-elastic
-	rm -rf bin
+	rm -rf bin report/*.xml
 	rm -f $(ES_GATEWAY_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
 
@@ -69,7 +69,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ## Run only Unit Tests.
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) --junit-report=es-gateway_ut.xml --output-dir=report/ pkg/*'
 
 # Disable challenger tests
 

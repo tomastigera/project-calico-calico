@@ -198,7 +198,7 @@ $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/D
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	rm -rf bin report/*.xml
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete

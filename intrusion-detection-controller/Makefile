@@ -104,7 +104,7 @@ run-ut: $(MMDB_CITY) $(MMDB_ASN)
 		-v $(CURDIR)/$(MMDB_ASN):/usr/share/GeoIP/dbip-asn-lite.mmdb \
 		-v $(CURDIR)/$(MMDB_CITY):/usr/share/GeoIP/dbip-city-lite.mmdb \
 		$(CALICO_BUILD) \
-			sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+			sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/intrusion_detection_controller_ut.xml -- $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: clean
 clean:

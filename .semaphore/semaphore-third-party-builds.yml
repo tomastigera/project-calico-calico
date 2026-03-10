@@ -345,7 +345,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Deep packet inspection: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/elasticsearch images
     run:
       when: "true or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -497,7 +497,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "fluentd: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/fluentd-base Windows images
     run:
       when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"

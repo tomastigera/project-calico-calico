@@ -66,7 +66,7 @@ $(QUERYSERVER_CONTAINER_CREATED): Dockerfile bin/queryserver-$(ARCH)
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	rm -rf bin report/*.xml
 	rm -f $(QUERYSERVER_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(QUERYSERVER_IMAGE) -a -q)
 

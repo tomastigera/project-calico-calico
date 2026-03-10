@@ -9,7 +9,5 @@ import (
 
 func TestTunnel(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../report/tunnel_suite.xml"
-	ginkgo.RunSpecs(t, "Tunnel Suite", suiteConfig, reporterConfig)
+	ginkgo.RunSpecs(t, "Tunnel Suite")
 }

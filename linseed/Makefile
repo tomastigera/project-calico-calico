@@ -104,7 +104,7 @@ UT_WHAT=./pkg... ./cmd/...
 ut: stop-elastic run-elastic ut-fast
 ut-fast: gen-certs
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test $(UT_WHAT) -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/linseed_ut.xml -- $(UT_WHAT) -cover -count 1'
 
 st:
 	@echo "No STs"

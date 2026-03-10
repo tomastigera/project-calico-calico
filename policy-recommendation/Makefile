@@ -62,7 +62,7 @@ $(POLICY_RECOMMENDATION_CONTAINER_CREATED): Dockerfile bin/policy-recommendation
 
 .PHONY: clean
 clean:
-	rm -rf bin \
+	rm -rf bin report/*.xml \
 	rm -f $(POLICY_RECOMMENDATION_CONTAINER_CREATED)
 	find . -name "*.coverprofile" -type f -delete
 	-docker image rm -f $$(docker images $(POLICY_RECOMMENDATION_IMAGE) -a -q)
@@ -89,7 +89,7 @@ fv:
 ## Run only Unit Tests.
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) --junit-report=policy-recommendation_ut.xml --output-dir=report/ -r pkg/*'
 
 ###############################################################################
 # CI/CD

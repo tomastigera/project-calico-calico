@@ -44,4 +44,4 @@
     epilogue:
       always:
         commands:
-          - test-results publish report --name "kube-controllers" --suite-prefix="$TEST_SUITE_PREFIX"
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'

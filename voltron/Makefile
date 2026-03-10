@@ -90,7 +90,7 @@ $(GUARDIAN_CONTAINER_CREATED): docker-image/guardian/Dockerfile $(BINDIR)/guardi
 ##########################################################################################
 .PHONY: clean
 clean:
-	rm -rf $(BINDIR)
+	rm -rf $(BINDIR) report/*.xml
 	find . -name "*.coverprofile" -type f -delete
 	rm -f $(VOLTRON_CONTAINER_CREATED)
 	rm -f $(GUARDIAN_CONTAINER_CREATED)
@@ -110,7 +110,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ## Run only Unit Tests.
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r --keep-going pkg/* internal/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) --junit-report=voltron_ut.xml --output-dir=report/ -r --keep-going pkg/* internal/*'
 
 #############################################
 # Run package level functional level tests

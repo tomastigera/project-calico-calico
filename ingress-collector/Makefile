@@ -53,7 +53,7 @@ $(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile bin/ingress-collector-$(ARCH)
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
-	rm -fr bin
+	rm -fr bin report/*.xml
 	rm -f $(INGRESS_COLLECTOR_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(INGRESS_COLLECTOR_IMAGE) -a -q)
 
@@ -65,7 +65,8 @@ GINKGO_FOCUS?=.*
 
 .PHONY: ut
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r --skip-package fv --focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo --junit-report=ingress-collector_ut.xml --output-dir=report/ -r --skip-package fv --focus=$(GINKGO_FOCUS) $(GINKGO_ARGS) $(WHAT)'
 
 .PHONY: fv
 fv:

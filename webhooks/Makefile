@@ -45,7 +45,7 @@ bin/LICENSE: ../LICENSE.md
 ci: clean static-checks image ut
 ut:
 	mkdir -p report
-	$(DOCKER_GO_BUILD) sh -c 'gotestsum --junitfile report/tests.xml -- ./... -coverprofile coverage.profile -race -count 1'
+	$(DOCKER_GO_BUILD) sh -c 'gotestsum --junitfile report/webhooks_ut.xml -- ./... -coverprofile coverage.profile -race -count 1'
 
 gen-mocks:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'mockery'

@@ -11,7 +11,5 @@ import (
 
 func TestClient(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	suiteConfig, reporterConfig := ginkgo.GinkgoConfiguration()
-	reporterConfig.JUnitReport = "../../../report/bootstrap_suite.xml"
-	ginkgo.RunSpecs(t, "Bootstrap Suite", suiteConfig, reporterConfig)
+	ginkgo.RunSpecs(t, "Bootstrap Suite")
 }

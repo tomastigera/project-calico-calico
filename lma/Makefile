@@ -46,7 +46,7 @@ report-dir:
 ut: report-dir run-elastic run-uts stop-elastic
 run-uts:
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
+		sh -c '$(GIT_CONFIG_SSH) gotestsum --junitfile report/lma_ut.xml -- $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 ###############################################################################

@@ -132,7 +132,8 @@ bin/LICENSE: ../LICENSE.md
 ut: geoip/dbip-city-lite.mmdb protobuf ut-exec
 
 ut-exec:
-	$(DOCKER_GO_BUILD) sh -c "gotestsum --junitfile report/tests.xml -- -count 1 ./..."
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c "gotestsum --junitfile report/app_policy_ut.xml -- -count 1 ./..."
 
 
 ###############################################################################

@@ -518,7 +518,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "API: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: API Server
     run:
       when: "true"
@@ -550,7 +550,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "API Server: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Application Layer Policy
     run:
       when: "true"
@@ -564,7 +564,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report --name "App policy"
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
         on_pass:
           commands:
             - cache store app-policy-geoip app-policy/geoip
@@ -587,7 +587,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report --name "App policy" --suite-prefix=(arm64)
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
       jobs:
         - name: "Application Layer Policy: build arm64"
           commands:
@@ -621,7 +621,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "calicoctl: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: CNI Plugin
     run:
       when: "true"
@@ -654,7 +654,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "CNI Plugin: UT" || true'
+            - 'python3 ../hack/strip-skipped-tests.py ./report/*.xml 2>/dev/null || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "CNI Plugin: Windows"
     run:
       when: "false or true"
@@ -735,7 +736,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "confd: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: E2E script & pipeline validations
     run:
       when: "true or change_in(['/.semaphore/end-to-end/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -785,6 +786,10 @@ blocks:
               value: "BIRD"
             - name: STORE_BUILD_CACHE
               value: "true"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "E2E tests (cluster routing: Felix)"
     run:
       when: "true"
@@ -822,6 +827,10 @@ blocks:
               value: '"BGP|\[sig-calico\].*staged"'
             - name: STORE_BUILD_CACHE
               value: "true"
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Envoy Gateway
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1289,7 +1298,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish report --name "kube-controllers" --suite-prefix="$TEST_SUITE_PREFIX"
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Libraries (lib)
     run:
       when: "true or change_in(['/lib/'], {pipeline_file: 'ignore'})"
@@ -1308,7 +1317,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Libraries: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: libcalico-go
     run:
       when: "true"
@@ -1342,7 +1351,8 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "libcalico-go: UT" || true'
+            - 'python3 ../hack/strip-skipped-tests.py ./report/*.xml 2>/dev/null || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "Node: Build"
     run:
       when: "true"
@@ -1378,7 +1388,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - test-results publish ./report/nosetests.xml --name "node-ci" || true
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "Node: multi-arch build"
     run:
       when: "true"
@@ -1480,7 +1490,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "pkg: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: pod2daemon
     run:
       when: "true"
@@ -1494,7 +1504,6 @@ blocks:
         - name: "pod2daemon: CI"
           commands:
             - ../.semaphore/run-and-monitor ci.log make ci
-            - 'test-results publish ./report/*.xml --name "pod2daemon: UT" || true'
         - name: "pod2daemon: Build multi-arch"
           matrix:
             - env_var: ARCH
@@ -1502,6 +1511,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "Tools (hack directory)"
     run:
       when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/hack/', '/api/', '/libcalico-go/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1518,7 +1531,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Tools: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Typha
     run:
       when: "true"
@@ -1579,7 +1592,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Webhooks: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: calicoq
     run:
       when: "true"
@@ -1605,7 +1618,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "calicoq: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Compliance
     run:
       when: "true"
@@ -1629,7 +1642,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Compliance: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Dashboards
     run:
       when: "true"
@@ -1653,7 +1666,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Dashboards: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/snort3 images
     run:
       when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1733,7 +1746,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Deep packet inspection: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Egress gateway
     run:
       when: "true"
@@ -1751,7 +1764,7 @@ blocks:
         always:
           commands:
             - ../.semaphore/publish-artifacts
-            - 'test-results publish ./report/*.xml --name "Egress gateway: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Egress gateway - native arm64 runner
     run:
       when: "true"
@@ -1796,6 +1809,10 @@ blocks:
                 - arm64
           commands:
             - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+      epilogue:
+        always:
+          commands:
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/elasticsearch images
     run:
       when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -1895,7 +1912,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "ES Gateway: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Firewall integration
     run:
       when: "true"
@@ -1919,7 +1936,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Firewall integration: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/fluentd-base images
     run:
       when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -1995,7 +2012,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "fluentd: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/fluentd-base Windows images
     run:
       when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -2087,7 +2104,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Gateway: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Ingress collector
     run:
       when: "true"
@@ -2111,7 +2128,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Ingress collector: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Intrusion detection controller
     run:
       when: "true"
@@ -2136,7 +2153,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "IDS Controller: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
         on_pass:
           commands:
             - cache store ids-geoip intrusion-detection-controller/geoip
@@ -2169,7 +2186,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Key cert provisioner: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/kibana images
     run:
       when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
@@ -2243,7 +2260,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "L7 admission controller: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "L7 Collector"
     run:
       when: "true"
@@ -2270,7 +2287,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "L7 collector: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: License Agent
     run:
       when: "true"
@@ -2294,7 +2311,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "License agent: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Licensing
     run:
       when: "true"
@@ -2318,7 +2335,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Licensing: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Linseed
     run:
       when: "true"
@@ -2342,7 +2359,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Linseed: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Logging/Monitoring/Alerting library (lma)
     run:
       when: "true"
@@ -2359,7 +2376,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "LMA: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Oiler
     run:
       when: "true"
@@ -2383,7 +2400,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Oiler: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Packet Capture
     run:
       when: "true"
@@ -2407,7 +2424,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Packetcapture: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Policy Recommendation
     run:
       when: "true"
@@ -2431,7 +2448,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Policy recommendation: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Prometheus Service
     run:
       when: "true"
@@ -2455,7 +2472,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Prometheus service: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Query Server
     run:
       when: "true"
@@ -2479,7 +2496,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Query server: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: UI APIs
     run:
       when: "true"
@@ -2508,7 +2525,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "UI APIs: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Voltron
     run:
       when: "true"
@@ -2532,7 +2549,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Voltron: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "Webhooks Processor"
     run:
       when: "true"
@@ -2556,7 +2573,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Webhooks processor: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Fluent Bit
     run:
       when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -2578,7 +2595,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Fluent-bit: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: SELinux
     run:
       when: "true or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -2758,7 +2775,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Fake log generator: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Mock node
     run:
       when: "true"
@@ -2781,7 +2798,7 @@ blocks:
       epilogue:
         always:
           commands:
-            - 'test-results publish ./report/*.xml --name "Mock node: UT" || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Release tooling
     run:
       when: "true"
@@ -2797,7 +2814,7 @@ blocks:
         - name: "Release tooling: CI"
           commands:
             - ../.semaphore/run-and-monitor release-ci.log make ci
-            - 'test-results publish --name "Release tool: UT" ./report/*.xml || true'
+            - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
         - name: "Release tooling: build"
           commands:
             - ../.semaphore/run-and-monitor release-build.log make build

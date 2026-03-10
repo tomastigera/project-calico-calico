@@ -21,4 +21,4 @@
     epilogue:
       always:
         commands:
-          - 'test-results publish ./report/*.xml --name "Webhooks processor: UT" || true'
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'

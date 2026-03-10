@@ -389,14 +389,16 @@ else
 WHAT=$(shell find . -name "*_test.go" | xargs dirname | sort -u)
 endif
 
+
 ## Run the ginkgo tests.
 ut fv: $(LIBBPF_A) run-k8s-apiserver
+	mkdir -p report
 	$(DOCKER_RUN) \
 	-v $(CERTS_PATH):/home/user/certs \
 	-e KUBECONFIG=/go/src/github.com/projectcalico/calico/hack/test/certs/kubeconfig \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	-e CALICO_API_GROUP=$(CALICO_API_GROUP) \
-	-e GINKGO_ARGS="$(GINKGO_ARGS)" \
+	-e GINKGO_ARGS="--junit-report=node_ut.xml --output-dir=report/ $(GINKGO_ARGS)" \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ./run-uts $(WHAT)'
 
 ###############################################################################

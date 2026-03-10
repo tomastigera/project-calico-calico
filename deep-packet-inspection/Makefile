@@ -96,7 +96,8 @@ FV_PACKAGE=pkg/syncer
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r --skip-package=$(FV_PACKAGE) pkg/*'
+	mkdir -p report
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) --junit-report=deep-packet-inspection_ut.xml --output-dir=report/ -r --skip-package=$(FV_PACKAGE) pkg/*'
 
 
 ###############################################################################

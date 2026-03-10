@@ -22,7 +22,7 @@
     epilogue:
       always:
         commands:
-          - 'test-results publish ./report/*.xml --name "IDS Controller: UT" || true'
+          - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
       on_pass:
         commands:
           - cache store ids-geoip intrusion-detection-controller/geoip

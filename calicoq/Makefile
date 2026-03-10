@@ -47,7 +47,7 @@ $(CALICOQ_IMAGE_CREATED): Dockerfile bin/calicoq-$(ARCH)
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	rm -rf bin report/*.xml
 	rm -f $(CALICOQ_IMAGE_CREATED) $(TOOLING_IMAGE_CREATED)
 
 	-docker image rm -f $$(docker images $(CALICOQ_IMAGE) -a -q)
@@ -74,7 +74,7 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
 .PHONY: ut
 ut:
 	mkdir -p report
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo --cover -r --skip-package calicoq/*'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo --junit-report=calicoq_ut.xml --output-dir=report/ --cover -r --skip-package calicoq/*'
 
 bin/calicoctl:
 	make -C ../calicoctl build
