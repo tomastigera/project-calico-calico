@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 
 package templates
 
@@ -16,6 +16,18 @@ type Template struct {
 	IndexPatterns []string       `json:"index_patterns,omitempty"`
 	Settings      map[string]any `json:"settings,omitempty"`
 	Mappings      map[string]any `json:"mappings,omitempty"`
+}
+
+// ComposableBody returns the template in composable index template format
+// suitable for use with the IndexPutIndexTemplate API.
+func (t *Template) ComposableBody() map[string]any {
+	return map[string]any{
+		"index_patterns": t.IndexPatterns,
+		"template": map[string]any{
+			"settings": t.Settings,
+			"mappings": t.Mappings,
+		},
+	}
 }
 
 // TemplateConfig is the configuration used to create a template

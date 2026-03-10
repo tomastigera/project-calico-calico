@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 //
 
 package testutils
@@ -366,8 +366,9 @@ func Populate(value reflect.Value) {
 
 func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, client *elastic.Client, idx bapi.Index, i bapi.ClusterInfo, indexPattern, shards, replicas, ILMPolicy string) {
 	// Check that the template was created.
-	templateExists, err := client.IndexTemplateExists(idx.IndexTemplateName(i)).Do(ctx)
+	templateResp, err := client.IndexGetIndexTemplate(idx.IndexTemplateName(i)).Do(ctx)
 	require.NoError(t, err)
+	_, templateExists := templateResp.IndexTemplates.ByName(idx.IndexTemplateName(i))
 	require.True(t, templateExists)
 
 	// Check that the bootstrap index exists
