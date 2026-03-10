@@ -77,7 +77,7 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 
 	// Parse policies in the same way Linseed would produce them.
 	for _, p := range policies {
-		hit, err := api.PolicyHitFromFlowLogPolicyString(p, 1)
+		hit, err := api.PolicyHitFromFlowLogPolicyString(p)
 		Expect(err).NotTo(HaveOccurred())
 
 		flow.Policies = append(flow.Policies, v1.Policy{
@@ -86,11 +86,10 @@ func flow(reporter, action, protocol string, source, dest epData, policies ...st
 			Namespace:    hit.Namespace(),
 			Name:         hit.Name(),
 			Action:       string(hit.Action()),
-			IsStaged:     hit.IsStaged(),
-			IsKubernetes: hit.IsKubernetes(),
-			IsProfile:    hit.IsProfile(),
-			Count:        hit.Count(),
-			RuleID:       hit.RuleIdIndex(),
+			IsStaged:     api.IsStaged(hit.Kind()),
+			IsKubernetes: api.IsKubernetes(hit.Kind()),
+			IsProfile:    api.IsProfile(hit.Kind()),
+			RuleID:       hit.RuleIndex(),
 		})
 	}
 	return flow
@@ -105,16 +104,16 @@ func (c alwaysAllowCalculator) CalculateSource(flow *api.Flow) (bool, policycalc
 		Include: true,
 		Action:  flow.ActionFlag,
 		Policies: []api.PolicyHit{
-			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+			mustCreatePolicyHit("1|default|default.policy1|allow"),
 		},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
 		Action:  api.ActionFlagAllow,
 		Policies: []api.PolicyHit{
-			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+			mustCreatePolicyHit("1|default|default.policy1|allow"),
 		},
 	}
 	return flow.ActionFlag != api.ActionFlagAllow, before, after
@@ -128,8 +127,8 @@ func (alwaysAllowCalculator) CalculateDest(
 			Include: true,
 			Action:  flow.ActionFlag,
 			Policies: []api.PolicyHit{
-				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-				mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+				mustCreatePolicyHit("1|default|default.policy1|allow"),
 			},
 		}
 	}
@@ -139,8 +138,8 @@ func (alwaysAllowCalculator) CalculateDest(
 			Include: true,
 			Action:  api.ActionFlagAllow,
 			Policies: []api.PolicyHit{
-				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-				mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+				mustCreatePolicyHit("1|default|default.policy1|allow"),
 			},
 		}
 	}
@@ -156,16 +155,16 @@ func (c alwaysDenyCalculator) CalculateSource(flow *api.Flow) (bool, policycalc.
 		Include: true,
 		Action:  flow.ActionFlag,
 		Policies: []api.PolicyHit{
-			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+			mustCreatePolicyHit("1|default|default.policy1|allow"),
 		},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
 		Action:  api.ActionFlagDeny,
 		Policies: []api.PolicyHit{
-			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+			mustCreatePolicyHit("1|default|default.policy1|allow"),
 		},
 	}
 	return flow.ActionFlag != api.ActionFlagDeny, before, after
@@ -179,8 +178,8 @@ func (alwaysDenyCalculator) CalculateDest(
 			Include: true,
 			Action:  flow.ActionFlag,
 			Policies: []api.PolicyHit{
-				mustCreatePolicyHit("0|tier1|tier1.policy1|deny", 1),
-				mustCreatePolicyHit("1|default|default.policy1|deny", 1),
+				mustCreatePolicyHit("0|tier1|tier1.policy1|deny"),
+				mustCreatePolicyHit("1|default|default.policy1|deny"),
 			},
 		}
 	}
@@ -189,8 +188,8 @@ func (alwaysDenyCalculator) CalculateDest(
 			Include: true,
 			Action:  api.ActionFlagDeny,
 			Policies: []api.PolicyHit{
-				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
-				mustCreatePolicyHit("1|default|default.policy1|deny", 1),
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass"),
+				mustCreatePolicyHit("1|default|default.policy1|deny"),
 			},
 		}
 	}
@@ -696,8 +695,8 @@ var _ = Describe("Test handling of aggregated response", func() {
 	})
 })
 
-func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
-	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+func mustCreatePolicyHit(policyStr string) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return policyHit

@@ -9,7 +9,7 @@ import (
 )
 
 // rule id index equals -1 for end-of-tier deny.
-const ruleIdIndexEndOfTierDeny = -1
+const ruleIndexEndOfTierDeny = -1
 
 // calculateCompiledTiersAndImpactedPolicies compiles the Tiers and policies and returns ingress and egress sets of
 // -  The compiled tiers (With policies)
@@ -508,12 +508,12 @@ func addPolicyToResponse(r *EndpointResponse, tier string, k model.ResourceKey, 
 	if len(r.Policies) > 0 {
 		lastPolicy := r.Policies[len(r.Policies)-1]
 		matchIndex = lastPolicy.Index()
-		if lastPolicy.Tier() != tier || lastPolicy.Namespace() != k.Namespace || lastPolicy.Name() != k.Name || lastPolicy.IsStaged() != staged {
+		if lastPolicy.Tier() != tier || lastPolicy.Namespace() != k.Namespace || lastPolicy.Name() != k.Name || api.IsStaged(lastPolicy.Kind()) != staged {
 			matchIndex++
 		}
 	}
 
-	var ruleIdIndex *int
+	var ruleIndex *int
 	for _, actionStr := range flags.ToActionStrings() {
 		action := api.ActionFromString(actionStr)
 		if action == api.ActionInvalid {
@@ -524,12 +524,12 @@ func addPolicyToResponse(r *EndpointResponse, tier string, k model.ResourceKey, 
 		// ActionEndOfTierDeny from AllActions in lma. Define the rule id index while defining the
 		// action.
 		if action == api.ActionEndOfTierDeny {
-			ruleIdIndex = new(int)
-			*ruleIdIndex = -1
+			ruleIndex = new(int)
+			*ruleIndex = -1
 			action = api.ActionDeny
 		}
 
-		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, k.Name, k.Namespace, k.Kind, tier, ruleIdIndex)
+		newPolicyHit, err := api.NewPolicyHit(action, matchIndex, k.Name, k.Namespace, k.Kind, tier, ruleIndex)
 		if err != nil {
 			log.WithError(err).Errorf("failed to create new policy hit")
 			continue
@@ -584,8 +584,8 @@ func getFlagsFromFlowLog(k model.ResourceKey, flow *api.Flow) (api.ActionFlag, b
 
 		// When the policy action and the rule index id are 'deny' and -1 respectively, set the
 		// policyAction to end-of-tier deny.
-		if p.RuleIdIndex() != nil &&
-			*p.RuleIdIndex() == ruleIdIndexEndOfTierDeny &&
+		if p.RuleIndex() != nil &&
+			*p.RuleIndex() == ruleIndexEndOfTierDeny &&
 			thisActionFlag == api.ActionDeny {
 			policyAction = api.ActionEndOfTierDeny
 		} else {

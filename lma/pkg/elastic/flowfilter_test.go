@@ -249,12 +249,12 @@ var _ = Describe("FlowFilter", func() {
 				},
 			},
 			func(mockFlowHelper *rbac.MockFlowHelper) {
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1")).Return(true, nil)
 			},
 			map[any]int64{
 				"0|*|*|pass|*":                   1000,
@@ -285,19 +285,19 @@ var _ = Describe("FlowFilter", func() {
 				},
 			},
 			func(mockFlowHelper *rbac.MockFlowHelper) {
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|allow|0", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|tier1.np1|deny|-1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier1|tier1.np1|pass", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier1|staged:tier1.np1|allow", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|tier2|ns1/tier2.np1|deny|0", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|tier2|ns1/tier2.np1|pass", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("6|tier2|ns1/staged:tier2.np1|allow", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("7|tier3|ns2/tier3.np2|allow|0", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("8|tier3|ns2/tier3.np3|allow|1", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("9|tier3|ns3/tier3.np3|deny|-1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("10|tier3|ns3/tier3.np3|pass|0", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("11|default|ns1/staged:knp.default.np1|allow", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("12|default|ns1/knp.default.np1|allow|-", 1000)).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|allow|0")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|tier1.np1|deny|-1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier1|tier1.np1|pass")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier1|staged:tier1.np1|allow")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|tier2|ns1/tier2.np1|deny|0")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|tier2|ns1/tier2.np1|pass")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("6|tier2|ns1/staged:tier2.np1|allow")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("7|tier3|ns2/tier3.np2|allow|0")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("8|tier3|ns2/tier3.np3|allow|1")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("9|tier3|ns3/tier3.np3|deny|-1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("10|tier3|ns3/tier3.np3|pass|0")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("11|default|ns1/staged:knp.default.np1|allow")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("12|default|ns1/knp.default.np1|allow|-")).Return(true, nil)
 			},
 			map[any]int64{
 				"6|tier2|snp:ns1/tier2.np1|allow|-": 1000,
@@ -330,12 +330,12 @@ var _ = Describe("FlowFilter", func() {
 				},
 			},
 			func(mockFlowHelper *rbac.MockFlowHelper) {
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0", 1000)).Return(true, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(false, nil)
-				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0")).Return(true, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0")).Return(false, nil)
+				mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1")).Return(true, nil)
 			},
 			map[any]int64{
 				"0|tier1|gnp:tier1.np1|pass|0":    1000,
@@ -346,8 +346,8 @@ var _ = Describe("FlowFilter", func() {
 	)
 })
 
-func mustParsePolicyHit(str string, count int64) api.PolicyHit {
-	ph, err := api.PolicyHitFromFlowLogPolicyString(str, count)
+func mustParsePolicyHit(str string) api.PolicyHit {
+	ph, err := api.PolicyHitFromFlowLogPolicyString(str)
 	if err != nil {
 		panic(fmt.Sprintf("failed to parse policy hit '%s'", str))
 	}

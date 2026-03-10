@@ -91,12 +91,13 @@ func (f *flowFilterUserRBAC) ModifyFlow(flow *CompositeAggregationBucket) error 
 // ObfuscatePolicies implements the RBACHelper interface.
 func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket) error {
 	var matchIdx int
-	var obfuscatedPass api.PolicyHit
+	var obfuscatedPassCount int64
+	var hasObfuscatedPass bool
 
 	// Extract the policies from the bucket.
 	term := flow.AggregatedTerms[FlowAggregatedTermsNamePolicies]
 	newBuckets := make(map[any]int64)
-	policies := GetFlowPoliciesFromAggTerm(term)
+	policies, counts := GetFlowPoliciesFromAggTerm(term)
 
 	// Sort the policies so that we can obfuscate and group multiple obfuscated entries together.
 	sort.Sort(api.SortablePolicyHits(policies))
@@ -104,34 +105,35 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 	// Loop through the policies, updating as we go.
 	for readIdx := range policies {
 		policy := policies[readIdx]
+		count := counts[readIdx]
 
 		if canList, err := f.r.CanListPolicy(policy); err != nil {
 			return err
 		} else if canList {
-			if obfuscatedPass != nil {
+			if hasObfuscatedPass {
 				// Store the obfuscated pass with the same doc count as the original pass.
-				newBuckets[api.ObfuscatedPolicyString(matchIdx, api.ActionNextTier)] = obfuscatedPass.Count()
+				newBuckets[api.ObfuscatedPolicyString(matchIdx, api.ActionNextTier)] = obfuscatedPassCount
 				matchIdx++
-				obfuscatedPass = nil
+				hasObfuscatedPass = false
 			}
 
-			// Store the unobfuscated policy, just need to update the match index.
-			policy = policy.SetIndex(matchIdx)
-			newBuckets[policy.ToFlowLogPolicyString()] = policy.Count()
+			// Store the unobfuscated policy, renumbered to the current match index.
+			newBuckets[api.ToFlowLogPolicyStringWithIndex(policy, matchIdx)] = count
 			matchIdx++
-		} else if policy.IsStaged() {
+		} else if api.IsStaged(policy.Kind()) {
 			// Skip staged policies that we do not have permissions to list.
 			continue
 		} else if policy.Action() == api.ActionNextTier {
 			// This is a pass, we need to obfuscate, but don't do that just yet, we'll contract multiple obfuscated
 			// entries into one.
-			obfuscatedPass = policy
+			obfuscatedPassCount = count
+			hasObfuscatedPass = true
 		} else {
 			// Store the obfuscated action with the same doc count as the original action. If there was one or more
 			// previous obfuscated passes then contract those into this obfuscated action.
-			newBuckets[api.ObfuscatedPolicyString(matchIdx, policy.Action())] = policy.Count()
+			newBuckets[api.ObfuscatedPolicyString(matchIdx, policy.Action())] = count
 			matchIdx++
-			obfuscatedPass = nil
+			hasObfuscatedPass = false
 		}
 	}
 

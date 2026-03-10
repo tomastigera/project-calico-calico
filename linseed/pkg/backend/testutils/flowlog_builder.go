@@ -231,7 +231,7 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 			// Then, sort the hits to ensure deterministic order.
 			var hits lmaapi.SortablePolicyHits
 			for _, p := range pols {
-				h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
+				h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p)
 				require.NoError(t, err)
 				hits = append(hits, h)
 			}
@@ -245,10 +245,10 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L
 					Namespace:    h.Namespace(),
 					Action:       string(h.Action()),
 					Count:        f.LogStats.FlowLogCount,
-					RuleID:       h.RuleIdIndex(),
-					IsProfile:    h.IsProfile(),
-					IsStaged:     h.IsStaged(),
-					IsKubernetes: h.IsKubernetes(),
+					RuleID:       h.RuleIndex(),
+					IsProfile:    lmaapi.IsProfile(h.Kind()),
+					IsStaged:     lmaapi.IsStaged(h.Kind()),
+					IsKubernetes: lmaapi.IsKubernetes(h.Kind()),
 				})
 			}
 		}

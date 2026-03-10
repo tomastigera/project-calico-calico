@@ -55,25 +55,27 @@ func GetFlowEndpointTypeFromCompAggKey(k CompositeAggregationKey, idx int) api.E
 	return api.EndpointType(k[idx].String())
 }
 
-// GetFlowPolicies extracts the flow policies that were applied reporter-side from the composite aggregation key.
-func GetFlowPoliciesFromAggTerm(t *AggregatedTerm) []api.PolicyHit {
+// GetFlowPoliciesFromAggTerm extracts the flow policies that were applied reporter-side from the
+// aggregated term. Returns the policy hits and their associated counts (doc counts from the
+// aggregation buckets) as parallel slices.
+func GetFlowPoliciesFromAggTerm(t *AggregatedTerm) ([]api.PolicyHit, []int64) {
 	if t == nil {
-		return nil
+		return nil, nil
 	}
-	// Extract the policies from the raw data, protecting against multiple occurrences of the same policy with different
-	// actions.
 	var p []api.PolicyHit
+	var counts []int64
 	for k, v := range t.Buckets {
 		if s, ok := k.(string); !ok {
 			log.Errorf("aggregated term policy log is not a string: %#v", s)
 			continue
-		} else if h, err := api.PolicyHitFromFlowLogPolicyString(s, v); err == nil {
+		} else if h, err := api.PolicyHitFromFlowLogPolicyString(s); err == nil {
 			p = append(p, h)
+			counts = append(counts, v)
 		} else {
 			log.WithError(err).Errorf("failed to parse policy log '%s' as PolicyHit", s)
 		}
 	}
-	return p
+	return p, counts
 }
 
 // EmptyToDash converts an empty string to a "-".

@@ -31,9 +31,9 @@ var (
 	namespace3      = "namespace3"
 
 	// Profiles
-	namespace1DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0", 0)
-	namespace2DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace2|allow|0", 0)
-	namespace3DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace3|allow|0", 0)
+	namespace1DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0")
+	namespace2DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace2|allow|0")
+	namespace3DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace3|allow|0")
 
 	// Endpoints
 	emptyEndpoint = ""

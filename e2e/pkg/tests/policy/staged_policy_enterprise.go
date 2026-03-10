@@ -637,7 +637,7 @@ func FindPolicyInFlowLogs(policyStrings []string, expected runtime.Object) api.P
 	kind := kindFromObject(expected)
 
 	for _, s := range policyStrings {
-		hit, err := api.PolicyHitFromFlowLogPolicyString(s, 0)
+		hit, err := api.PolicyHitFromFlowLogPolicyString(s)
 		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
 		if hit.Name() == name && hit.Namespace() == ns && (kind == "" || hit.Kind() == kind) {
 			return hit
@@ -662,7 +662,7 @@ func ExpectPolicyInFlowLogs(policyStrings []string, expected runtime.Object) {
 func ExpectProfileInFlowLogs(policyStrings []string, namespace string) {
 	expectedName := "kns." + namespace
 	for _, s := range policyStrings {
-		hit, err := api.PolicyHitFromFlowLogPolicyString(s, 0)
+		hit, err := api.PolicyHitFromFlowLogPolicyString(s)
 		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
 		if hit.Name() == expectedName && hit.Kind() == "Profile" {
 			return

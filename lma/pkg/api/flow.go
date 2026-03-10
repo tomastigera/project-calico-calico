@@ -179,7 +179,7 @@ func getVersion(ips []net.IP) *int {
 func GetPolicyHits(pols []lapi.Policy) []PolicyHit {
 	hits := []PolicyHit{}
 	for i, p := range pols {
-		hit, err := NewPolicyHit(Action(p.Action), p.Count, i, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
+		hit, err := NewPolicyHit(Action(p.Action), i, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"name":      p.Name,

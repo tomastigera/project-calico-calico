@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
 package api_test
 
 import (
@@ -25,15 +25,14 @@ type expectedHit struct {
 	isKNP       bool
 	isProfile   bool
 	isStaged    bool
-	count       int64
-	ruleIdIndex *int
+	ruleIndex   *int
 }
 
 var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 	DescribeTable("Successful PolicyHit parsing",
-		func(policyStr string, docCount int, expected expectedHit, expectedPolicyString string) {
+		func(policyStr string, expected expectedHit, expectedPolicyString string) {
 			// Parse the policy string.
-			policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(docCount))
+			policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Verify the fields.
@@ -41,25 +40,23 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 			Expect(policyHit.Action()).Should(Equal(expected.action), policyStr)
 			Expect(policyHit.Index()).Should(Equal(expected.index), policyStr)
 			Expect(policyHit.Tier()).Should(Equal(expected.tier), policyStr)
-			Expect(policyHit.RuleIdIndex()).Should(Equal(expected.ruleIdIndex), policyStr)
-			Expect(policyHit.FlowLogName()).Should(Equal(expected.flowLogName), policyStr)
+			Expect(policyHit.RuleIndex()).Should(Equal(expected.ruleIndex), policyStr)
+			Expect(api.HitFlowLogName(policyHit)).Should(Equal(expected.flowLogName), policyStr)
 			Expect(policyHit.Namespace()).Should(Equal(expected.namespace), policyStr)
-			Expect(policyHit.Count()).Should(Equal(expected.count), policyStr)
-			Expect(policyHit.IsKubernetes()).Should(Equal(expected.isKNP), policyStr)
-			Expect(policyHit.IsProfile()).Should(Equal(expected.isProfile), policyStr)
-			Expect(policyHit.IsStaged()).Should(Equal(expected.isStaged), policyStr)
-			Expect(policyHit.ToFlowLogPolicyString()).Should(Equal(expectedPolicyString), policyStr)
+			Expect(api.IsKubernetes(policyHit.Kind())).Should(Equal(expected.isKNP), policyStr)
+			Expect(api.IsProfile(policyHit.Kind())).Should(Equal(expected.isProfile), policyStr)
+			Expect(api.IsStaged(policyHit.Kind())).Should(Equal(expected.isStaged), policyStr)
+			Expect(api.ToFlowLogPolicyString(policyHit)).Should(Equal(expectedPolicyString), policyStr)
 			Expect(policyHit.Kind()).Should(Equal(expected.kind), policyStr)
 		},
 
 		Entry(
 			"properly handles a (legacy) network policy",
 			"4|tierName|namespaceName/tierName.policyName|allow",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindNetworkPolicy,
 				flowLogName: "np:namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: false,
+				ruleIndex: nil, isKNP: false, isProfile: false, isStaged: false,
 			},
 			"4|tierName|np:namespaceName/tierName.policyName|allow|-",
 		),
@@ -70,21 +67,19 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a (legacy) staged network policy",
 			"4|tierName|namespaceName/tierName.staged:policyName|deny",
-			5,
 			expectedHit{
 				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
 				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: true,
+				ruleIndex: nil, isKNP: false, isProfile: false, isStaged: true,
 			},
 			"4|tierName|snp:namespaceName/tierName.policyName|deny|-",
 		),
 		Entry(
 			"properly handles a (legacy) staged global network policy",
 			"4|tierName|tierName.staged:policyName|allow",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedGlobalNetworkPolicy,
-				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5,
+				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIndex: nil,
 				isKNP: false, isProfile: false, isStaged: true,
 			},
 			"4|tierName|sgnp:tierName.policyName|allow|-",
@@ -92,21 +87,19 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a (legacy) staged network policy",
 			"4|tierName|namespaceName/tierName.staged:policyName|deny|-1",
-			5,
 			expectedHit{
 				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
 				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: ptr.To(-1), count: 5, isKNP: false, isProfile: false, isStaged: true,
+				ruleIndex: ptr.To(-1), isKNP: false, isProfile: false, isStaged: true,
 			},
 			"4|tierName|snp:namespaceName/tierName.policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a (legacy) staged global network policy",
 			"4|tierName|tierName.staged:policyName|allow|1",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedGlobalNetworkPolicy,
-				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIdIndex: ptr.To(1), count: 5,
+				flowLogName: "sgnp:tierName.policyName", namespace: "", ruleIndex: ptr.To(1),
 				isKNP: false, isProfile: false, isStaged: true,
 			},
 			"4|tierName|sgnp:tierName.policyName|allow|1",
@@ -116,11 +109,10 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a staged network policy",
 			"4|tierName|snp:namespaceName/tierName.policyName|deny",
-			5,
 			expectedHit{
 				action: api.ActionDeny, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindStagedNetworkPolicy,
 				flowLogName: "snp:namespaceName/tierName.policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: false, isProfile: false, isStaged: true,
+				ruleIndex: nil, isKNP: false, isProfile: false, isStaged: true,
 			},
 			"4|tierName|snp:namespaceName/tierName.policyName|deny|-",
 		),
@@ -128,10 +120,9 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a global network policy",
 			"4|tierName|gnp:tierName.policyName|allow",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "tierName.policyName", kind: v3.KindGlobalNetworkPolicy,
-				flowLogName: "gnp:tierName.policyName", namespace: "", ruleIdIndex: nil, count: 5, isKNP: false,
+				flowLogName: "gnp:tierName.policyName", namespace: "", ruleIndex: nil, isKNP: false,
 				isProfile: false, isStaged: false,
 			},
 			"4|tierName|gnp:tierName.policyName|allow|-",
@@ -139,32 +130,29 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a kubernetes network policy",
 			"4|default|knp:namespaceName/policyName|allow",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "default", name: "policyName", kind: model.KindKubernetesNetworkPolicy,
 				flowLogName: "knp:namespaceName/policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: true, isStaged: false,
+				ruleIndex: nil, isKNP: true, isStaged: false,
 			},
 			"4|default|knp:namespaceName/policyName|allow|-",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
 			"4|default|sknp:namespaceName/policyName|deny",
-			5,
 			expectedHit{
 				action: api.ActionDeny, index: 4, tier: "default", name: "policyName", kind: v3.KindStagedKubernetesNetworkPolicy,
 				flowLogName: "sknp:namespaceName/policyName", namespace: "namespaceName",
-				ruleIdIndex: nil, count: 5, isKNP: true, isProfile: false, isStaged: true,
+				ruleIndex: nil, isKNP: true, isProfile: false, isStaged: true,
 			},
 			"4|default|sknp:namespaceName/policyName|deny|-",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
 			"4|__PROFILE__|pro:kns.namespaceName|allow",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
-				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIndex: nil,
 				isKNP: false, isProfile: true, isStaged: false,
 			},
 			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
@@ -172,21 +160,19 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a network policy",
 			"4|tierName|np:namespaceName/policyName|allow|1",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", kind: v3.KindNetworkPolicy,
 				flowLogName: "np:namespaceName/policyName", namespace: "namespaceName",
-				ruleIdIndex: ptr.To(1), count: 5, isKNP: false, isProfile: false, isStaged: false,
+				ruleIndex: ptr.To(1), isKNP: false, isProfile: false, isStaged: false,
 			},
 			"4|tierName|np:namespaceName/policyName|allow|1",
 		),
 		Entry(
 			"properly handles a global network policy",
 			"4|tierName|gnp:policyName|allow|0",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", kind: v3.KindGlobalNetworkPolicy,
-				flowLogName: "gnp:policyName", namespace: "", ruleIdIndex: ptr.To(0), count: 5,
+				flowLogName: "gnp:policyName", namespace: "", ruleIndex: ptr.To(0),
 				isKNP: false, isProfile: false, isStaged: false,
 			},
 			"4|tierName|gnp:policyName|allow|0",
@@ -194,43 +180,39 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 		Entry(
 			"properly handles a kubernetes network policy",
 			"4|default|knp:namespaceName/policyName|allow|2",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "default", name: "policyName", kind: model.KindKubernetesNetworkPolicy,
 				flowLogName: "knp:namespaceName/policyName", namespace: "namespaceName",
-				ruleIdIndex: ptr.To(2), count: 5, isKNP: true, isStaged: false,
+				ruleIndex: ptr.To(2), isKNP: true, isStaged: false,
 			},
 			"4|default|knp:namespaceName/policyName|allow|2",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
 			"4|default|sknp:namespaceName/policyName|deny|10",
-			5,
 			expectedHit{
 				action: api.ActionDeny, index: 4, tier: "default", name: "policyName", kind: v3.KindStagedKubernetesNetworkPolicy,
 				flowLogName: "sknp:namespaceName/policyName", namespace: "namespaceName",
-				ruleIdIndex: ptr.To(10), count: 5, isKNP: true, isProfile: false, isStaged: true,
+				ruleIndex: ptr.To(10), isKNP: true, isProfile: false, isStaged: true,
 			},
 			"4|default|sknp:namespaceName/policyName|deny|10",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
 			"4|__PROFILE__|pro:kns.namespaceName|allow|4",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
-				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: ptr.To(4),
-				count: 5, isKNP: false, isProfile: true, isStaged: false,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIndex: ptr.To(4),
+				isKNP: false, isProfile: true, isStaged: false,
 			},
 			"4|__PROFILE__|pro:kns.namespaceName|allow|4",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
 			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
-			5,
 			expectedHit{
 				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "kns.namespaceName", kind: v3.KindProfile,
-				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIdIndex: nil, count: 5,
+				flowLogName: "pro:kns.namespaceName", namespace: "", ruleIndex: nil,
 				isKNP: false, isProfile: true, isStaged: false,
 			},
 			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
@@ -238,58 +220,54 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 	)
 
 	DescribeTable("Unsuccessful PolicyHit parsing",
-		func(policyStr string, docCount int, expectedErr error) {
-			_, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(docCount))
+		func(policyStr string, expectedErr error) {
+			_, err := api.PolicyHitFromFlowLogPolicyString(policyStr)
 			Expect(err).Should(Equal(expectedErr))
 		},
 		Entry(
 			"fails to parse a policy string with extra pipes",
 			"4|tier1|namespace1/policy1|allow|0|extra",
-			5,
 			fmt.Errorf("invalid policy string '4|tier1|namespace1/policy1|allow|0|extra': pipe "+
 				"count must equal 5 for a new or 4 for an old version of the policy string"),
 		),
 		Entry(
 			"fails to parse a policy string with extra pipes",
 			"4|tier1|namespace1/policy1|allow|0|extra|extra",
-			5,
 			fmt.Errorf("invalid policy string '4|tier1|namespace1/policy1|allow|0|extra|extra': pipe "+
 				"count must equal 5 for a new or 4 for an old version of the policy string"),
 		),
 		Entry(
 			"fails to parse a policy string with extra pipes",
 			"4|tier1|namespace1/policy1",
-			5,
 			fmt.Errorf("invalid policy string '4|tier1|namespace1/policy1': pipe "+
 				"count must equal 5 for a new or 4 for an old version of the policy string"),
 		),
 		Entry(
 			"fails to parse a policy string with an invalid index",
-			"x|tier1|namespace1/policy1|allow|0", 5,
+			"x|tier1|namespace1/policy1|allow|0",
 			fmt.Errorf("invalid policy index: %w",
 				&strconv.NumError{Func: "Atoi", Num: "x", Err: fmt.Errorf("invalid syntax")}),
 		),
 		Entry(
 			"fails to parse a policy string with an invalid index",
-			"4|tier1|namespace1/policy1|badaction|0", 5,
+			"4|tier1|namespace1/policy1|badaction|0",
 			fmt.Errorf("invalid action 'badaction'"),
 		),
 		Entry(
 			"fails to parse a policy string with extra pipes",
 			"4|tier1|namespace1/policy1|",
-			5,
 			fmt.Errorf("invalid action ''"),
 		),
 		Entry(
-			"fails to parse a policy string with an invalid rule id index index",
-			"4|tier1|namespace1/policy1|deny|x", 5,
-			fmt.Errorf("invalid policy rule id index: %w",
+			"fails to parse a policy string with an invalid rule index",
+			"4|tier1|namespace1/policy1|deny|x",
+			fmt.Errorf("invalid policy rule index: %w",
 				&strconv.NumError{Func: "Atoi", Num: "x", Err: fmt.Errorf("invalid syntax")}),
 		),
 		Entry(
-			"fails to parse a policy string with an invalid rule id index index",
-			"4|tier1|namespace1/policy1|deny|", 5,
-			fmt.Errorf("invalid policy rule id index: %w",
+			"fails to parse a policy string with an invalid rule index",
+			"4|tier1|namespace1/policy1|deny|",
+			fmt.Errorf("invalid policy rule index: %w",
 				&strconv.NumError{Func: "Atoi", Num: "", Err: fmt.Errorf("invalid syntax")}),
 		),
 	)
@@ -297,95 +275,89 @@ var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
 
 var _ = Describe("NewPolicyHit", func() {
 	DescribeTable("Creating a valid policy hit", func(
-		action api.Action, count int, index int, name, namespace, kind, tier string,
+		action api.Action, index int, name, namespace, kind, tier string,
 		ruleIndex *int, fullName, policyString string,
 	) {
-		policyHit, err := api.NewPolicyHit(action, int64(count), index, name, namespace, kind, tier, ruleIndex)
+		policyHit, err := api.NewPolicyHit(action, index, name, namespace, kind, tier, ruleIndex)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		Expect(policyHit.FlowLogName()).Should(Equal(fullName))
-		polstr := policyHit.ToFlowLogPolicyString()
+		Expect(api.HitFlowLogName(policyHit)).Should(Equal(fullName))
+		polstr := api.ToFlowLogPolicyString(policyHit)
 		Expect(polstr).Should(Equal(policyString))
-		Expect(policyHit.Count()).Should(Equal(int64(count)))
 	},
 		Entry(
 			"properly handles a network policy",
-			api.ActionAllow, 5, 4, "foo.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(0),
+			api.ActionAllow, 4, "foo.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(0),
 			"np:namespaceName/foo.policyName",
 			"4|tierName|np:namespaceName/foo.policyName|allow|0",
 		),
 		Entry(
 			"properly handles a staged network policy",
-			api.ActionDeny, 5, 4, "tierName.policyName", "namespaceName", v3.KindStagedNetworkPolicy, "tierName", ptr.To(-1),
+			api.ActionDeny, 4, "tierName.policyName", "namespaceName", v3.KindStagedNetworkPolicy, "tierName", ptr.To(-1),
 			"snp:namespaceName/tierName.policyName",
 			"4|tierName|snp:namespaceName/tierName.policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a staged global network policy",
-			api.ActionAllow, 5, 4, "tierName.policyName", "", v3.KindStagedGlobalNetworkPolicy, "tierName", ptr.To(2),
+			api.ActionAllow, 4, "tierName.policyName", "", v3.KindStagedGlobalNetworkPolicy, "tierName", ptr.To(2),
 			"sgnp:tierName.policyName",
 			"4|tierName|sgnp:tierName.policyName|allow|2",
 		),
 		Entry(
 			"properly handles a global network policy",
-			api.ActionAllow, 5, 4, "policyName", "", v3.KindGlobalNetworkPolicy, "tierName", ptr.To(1),
+			api.ActionAllow, 4, "policyName", "", v3.KindGlobalNetworkPolicy, "tierName", ptr.To(1),
 			"gnp:policyName",
 			"4|tierName|gnp:policyName|allow|1",
 		),
 		Entry(
 			"properly handles a kubernetes network policy",
-			api.ActionAllow, 5, 4, "policyName", "namespaceName", model.KindKubernetesNetworkPolicy, "default", ptr.To(3),
+			api.ActionAllow, 4, "policyName", "namespaceName", model.KindKubernetesNetworkPolicy, "default", ptr.To(3),
 			"knp:namespaceName/policyName",
 			"4|default|knp:namespaceName/policyName|allow|3",
 		),
 		Entry(
 			"properly handles a staged kubernetes network policy",
-			api.ActionDeny, 5, 4, "policyName", "namespaceName", v3.KindStagedKubernetesNetworkPolicy, "default",
+			api.ActionDeny, 4, "policyName", "namespaceName", v3.KindStagedKubernetesNetworkPolicy, "default",
 			ptr.To(-1), "sknp:namespaceName/policyName",
 			"4|default|sknp:namespaceName/policyName|deny|-1",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile",
-			api.ActionAllow, 5, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", ptr.To(0),
+			api.ActionAllow, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", ptr.To(0),
 			"pro:kns.namespaceName",
 			"4|__PROFILE__|pro:kns.namespaceName|allow|0",
 		),
 		Entry(
 			"properly handles a kubernetes namespace profile with no rule index",
-			api.ActionAllow, 5, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", nil,
+			api.ActionAllow, 4, "kns.namespaceName", "", v3.KindProfile, "__PROFILE__", nil,
 			"pro:kns.namespaceName",
 			"4|__PROFILE__|pro:kns.namespaceName|allow|-",
 		),
 	)
 
 	DescribeTable("Creating an invalid policy hit", func(
-		action api.Action, count int, index int, name, namespace, kind, tier string,
-		ruleIdIndex *int, expectedErr error,
+		action api.Action, index int, name, namespace, kind, tier string,
+		ruleIndex *int, expectedErr error,
 	) {
-		_, err := api.NewPolicyHit(action, int64(count), index, name, namespace, kind, tier, ruleIdIndex)
+		_, err := api.NewPolicyHit(action, index, name, namespace, kind, tier, ruleIndex)
 		Expect(err).Should(Equal(expectedErr))
 	},
 		Entry(
 			"returns an error when action the is empty",
-			api.ActionInvalid, 5, 4, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
+			api.ActionInvalid, 4, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
 			ptr.To(0),
 			fmt.Errorf("a none empty Action must be provided"),
 		),
 		Entry(
 			"returns an error when the index is negative",
-			api.ActionDeny, 5, -1, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
+			api.ActionDeny, -1, "tierName.policyName", "namespaceName", v3.KindNetworkPolicy, "tierName",
 			ptr.To(-1),
 			fmt.Errorf("index must be a positive integer"),
 		),
 		Entry(
-			"returns an error when the count is negative",
-			api.ActionAllow, -1, 4, "policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(1),
-			fmt.Errorf("count must be a positive integer"),
-		),
-		Entry(
-			"returns an error when the rule id index is not -1 and negative",
-			api.ActionAllow, 5, 4, "policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(-2),
-			fmt.Errorf("rule id index must be a positive integer or -1"),
+			"returns an error when the rule index is not -1 and negative",
+			api.ActionAllow, 4, "policyName", "namespaceName", v3.KindNetworkPolicy, "tierName", ptr.To(-2),
+			fmt.Errorf("rule index must be a positive integer or -1"),
 		),
 	)
 
@@ -425,12 +397,12 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
@@ -442,20 +414,20 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("4|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("4|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
@@ -465,20 +437,20 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName2|ns4/tierName2.p7|pass|-1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName2|ns4/tierName2.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
@@ -488,20 +460,20 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns3/tierName1.p7|pass|-1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns3/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
@@ -511,20 +483,20 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p8|pass|-1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p8|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
@@ -534,43 +506,43 @@ var _ = Describe("NewPolicyHit", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|pass|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|-1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|-1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
 		})
 
-		It("compares unequal lists of policyHits, where the difference lies in the rule id index", func() {
+		It("compares unequal lists of policyHits, where the difference lies in the rule index", func() {
 			var policyHits1 []api.PolicyHit
 			var policyHits2 []api.PolicyHit
 			for _, ps := range pstrings1 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits1 = append(policyHits1, ph)
 			}
 			for _, ps := range pstrings2 {
-				ph, err := api.PolicyHitFromFlowLogPolicyString(ps, 0)
+				ph, err := api.PolicyHitFromFlowLogPolicyString(ps)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits2 = append(policyHits2, ph)
 			}
 
 			var err error
-			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|-1", 0)
+			policyHits1[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|-1")
 			Expect(err).ShouldNot(HaveOccurred())
-			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|1", 0)
+			policyHits2[5], err = api.PolicyHitFromFlowLogPolicyString("3|tierName1|ns4/tierName1.p7|deny|1")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(api.PolicyHitsEqual(policyHits1, policyHits2)).Should(Equal(false))
@@ -581,7 +553,6 @@ var _ = Describe("NewPolicyHit", func() {
 		var policyStrings [10]string
 		var expectedSortedPolicyStrings [10]string
 		var expectedSortedPolicyHits []api.PolicyHit
-		var expectedCounts [10]int64
 
 		BeforeEach(func() {
 			policyStrings = [10]string{
@@ -597,7 +568,6 @@ var _ = Describe("NewPolicyHit", func() {
 				"1|tierName1|ns2/tierName1.p3|allow|2",
 			}
 
-			expectedCounts = [10]int64{1, 19, 0, 1, 19, 0, 7, 5, 18, 16}
 			expectedSortedPolicyStrings = [10]string{
 				"0|tierName3|np:ns1/tierName3.p1|allow|-",
 				"1|tierName3|np:ns1/tierName3.p5|allow|2",
@@ -612,8 +582,8 @@ var _ = Describe("NewPolicyHit", func() {
 			}
 
 			By("creating expected sorted policy hits from a list of sorted policy strings")
-			for i, spstring := range expectedSortedPolicyStrings {
-				sphit, err := api.PolicyHitFromFlowLogPolicyString(spstring, expectedCounts[i])
+			for _, spstring := range expectedSortedPolicyStrings {
+				sphit, err := api.PolicyHitFromFlowLogPolicyString(spstring)
 				Expect(err).ShouldNot(HaveOccurred())
 				expectedSortedPolicyHits = append(expectedSortedPolicyHits, sphit)
 			}
@@ -622,9 +592,8 @@ var _ = Describe("NewPolicyHit", func() {
 		It("returns the sorted list of PolicyHits", func() {
 			By("creating new policy hits from a list of policy strings")
 			var policyHits []api.PolicyHit
-			counts := [10]int64{1, 1, 0, 19, 19, 7, 18, 16, 5, 0}
-			for i, pstrings := range policyStrings {
-				phit, err := api.PolicyHitFromFlowLogPolicyString(pstrings, counts[i])
+			for _, pstrings := range policyStrings {
+				phit, err := api.PolicyHitFromFlowLogPolicyString(pstrings)
 				Expect(err).ShouldNot(HaveOccurred())
 				policyHits = append(policyHits, phit)
 			}
@@ -641,24 +610,20 @@ var _ = Describe("NewPolicyHit", func() {
 
 			By("verifying the sorted list of policy strings")
 			for i, sphit := range expectedSortedPolicyStrings {
-				Expect(sortablePolicyHits[i].ToFlowLogPolicyString()).Should(Equal(sphit))
+				Expect(api.ToFlowLogPolicyString(sortablePolicyHits[i])).Should(Equal(sphit))
 			}
 
 			By("verifying the sorted list of policy hits")
 
 			for i, sphit := range sortablePolicyHits {
-				// Get the string.
-				str := expectedSortedPolicyStrings[i]
-
 				Expect(sphit.Action()).Should(Equal(expectedSortedPolicyHits[i].Action()))
-				Expect(sphit.Count()).Should(Equal(expectedSortedPolicyHits[i].Count()))
-				Expect(sphit.FlowLogName()).Should(Equal(expectedSortedPolicyHits[i].FlowLogName()))
-				Expect(sphit.IsKubernetes()).Should(Equal(expectedSortedPolicyHits[i].IsKubernetes()))
-				Expect(sphit.IsProfile()).Should(Equal(expectedSortedPolicyHits[i].IsProfile()))
-				Expect(sphit.IsStaged()).Should(Equal(expectedSortedPolicyHits[i].IsStaged()), str)
+				Expect(api.HitFlowLogName(sphit)).Should(Equal(api.HitFlowLogName(expectedSortedPolicyHits[i])))
+				Expect(api.IsKubernetes(sphit.Kind())).Should(Equal(api.IsKubernetes(expectedSortedPolicyHits[i].Kind())))
+				Expect(api.IsProfile(sphit.Kind())).Should(Equal(api.IsProfile(expectedSortedPolicyHits[i].Kind())))
+				Expect(api.IsStaged(sphit.Kind())).Should(Equal(api.IsStaged(expectedSortedPolicyHits[i].Kind())))
 				Expect(sphit.Name()).Should(Equal(expectedSortedPolicyHits[i].Name()))
 				Expect(sphit.Namespace()).Should(Equal(expectedSortedPolicyHits[i].Namespace()))
-				Expect(sphit.RuleIdIndex()).Should(Equal(expectedSortedPolicyHits[i].RuleIdIndex()))
+				Expect(sphit.RuleIndex()).Should(Equal(expectedSortedPolicyHits[i].RuleIndex()))
 				Expect(sphit.Tier()).Should(Equal(expectedSortedPolicyHits[i].Tier()))
 			}
 		})

@@ -41,7 +41,7 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with global network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow", 0)
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
@@ -86,7 +86,7 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with staged global network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow|0", 0)
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow|0")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
@@ -131,7 +131,7 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow", 0)
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
@@ -176,7 +176,7 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with kubernetes network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow|0", 0)
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow|0")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
@@ -204,7 +204,7 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with staged kubernetes network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow|0", 0)
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow|0")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)

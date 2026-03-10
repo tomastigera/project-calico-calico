@@ -516,7 +516,7 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 	// to maintain multiple structures representing a policy hit.
 	for _, p := range flow.Policies {
 		// Create a PolicyHit object to help with RBAC decisions.
-		policyHit, err := api.NewPolicyHit(api.Action(p.Action), p.Count, policyIdx, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
+		policyHit, err := api.NewPolicyHit(api.Action(p.Action), policyIdx, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
 		if err != nil {
 			logrus.WithField("policy", p).Warn("Failed to parse policy, skipping")
 			continue
@@ -550,20 +550,20 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 			})
 
 			policyIdx++
-		} else if policyHit.IsStaged() {
+		} else if api.IsStaged(policyHit.Kind()) {
 			// Ignore staged policies the use is not authorized to view
 			continue
 		} else {
 			if obfuscatedPolicy != nil {
 				obfuscatedPolicy.Action = string(policyHit.Action())
-				obfuscatedPolicy.Count += policyHit.Count()
+				obfuscatedPolicy.Count += p.Count
 			} else {
 				obfuscatedPolicy = &FlowResponsePolicy{
 					Namespace: "*",
 					Tier:      "*",
 					Name:      "*",
 					Action:    string(policyHit.Action()),
-					Count:     policyHit.Count(),
+					Count:     p.Count,
 				}
 			}
 		}

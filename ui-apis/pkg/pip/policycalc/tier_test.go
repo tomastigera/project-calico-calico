@@ -1249,7 +1249,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow"),
 		}
 		np.Spec.Types = typesEgress
 		np.Spec.Ingress = nil
@@ -1327,7 +1327,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1344,7 +1344,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1362,8 +1362,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0", 1),
-			mustCreatePolicyHit("0|__PROFILE__|pro:kns.ns1|allow|0", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0"),
+			mustCreatePolicyHit("0|__PROFILE__|pro:kns.ns1|allow|0"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1380,8 +1380,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0", 1),
-			mustCreatePolicyHit("0|__PROFILE__|pro:kns.ns1|deny|-1", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0"),
+			mustCreatePolicyHit("0|__PROFILE__|pro:kns.ns1|deny|-1"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1398,7 +1398,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|pass|0"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1416,7 +1416,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-1", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-1"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1434,8 +1434,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow|-", 1),
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|allow|-"),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1470,7 +1470,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-", 1),
+			mustCreatePolicyHit("0|meh|np:ns1/meh.policy|deny|-"),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1605,8 +1605,8 @@ var _ = Describe("Compiled tiers and gnpolicies tests", func() {
 	})
 })
 
-func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
-	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+func mustCreatePolicyHit(policyStr string) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return policyHit

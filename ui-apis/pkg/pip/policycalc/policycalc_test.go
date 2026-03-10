@@ -746,68 +746,68 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Checking staged policies ignored in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
-				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
+				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeTrue())
 
 		By("Checking duplicate policies ignored in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
-				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeTrue())
 
 		By("Checking staged policies ignored in calculated set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeTrue())
 
 		By("Checking policy name not matching")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow"),
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier2|ns1/tier2.policy|allow", 1),
+				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier2|ns1/tier2.policy|allow"),
 			}),
 		).To(BeFalse())
 
 		By("Checking action not matching")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny"),
 			}),
 		).To(BeFalse())
 
 		By("Checking conflicting actions in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("3|tier|ns1/tier.policy|deny", 1),
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|deny"),
 			}),
 		).To(BeFalse())
 	})
@@ -816,52 +816,52 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Checking staged policies ignored in before set")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
-				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
+				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeTrue())
 
 		By("Checking staged policies ignored in after set")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeTrue())
 
 		By("Checking policies have to be in the same order")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns2/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
+				mustCreatePolicyHit("2|tier|ns2/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns2/tier.staged:policy|allow", 1),
-				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns2/tier.staged:policy|allow"),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow"),
 			}),
 		).To(BeFalse())
 
 		By("Checking policy actions have to be the same")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow"),
 			},
 			[]api.PolicyHit{
-				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny"),
 			}),
 		).To(BeFalse())
 	})
 })
 
-func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
-	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+func mustCreatePolicyHit(policyStr string) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return policyHit

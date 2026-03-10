@@ -142,7 +142,7 @@ type OrderedPolicyHits []api.PolicyHit
 func (o OrderedPolicyHits) FlowLogPolicyStrings() []string {
 	s := make([]string, 0, len(o))
 	for i := range o {
-		s = append(s, o[i].ToFlowLogPolicyString())
+		s = append(s, api.ToFlowLogPolicyString(o[i]))
 	}
 	return s
 }
@@ -400,7 +400,7 @@ func getUnchangedResponse(f *api.Flow) EndpointResponse {
 	// Filter out staged policies from the original data.
 	var filtered []api.PolicyHit
 	for _, p := range f.Policies {
-		if !p.IsStaged() {
+		if !api.IsStaged(p.Kind()) {
 			filtered = append(filtered, p)
 		}
 	}
@@ -436,11 +436,11 @@ func PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(dirty, calculated []api.Pol
 	// Get the set of policy names and actions. This removes duplicates with different match indexes.
 	dirtyActions := map[string]api.ActionFlag{}
 	for _, p := range dirty {
-		if p.IsStaged() {
+		if api.IsStaged(p.Kind()) {
 			log.Debug("Skip staged in dirty set")
 			continue
 		}
-		name := p.FlowLogName()
+		name := api.HitFlowLogName(p)
 		action := ActualPolicyHitAction(p.Action().ToFlag())
 		if af, ok := dirtyActions[name]; ok {
 			if af != action {
@@ -455,11 +455,11 @@ func PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(dirty, calculated []api.Pol
 
 	// Check the calculated hits against the dirty hits (ignoring staged policies).
 	for _, p := range calculated {
-		if p.IsStaged() {
+		if api.IsStaged(p.Kind()) {
 			log.Debug("Skip staged in calculated set")
 			continue
 		}
-		name := p.FlowLogName()
+		name := api.HitFlowLogName(p)
 		action := ActualPolicyHitAction(p.Action().ToFlag())
 		if af, ok := dirtyActions[name]; !ok {
 			log.WithField("name", name).Debug("No matching policy")
@@ -482,7 +482,7 @@ func PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(dirty, calculated []api.Pol
 func PolicyHitsEqualIgnoringStaged(before, after []api.PolicyHit) bool {
 	next := func(idx int, p []api.PolicyHit) int {
 		for ; idx < len(p); idx++ {
-			if !p[idx].IsStaged() {
+			if !api.IsStaged(p[idx].Kind()) {
 				return idx
 			}
 		}
@@ -496,7 +496,7 @@ func PolicyHitsEqualIgnoringStaged(before, after []api.PolicyHit) bool {
 			break
 		}
 		if ActualPolicyHitAction(before[beforeIdx].Action().ToFlag()) != ActualPolicyHitAction(after[afterIdx].Action().ToFlag()) ||
-			before[beforeIdx].FlowLogName() != after[afterIdx].FlowLogName() {
+			api.HitFlowLogName(before[beforeIdx]) != api.HitFlowLogName(after[afterIdx]) {
 			// Either the action or policy do not match. Return false.
 			return false
 		}

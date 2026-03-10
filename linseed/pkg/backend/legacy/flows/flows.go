@@ -787,6 +787,7 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 		//
 		// We use a set to ensure uniqueness, as the same policy could be represented in different syntaxes in the flow log.
 		uniquePolicies := make(map[types.PolicyID]api.PolicyHit)
+		policyCounts := make(map[types.PolicyID]int64)
 		for k, count := range terms.Buckets {
 			key, ok := k.(string)
 			if !ok {
@@ -796,7 +797,7 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 				continue
 			}
 
-			policyHit, err := api.PolicyHitFromFlowLogPolicyString(key, count)
+			policyHit, err := api.PolicyHitFromFlowLogPolicyString(key)
 			if err != nil {
 				// This means the flow log is invalid so just skip it, otherwise a minor issue with a single flow
 				// could completely disable this endpoint.
@@ -811,6 +812,7 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 			}
 			if _, exists := uniquePolicies[k]; !exists {
 				uniquePolicies[k] = policyHit
+				policyCounts[k] = count
 			}
 		}
 
@@ -825,17 +827,22 @@ func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[str
 		// perform filtering of the returned policies to remove any that the user does not have permission to view.
 		// TODO: Should we (and can we) perform that RBAC here?
 		for _, policyHit := range policyHits {
+			k := types.PolicyID{
+				Name:      policyHit.Name(),
+				Namespace: policyHit.Namespace(),
+				Kind:      policyHit.Kind(),
+			}
 			policies = append(policies, v1.Policy{
 				Action:       string(policyHit.Action()),
 				Tier:         policyHit.Tier(),
 				Kind:         policyHit.Kind(),
 				Namespace:    policyHit.Namespace(),
 				Name:         policyHit.Name(),
-				IsStaged:     policyHit.IsStaged(),
-				IsKubernetes: policyHit.IsKubernetes(),
-				IsProfile:    policyHit.IsProfile(),
-				Count:        policyHit.Count(),
-				RuleID:       policyHit.RuleIdIndex(),
+				IsStaged:     api.IsStaged(policyHit.Kind()),
+				IsKubernetes: api.IsKubernetes(policyHit.Kind()),
+				IsProfile:    api.IsProfile(policyHit.Kind()),
+				Count:        policyCounts[k],
+				RuleID:       policyHit.RuleIndex(),
 			})
 		}
 	}

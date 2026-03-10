@@ -180,10 +180,10 @@ func (r flowHelper) CanListEndpoint(typ api.EndpointType, namespace string) (boo
 func (r flowHelper) CanListPolicy(p api.PolicyHit) (bool, error) {
 	ns := p.Namespace()
 
-	switch p.IsStaged() {
+	switch api.IsStaged(p.Kind()) {
 	case true:
 		switch {
-		case p.IsKubernetes():
+		case api.IsKubernetes(p.Kind()):
 			// Staged kubernetes policy. Ability to list this is just based on the namespace.
 			log.Debug("Check staged kubernetes policy")
 			return r.authorized(sknpHelper, "list", ns, "")
@@ -198,11 +198,11 @@ func (r flowHelper) CanListPolicy(p api.PolicyHit) (bool, error) {
 		}
 	case false:
 		switch {
-		case p.IsProfile():
+		case api.IsProfile(p.Kind()):
 			// Profile matches are always included.
 			log.Debug("Profile match is always included")
 			return true, nil
-		case p.IsKubernetes():
+		case api.IsKubernetes(p.Kind()):
 			// Kubernetes policy. Ability to list this is just based on the namespace.
 			log.Debug("Check kubernetes policy")
 			return r.authorized(knpHelper, "list", ns, "")

@@ -1073,7 +1073,7 @@ func policiesToV1(policies []map[string]any) []v1.Policy {
 	for _, policy := range policies {
 		key := policy["key"].(string)
 		count := policy["doc_count"].(int)
-		policyHit, err := api.PolicyHitFromFlowLogPolicyString(key, int64(count))
+		policyHit, err := api.PolicyHitFromFlowLogPolicyString(key)
 		if err != nil {
 			panic(err)
 		}
@@ -1083,11 +1083,11 @@ func policiesToV1(policies []map[string]any) []v1.Policy {
 			Kind:         policyHit.Kind(),
 			Namespace:    policyHit.Namespace(),
 			Name:         policyHit.Name(),
-			IsStaged:     policyHit.IsStaged(),
-			IsKubernetes: policyHit.IsKubernetes(),
-			IsProfile:    policyHit.IsProfile(),
-			Count:        policyHit.Count(),
-			RuleID:       policyHit.RuleIdIndex(),
+			IsStaged:     api.IsStaged(policyHit.Kind()),
+			IsKubernetes: api.IsKubernetes(policyHit.Kind()),
+			IsProfile:    api.IsProfile(policyHit.Kind()),
+			Count:        int64(count),
+			RuleID:       policyHit.RuleIndex(),
 		}
 		res = append(res, pol)
 	}
