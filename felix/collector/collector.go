@@ -1404,34 +1404,24 @@ func (c *collector) loopEvaluatingPolicyActivity(reporter types.Reporter) {
 			for i := range entries {
 				entry := &entries[i]
 				flow := TupleAsFlow(entry.Tuple)
-
-				// Evaluate ingress if destination is a local workload endpoint.
-				if isLocalWorkloadEp(entry.DstEp) {
-					trace := c.evaluateRuleTraceForEp(ps, rules.RuleDirIngress, entry.DstEp, flow)
-					if len(trace) > 0 {
-						reportPolicyActivityFromEntry(reporter, entry, trace)
-					}
-				}
-
-				// Evaluate egress if source is a local workload endpoint.
-				if isLocalWorkloadEp(entry.SrcEp) {
-					trace := c.evaluateRuleTraceForEp(ps, rules.RuleDirEgress, entry.SrcEp, flow)
-					if len(trace) > 0 {
-						reportPolicyActivityFromEntry(reporter, entry, trace)
-					}
-				}
+				c.evaluateAndReportPolicyActivity(ps, reporter, entry, flow, rules.RuleDirIngress, entry.DstEp)
+				c.evaluateAndReportPolicyActivity(ps, reporter, entry, flow, rules.RuleDirEgress, entry.SrcEp)
 			}
 		})
 	}
 }
 
-// evaluateRuleTraceForEp evaluates the rule trace for a single endpoint direction.
-// Must be called with the policy store read lock held.
-func (c *collector) evaluateRuleTraceForEp(ps *policystore.PolicyStore, direction rules.RuleDir, ep calc.EndpointData, flow TupleAsFlow) []*calc.RuleID {
-	if protoEp := c.lookupProtoWorkloadEndpoint(ps, ep.Key()); protoEp != nil {
-		return checker.Evaluate(direction, ps, protoEp, &flow)
+// evaluateAndReportPolicyActivity evaluates the rule trace for a local workload endpoint
+// and reports the result if any rules matched. Must be called with the policy store read lock held.
+func (c *collector) evaluateAndReportPolicyActivity(ps *policystore.PolicyStore, reporter types.Reporter, entry *policyActivityEntry, flow TupleAsFlow, direction rules.RuleDir, ep calc.EndpointData) {
+	if !isLocalWorkloadEp(ep) {
+		return
 	}
-	return nil
+	if protoEp := c.lookupProtoWorkloadEndpoint(ps, ep.Key()); protoEp != nil {
+		if trace := checker.Evaluate(direction, ps, protoEp, &flow); len(trace) > 0 {
+			reportPolicyActivityFromEntry(reporter, entry, trace)
+		}
+	}
 }
 
 // reportPolicyActivityFromEntry sends a metric.Update to the given reporter from a
