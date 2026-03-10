@@ -63,8 +63,9 @@ RUN apk add --no-cache \
     tshark
 
 # Install etcdctl
-RUN curl -sfL https://github.com/coreos/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz | \
-    tar xz --strip-components 1 -C /usr/local/bin etcd-${ETCD_VERSION}-linux-${TARGETARCH}/etcdctl
+RUN curl -sSfL --retry 5 -o /tmp/etcd.tar.gz https://github.com/coreos/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz && \
+    tar xz --strip-components 1 -C /usr/local/bin -f /tmp/etcd.tar.gz etcd-${ETCD_VERSION}-linux-${TARGETARCH}/etcdctl && \
+    rm -f /tmp/etcd.tar.gz
 
 # Install kubectl
 RUN curl -sfL https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/${TARGETARCH}/kubectl -o /usr/bin/kubectl && \
