@@ -5801,6 +5801,286 @@ func validateRuleID(t *testing.T, actual, expected *calc.RuleID, context string)
 	Expect(actual.Index).To(Equal(expected.Index), "Index mismatch in %s", context)
 }
 
+// newPolicyActivityTestCollector creates a collector configured for policy activity refresh
+// testing, with a policy store populated with two local endpoints (localEd1 with policy1/allow,
+// localEd2 with policy2/deny) and a long-lived connection between them.
+func newPolicyActivityTestCollector(t *testing.T) (c *collector, psm policystore.PolicyStoreManager, flowTuple *tuple.Tuple) {
+	t.Helper()
+
+	convertWorkloadID := func(key model.WorkloadEndpointKey) felixtypes.WorkloadEndpointID {
+		return felixtypes.WorkloadEndpointID{
+			OrchestratorId: key.OrchestratorID,
+			WorkloadId:     key.WorkloadID,
+			EndpointId:     key.EndpointID,
+		}
+	}
+
+	epMap := map[[16]byte]calc.EndpointData{
+		localIp1:  localEd1,
+		localIp2:  localEd2,
+		remoteIp1: remoteEd1,
+		nodeIp1:   nodeEd1,
+	}
+	lm := newMockLookupsCache(epMap, nil, nil, nil, nil, nil)
+	psm = policystore.NewPolicyStoreManager()
+
+	conf := &Config{
+		StatsDumpFilePath:             "/tmp/qwerty",
+		AgeTimeout:                    time.Duration(10) * time.Second,
+		InitialReportingDelay:         time.Duration(5) * time.Second,
+		ExportingInterval:             time.Duration(1) * time.Second,
+		FlowLogsFlushInterval:         time.Duration(100) * time.Second,
+		MaxOriginalSourceIPsIncluded:  5,
+		DisplayDebugTraceLogs:         true,
+		PolicyStoreManager:            psm,
+		PolicyActivityRefreshInterval: time.Duration(1) * time.Hour,
+	}
+	c = newCollector(lm, conf).(*collector)
+
+	localWlEp1Proto := calc.ModelWorkloadEndpointToProto(localWlEp1, nil, nil, []*proto.TierInfo{
+		{
+			Name:            "default",
+			IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+		},
+	})
+	localWlEp2Proto := calc.ModelWorkloadEndpointToProto(localWlEp2, nil, nil, []*proto.TierInfo{
+		{
+			Name:            "default",
+			IngressPolicies: []*proto.PolicyID{{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}},
+			EgressPolicies:  []*proto.PolicyID{{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}},
+		},
+	})
+
+	psm.DoWithLock(func(ps *policystore.PolicyStore) {
+		ps.Endpoints[convertWorkloadID(localWlEPKey1)] = localWlEp1Proto
+		ps.Endpoints[convertWorkloadID(localWlEPKey2)] = localWlEp2Proto
+
+		ps.PolicyByID[felixtypes.PolicyID{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}] = &proto.Policy{
+			Tier:          "default",
+			InboundRules:  []*proto.Rule{{Action: "allow"}},
+			OutboundRules: []*proto.Rule{{Action: "allow"}},
+		}
+		ps.PolicyByID[felixtypes.PolicyID{Name: "policy2", Kind: v3.KindGlobalNetworkPolicy}] = &proto.Policy{
+			Tier:          "default",
+			InboundRules:  []*proto.Rule{{Action: "deny"}},
+			OutboundRules: []*proto.Rule{{Action: "deny"}},
+		}
+	})
+	psm.OnInSync()
+
+	flowTuple = tuple.New(localIp1, localIp2, proto_tcp, 1000, 1000)
+
+	rid := calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
+	c.applyPacketInfo(clttypes.PacketInfo{
+		Tuple:     *flowTuple,
+		Direction: rules.RuleDirEgress,
+		RuleHits:  []clttypes.RuleHit{{RuleID: rid, Hits: 1, Bytes: 100}},
+	})
+
+	data := c.epStats[*flowTuple]
+	if data == nil {
+		t.Fatal("flow data should exist after applyPacketInfo")
+	}
+	data.IsConnection = true
+
+	return c, psm, flowTuple
+}
+
+func TestRefreshLongLivedPolicyActivity(t *testing.T) {
+	RegisterTestingT(t)
+
+	c, policyStoreManager, flowTuple := newPolicyActivityTestCollector(t)
+
+	t.Run("should skip non-connection entries", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		// Create a second flow that is NOT a connection (aggregated nflog stats).
+		nonConnTuple := tuple.New(localIp2, remoteIp1, proto_tcp, 2000, 2000)
+		c.applyPacketInfo(clttypes.PacketInfo{
+			Tuple:     *nonConnTuple,
+			Direction: rules.RuleDirEgress,
+			RuleHits:  []clttypes.RuleHit{{RuleID: calc.NewRuleID(v3.KindGlobalNetworkPolicy, "default", "policy1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow), Hits: 1, Bytes: 50}},
+		})
+		nonConnData := c.epStats[*nonConnTuple]
+		Expect(nonConnData).NotTo(BeNil())
+		Expect(nonConnData.IsConnection).To(BeFalse())
+
+		// Set up channel and mock reporter.
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+		mr := newMockReporter()
+
+		// Start evaluatePolicyActivity goroutine.
+		go c.evaluatePolicyActivity(mr)
+
+		// Call refreshLongLivedPolicyActivity — should only pick up the connection entry.
+		c.refreshLongLivedPolicyActivity()
+
+		// Verify we get updates only for the connection flow, not the non-connection flow.
+		// The connection localIp1->localIp2 should produce updates because both endpoints are local.
+		var received []testMetricUpdate
+		timeout := time.After(2 * time.Second)
+	collectLoop:
+		for {
+			select {
+			case mu := <-mr.reportChan:
+				received = append(received, mu)
+			case <-timeout:
+				break collectLoop
+			}
+		}
+
+		// We expect updates: ingress (dst=localEd2 has policy2) and egress (src=localEd1 has policy1).
+		Expect(len(received)).To(BeNumerically(">=", 2), "Expected at least 2 policy activity updates for the connection flow")
+
+		// All updates should be for the connection tuple, not the non-connection tuple.
+		for _, mu := range received {
+			Expect(mu.tpl).To(Equal(*flowTuple), "All updates should be for the connection tuple")
+			Expect(mu.updateType).To(Equal(metric.UpdateTypeReport))
+		}
+
+		close(c.policyActivityRefreshC)
+		delete(c.epStats, *nonConnTuple)
+	})
+
+	t.Run("should evaluate policies and report for local endpoints", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+		mr := newMockReporter()
+
+		go c.evaluatePolicyActivity(mr)
+
+		c.refreshLongLivedPolicyActivity()
+
+		// Collect exactly 2 updates (ingress for dst, egress for src).
+		var received []testMetricUpdate
+		for i := 0; i < 2; i++ {
+			select {
+			case mu := <-mr.reportChan:
+				received = append(received, mu)
+			case <-time.After(2 * time.Second):
+				t.Fatalf("Timed out waiting for policy activity update %d", i+1)
+			}
+		}
+
+		Expect(received).To(HaveLen(2))
+
+		// Verify endpoint data is passed through correctly.
+		for _, mu := range received {
+			Expect(mu.tpl).To(Equal(*flowTuple))
+			Expect(mu.srcEp).To(Equal(calc.EndpointData(localEd1)))
+			Expect(mu.dstEp).To(Equal(calc.EndpointData(localEd2)))
+			Expect(mu.ruleIDs).NotTo(BeEmpty(), "Each update should have evaluated rule IDs")
+		}
+
+		close(c.policyActivityRefreshC)
+	})
+
+	t.Run("should skip connections with changed endpoints", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		// Remove localIp1 from the lookup cache to simulate endpoint deletion.
+		epMapWithout := map[[16]byte]calc.EndpointData{
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
+			nodeIp1:   nodeEd1,
+		}
+		c.luc = newMockLookupsCache(epMapWithout, nil, nil, nil, nil, nil)
+
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+
+		c.refreshLongLivedPolicyActivity()
+
+		// The channel should be empty because the connection's source endpoint changed (deleted).
+		select {
+		case entries := <-c.policyActivityRefreshC:
+			t.Fatalf("Expected no entries sent, but got %d", len(entries))
+		case <-time.After(100 * time.Millisecond):
+			// Expected: nothing sent.
+		}
+
+		// Restore the original lookup cache.
+		c.luc = newMockLookupsCache(map[[16]byte]calc.EndpointData{
+			localIp1:  localEd1,
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
+			nodeIp1:   nodeEd1,
+		}, nil, nil, nil, nil, nil)
+		close(c.policyActivityRefreshC)
+	})
+
+	t.Run("should reflect policy updates on next refresh", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		// Change localWlEp2 from policy2 (deny) to policy1 (allow).
+		updatedLocalWlEp2Proto := calc.ModelWorkloadEndpointToProto(localWlEp2, nil, nil, []*proto.TierInfo{
+			{
+				Name:            "default",
+				IngressPolicies: []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+				EgressPolicies:  []*proto.PolicyID{{Name: "policy1", Kind: v3.KindGlobalNetworkPolicy}},
+			},
+		})
+		policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
+			ps.Endpoints[felixtypes.WorkloadEndpointID{
+				OrchestratorId: localWlEPKey2.OrchestratorID,
+				WorkloadId:     localWlEPKey2.WorkloadID,
+				EndpointId:     localWlEPKey2.EndpointID,
+			}] = updatedLocalWlEp2Proto
+		})
+		policyStoreManager.OnInSync()
+
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+		mr := newMockReporter()
+
+		go c.evaluatePolicyActivity(mr)
+
+		c.refreshLongLivedPolicyActivity()
+
+		// Collect 2 updates (ingress for dst, egress for src).
+		var received []testMetricUpdate
+		for i := 0; i < 2; i++ {
+			select {
+			case mu := <-mr.reportChan:
+				received = append(received, mu)
+			case <-time.After(2 * time.Second):
+				t.Fatalf("Timed out waiting for policy activity update %d", i+1)
+			}
+		}
+
+		Expect(received).To(HaveLen(2))
+
+		// After the policy update, both endpoints now have policy1 (allow).
+		// Verify all reported rule IDs reflect policy1 allow, not policy2 deny.
+		for _, mu := range received {
+			Expect(mu.ruleIDs).NotTo(BeEmpty())
+			for _, rid := range mu.ruleIDs {
+				Expect(rid.Name).To(Equal("policy1"), "After policy update, all rules should be from policy1")
+				Expect(rid.Action).To(Equal(rules.RuleActionAllow), "After policy update, all rules should be allow")
+			}
+		}
+
+		close(c.policyActivityRefreshC)
+	})
+
+	t.Run("should skip when channel is full", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+
+		// Fill the channel.
+		c.policyActivityRefreshC <- []policyActivityEntry{{Tuple: *flowTuple}}
+
+		// This should not block — it logs a warning and skips.
+		c.refreshLongLivedPolicyActivity()
+
+		// Drain the pre-filled entry.
+		<-c.policyActivityRefreshC
+
+		close(c.policyActivityRefreshC)
+	})
+}
+
 func TestEqualFunction(t *testing.T) {
 	RegisterTestingT(t)
 	t.Run("should return true for equal rule IDs", func(t *testing.T) {
