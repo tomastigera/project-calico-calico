@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -1495,6 +1496,15 @@ func updatePodLabelsAndAnnotations(wep *internalapi.WorkloadEndpoint, pod *v1.Po
 		delete(pod.Annotations, "egress.projectcalico.org/egressGatewayPolicy")
 		delete(pod.Annotations, "egress.projectcalico.org/selector")
 		delete(pod.Annotations, "egress.projectcalico.org/namespaceSelector")
+	}
+	if len(wep.Spec.ExternalNetworkNames) > 0 {
+		if pod.Annotations == nil {
+			pod.Annotations = map[string]string{}
+		}
+		data, _ := json.Marshal(wep.Spec.ExternalNetworkNames)
+		pod.Annotations[conversion.AnnotationEgressExternalNetworkNames] = string(data)
+	} else if pod.Annotations != nil {
+		delete(pod.Annotations, conversion.AnnotationEgressExternalNetworkNames)
 	}
 	if wep.Spec.QoSControls != nil {
 		if pod.Annotations == nil {
