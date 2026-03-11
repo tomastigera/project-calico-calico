@@ -6551,13 +6551,13 @@ func bpfDumpPolicyAsm(felix *infrastructure.Felix, iface, hook string) string {
 
 // bpfWaitForGlobalNetworkPolicy waits for the given global network policy to appear in BPF policy.
 func bpfWaitForGlobalNetworkPolicy(felix *infrastructure.Felix, iface, hook, policyName string) string {
-	search := fmt.Sprintf("Start of GlobalNetworkPolicy %s", policyName)
+	search := fmt.Sprintf("Policy: GlobalNetworkPolicy %s", policyName)
 	return bpfWaitForPolicy(felix, iface, hook, search)
 }
 
 // bpfWaitForNetworkPolicy waits for the given network policy in the given namespace to appear in BPF policy.
 func bpfWaitForNetworkPolicy(felix *infrastructure.Felix, iface, hook, ns, policyName string) string {
-	search := fmt.Sprintf("Start of NetworkPolicy %s/%s", ns, policyName)
+	search := fmt.Sprintf("Policy: NetworkPolicy %s/%s", ns, policyName)
 	return bpfWaitForPolicy(felix, iface, hook, search)
 }
 
@@ -6573,7 +6573,13 @@ func bpfWaitForPolicy(felix *infrastructure.Felix, iface, hook, search string) s
 }
 
 func bpfWaitForPolicyRule(felix *infrastructure.Felix, iface, hook, policy, rule string) string {
-	search := fmt.Sprintf("Start of rule %s %s", policy, rule)
+	// Extract the action value from the legacy format `action:"allow"` to match
+	// the new human-readable format `Rule: <policy>  Action: allow`.
+	action := rule
+	if strings.HasPrefix(rule, `action:"`) && strings.HasSuffix(rule, `"`) {
+		action = strings.TrimSuffix(strings.TrimPrefix(rule, `action:"`), `"`)
+	}
+	search := fmt.Sprintf("Rule: %s  Action: %s", policy, action)
 	out := ""
 	EventuallyWithOffset(1, func() string {
 		out = bpfDumpPolicy(felix, iface, hook)
