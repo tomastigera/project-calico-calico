@@ -42,6 +42,8 @@ const (
 
 	// upstream components
 	upstreamFluentdComponentName = "upstream-fluentd"
+
+	operatorComponentsFileName = "pinned_components.yml"
 )
 
 var onceEnterprise sync.Once
@@ -310,11 +312,10 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 
 // GenerateEnterpriseOperatorComponents generates the pinned_components.yaml for operator.
 // It also copies the generated file to the output directory if provided.
-func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.OperatorComponent, string, error) {
-	op := registry.OperatorComponent{}
+func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
 	pinnedVersion, err := retrieveEnterprisePinnedVersion(srcDir)
 	if err != nil {
-		return op, "", err
+		return err
 	}
 
 	components := pinnedVersion.ImageComponents(false)
@@ -328,7 +329,7 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
 	operatorComponentsFile, err := os.Create(operatorComponentsFilePath)
 	if err != nil {
-		return op, "", err
+		return err
 	}
 	defer func() { _ = operatorComponentsFile.Close() }()
 
@@ -337,15 +338,14 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (registry.Op
 	defer func() { _ = enc.Close() }()
 
 	if err = enc.Encode(pinnedVersion); err != nil {
-		return op, "", err
+		return fmt.Errorf("encode operator components file: %w", err)
 	}
 	if outputDir != "" {
 		if err := utils.CopyFile(operatorComponentsFilePath, filepath.Join(outputDir, operatorComponentsFileName)); err != nil {
-			return op, "", err
+			return fmt.Errorf("copy operator components file: %w", err)
 		}
 	}
-	op.Component = pinnedVersion.TigeraOperator
-	return op, operatorComponentsFilePath, nil
+	return nil
 }
 
 // LoadEnterpriseHashrelease loads the hashrelease from the pinned version file.
@@ -365,14 +365,14 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}
 	return &hashreleaseserver.EnterpriseHashrelease{
 		Hashrelease: hashreleaseserver.Hashrelease{
-			Name:            pinnedVersion.ReleaseName,
-			Hash:            pinnedVersion.Hash,
-			Note:            pinnedVersion.Note,
-			Stream:          version.DeterminePublishStream(productBranch, pinnedVersion.Title),
-			ProductVersion:  pinnedVersion.Title,
-			OperatorVersion: pinnedVersion.TigeraOperator.Version,
-			Source:          hashreleaseSrc,
-			Latest:          latest,
+			Name:           pinnedVersion.ReleaseName,
+			Hash:           pinnedVersion.Hash,
+			Note:           pinnedVersion.Note,
+			Stream:         version.DeterminePublishStream(productBranch, pinnedVersion.Title),
+			ProductVersion: pinnedVersion.Title,
+			Operator:       pinnedVersion.TigeraOperator,
+			Source:         hashreleaseSrc,
+			Latest:         latest,
 		},
 		ChartVersion:   pinnedVersion.HelmRelease,
 		ManagerVersion: pinnedVersion.Components[managerComponentName].Version,
