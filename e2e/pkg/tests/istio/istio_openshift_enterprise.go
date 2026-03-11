@@ -76,9 +76,6 @@ var _ = describe.EnterpriseDescribe(
 			// Enable Istio ambient mode so the operator renders the OpenShift profile.
 			ginkgo.By("Ensuring Istio ambient mode is enabled")
 			enableIstioAmbientMode(ctx, cli)
-			ginkgo.DeferCleanup(func() {
-				disableIstioAmbientMode(context.Background(), cli)
-			})
 
 			// Verify all Istio pods start without permission or path errors.
 			ginkgo.By("Verifying all Istio pods are Running without errors")

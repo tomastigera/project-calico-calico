@@ -123,9 +123,6 @@ var _ = describe.EnterpriseDescribe(
 			// Phase 2: Enable Istio Ambient Mode.
 			ginkgo.By("Creating the Istio CR to enable ambient mode")
 			enableIstioAmbientMode(ctx, cli)
-			ginkgo.DeferCleanup(func() {
-				disableIstioAmbientMode(context.Background(), cli)
-			})
 
 			// Phase 3: Apply ambient mode label to test namespace.
 			ginkgo.By(fmt.Sprintf("Labeling namespace %s with istio ambient mode", f.Namespace.Name))
@@ -224,9 +221,6 @@ var _ = describe.EnterpriseDescribe(
 			// Phase 2: Enable Istio and label namespace.
 			ginkgo.By("Enabling Istio ambient mode")
 			enableIstioAmbientMode(ctx, cli)
-			ginkgo.DeferCleanup(func() {
-				disableIstioAmbientMode(context.Background(), cli)
-			})
 
 			ginkgo.By(fmt.Sprintf("Labeling namespace %s with istio ambient mode", f.Namespace.Name))
 			applyAmbientLabel(ctx, f, f.Namespace.Name)
@@ -261,7 +255,9 @@ var _ = describe.EnterpriseDescribe(
 )
 
 // enableIstioAmbientMode creates the Istio CR (if it doesn't already exist) and waits for
-// the "istio" TigeraStatus to report Available.
+// the "istio" TigeraStatus to report Available. If the CR is created by this call, a
+// DeferCleanup is registered to delete it after the test, preserving pre-existing Istio
+// installations.
 func enableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
 	// Check if the Istio CR already exists.
 	existing := &operatorv1.Istio{}
@@ -269,7 +265,7 @@ func enableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
 	defer getCancel()
 	err := cli.Get(getCtx, types.NamespacedName{Name: "default"}, existing)
 	if err == nil {
-		logrus.Info("Istio CR already exists, skipping creation")
+		logrus.Info("Istio CR already exists, skipping creation and cleanup registration")
 	} else if apierrors.IsNotFound(err) {
 		istioObj := &operatorv1.Istio{
 			ObjectMeta: metav1.ObjectMeta{Name: "default"},
@@ -278,6 +274,11 @@ func enableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
 		defer cancel()
 		err = cli.Create(createCtx, istioObj)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create Istio CR")
+
+		// Only clean up what the test created.
+		ginkgo.DeferCleanup(func(ctx context.Context) {
+			disableIstioAmbientMode(ctx, cli)
+		})
 	} else {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to check for existing Istio CR")
 	}
