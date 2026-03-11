@@ -175,6 +175,7 @@ clean: clean-windows
 	rm -rf filesystem/included-source
 	rm -rf package
 	rm -rf tests/k8st/infra/operator
+	rm -rf $(REPO_ROOT)/hack/test/kind/infra/operator
 	# We build these as part of the node build, so clean them as part of the clean.
 	make -C ../felix clean
 	# Delete images that we built in this repo
@@ -371,22 +372,6 @@ $(FELIX_GPL_SOURCE): .felix-gpl-source.created
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=calico-node.tar \
-	calico-typha.tar \
-	calico-apiserver.tar \
-	calico-cni.tar \
-	pod2daemon.tar \
-	csi.tar \
-	node-driver-registrar.tar \
-	calicoctl.tar \
-	kube-controllers.tar \
-	operator.tar \
-	webhook.tar
-
-# Add in enterprise-only images.
-ENTERPRISE_IMAGE_TARS=egress-gateway.tar calico-queryserver.tar egress-gateway.tar prometheus-operator.tar config-reloader.tar prometheus.tar prometheus-service.tar alertmanager.tar fluentd.tar policy-rec.tar eck.tar manager.tar voltron.tar ui-apis.tar kibana.tar elastic.tar es-gw.tar linseed.tar idc.tar webhooks-processor.tar dashboards-installer.tar es-metrics.tar manager.tar
-K8ST_IMAGE_TARS += $(ENTERPRISE_IMAGE_TARS)
-
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
 WHAT=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ../hack/test/spider -commit-range=${SEMAPHORE_GIT_COMMIT_RANGE} -filter-dir node/')
@@ -450,214 +435,14 @@ chart: $(CHARTS)
 ../bin/projectcalico.org.v3-$(GIT_VERSION).tgz:
 	make -C ../ bin/projectcalico.org.v3-$(GIT_VERSION).tgz
 
-# Tag to use for images built for e2e testing. This must match the image tag used in
-# tests/k8st/infra/calico_versions.yml
-TEST_BUILD_TAG=test-build
-
-operator.tar: $(K8ST_IMAGE_TARS) tests/k8st/infra/calico_versions.yml tests/k8st/infra/enterprise_versions.yml
-	cd tests/k8st/infra/ && BRANCH=$(OPERATOR_BRANCH) ./build-operator.sh
-	docker save --output $@ docker.io/tigera/operator:$(TEST_BUILD_TAG)
-
-calico-node.tar: $(NODE_CONTAINER_CREATED)
-	docker tag $(NODE_IMAGE):latest-$(ARCH) tigera/node:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/node:$(TEST_BUILD_TAG)
-
-calico-typha.tar: ../go.mod $(shell find ../typha -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../typha image
-	docker tag tigera/typha:latest-$(ARCH) tigera/typha:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/typha:$(TEST_BUILD_TAG)
-
-calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../apiserver image
-	docker tag tigera/apiserver:latest-$(ARCH) tigera/apiserver:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/apiserver:$(TEST_BUILD_TAG)
-
-calico-cni.tar: ../go.mod $(shell find ../cni-plugin -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../cni-plugin image
-	docker tag tigera/cni:latest-$(ARCH) tigera/cni:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/cni:$(TEST_BUILD_TAG)
-
-csi.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
-	make -C ../pod2daemon image
-	docker tag tigera/csi:latest-$(ARCH) tigera/csi:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/csi:$(TEST_BUILD_TAG)
-
-node-driver-registrar.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
-	make -C ../pod2daemon image
-	docker tag tigera/node-driver-registrar:latest-$(ARCH) tigera/node-driver-registrar:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/node-driver-registrar:$(TEST_BUILD_TAG)
-
-pod2daemon.tar: ../go.mod $(shell find ../pod2daemon/ -name '*.go')
-	make -C ../pod2daemon image
-	docker tag tigera/pod2daemon-flexvol:latest-$(ARCH) tigera/pod2daemon-flexvol:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/pod2daemon-flexvol:$(TEST_BUILD_TAG)
-
-calicoctl.tar: ../go.mod $(shell find ../calicoctl -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../calicoctl image
-	docker tag tigera/calicoctl:latest-$(ARCH) tigera/calicoctl:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/calicoctl:$(TEST_BUILD_TAG)
-
-kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../kube-controllers image
-	docker tag tigera/kube-controllers:latest-$(ARCH) tigera/kube-controllers:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/kube-controllers:$(TEST_BUILD_TAG)
-
-# Enterprise-only tar files below here.
-calico-queryserver.tar:
-	make -C ../queryserver image
-	docker tag tigera/queryserver:latest-$(ARCH) tigera/queryserver:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/queryserver:$(TEST_BUILD_TAG)
-
-egress-gateway.tar: ../go.mod $(shell find ../egress-gateway -name '*.go') ../egress-gateway/* $(shell find ../libcalico-go -name '*.go')
-	make -C ../egress-gateway image
-	docker tag tigera/egress-gateway:latest-$(ARCH) tigera/egress-gateway:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/egress-gateway:$(TEST_BUILD_TAG)
-
-prometheus-operator.tar:
-	make -C ../third_party/prometheus-operator image
-	docker tag tigera/prometheus-operator:latest-$(ARCH) tigera/prometheus-operator:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/prometheus-operator:$(TEST_BUILD_TAG)
-
-config-reloader.tar:
-	make -C ../third_party/prometheus-operator image
-	docker tag tigera/prometheus-config-reloader:latest-$(ARCH) tigera/prometheus-config-reloader:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/prometheus-config-reloader:$(TEST_BUILD_TAG)
-
-prometheus.tar:
-	# TODO: Build this. We cannot at the moment because it relies on the host OS npm / go toolchain.
-	# make -C ../third_party/prometheus image
-	# docker tag tigera/prometheus:latest-$(ARCH) tigera/prometheus:$(TEST_BUILD_TAG)
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH) tigera/prometheus:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/prometheus:$(TEST_BUILD_TAG)
-
-prometheus-service.tar:
-	make -C ../prometheus-service/ image
-	docker tag  tigera/prometheus-service:latest-amd64 tigera/prometheus-service:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/prometheus-service:$(TEST_BUILD_TAG)
-
-fluentd.tar:
-	make -C ../fluentd image THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY_CD)
-	docker tag tigera/fluentd:latest-$(ARCH) tigera/fluentd:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/fluentd:$(TEST_BUILD_TAG)
-
-policy-rec.tar:
-	make -C ../policy-recommendation/ image
-	docker tag tigera/policy-recommendation:latest-$(ARCH) tigera/policy-recommendation:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/policy-recommendation:$(TEST_BUILD_TAG)
-
-eck.tar:
-	make -C ../third_party/eck-operator/ image
-	docker tag tigera/eck-operator:latest-$(ARCH) tigera/eck-operator:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/eck-operator:$(TEST_BUILD_TAG)
-
-alertmanager.tar:
-	# TODO: Build this.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/alertmanager:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/alertmanager:$(TEST_BUILD_TAG)
-
-elastic.tar:
-	# TODO: Build this.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
-	# make -C ../third_party/elasticsearch/ image
-	# docker tag tigera/elasticsearch:latest-$(ARCH) tigera/elasticsearch:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/elasticsearch:$(TEST_BUILD_TAG)
-
-kibana.tar:
-	# TODO: Can we run without kibana? Requires operator change.
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH) tigera/kibana:$(TEST_BUILD_TAG)
-	# make -C ../third_party/kibana/ image
-	# docker tag tigera/kibana:latest-$(ARCH) tigera/kibana:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/kibana:$(TEST_BUILD_TAG)
-
-manager.tar:
-	# TODO
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH)
-	docker tag gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/manager:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/manager:$(TEST_BUILD_TAG)
-
-ui-apis.tar:
-	make -C ../ui-apis image
-	docker tag tigera/ui-apis:latest-$(ARCH) tigera/ui-apis:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/ui-apis:$(TEST_BUILD_TAG)
-
-es-gw.tar:
-	make -C ../es-gateway image
-	docker tag tigera/es-gateway:latest-$(ARCH) tigera/es-gateway:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/es-gateway:$(TEST_BUILD_TAG)
-
-voltron.tar:
-	make -C ../voltron image
-	docker tag tigera/voltron:latest-$(ARCH) tigera/voltron:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/voltron:$(TEST_BUILD_TAG)
-
-linseed.tar:
-	make -C ../linseed image
-	docker tag tigera/linseed:latest-$(ARCH) tigera/linseed:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/linseed:$(TEST_BUILD_TAG)
-
-idc.tar:
-	make -C ../intrusion-detection-controller image
-	docker tag tigera/intrusion-detection-controller:latest-$(ARCH) tigera/intrusion-detection-controller:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/intrusion-detection-controller:$(TEST_BUILD_TAG)
-
-webhooks-processor.tar:
-	make -C ../webhooks-processor image
-	docker tag tigera/webhooks-processor:latest-$(ARCH) tigera/webhooks-processor:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/webhooks-processor:$(TEST_BUILD_TAG)
-
-dashboards-installer.tar:
-	make -C ../intrusion-detection-controller intrusion-detection-job-installer
-	docker tag tigera/intrusion-detection-job-installer:latest-$(ARCH) tigera/intrusion-detection-job-installer:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/intrusion-detection-job-installer:$(TEST_BUILD_TAG)
-
-es-metrics.tar:
-	make -C ../elasticsearch-metrics image
-	docker tag tigera/elasticsearch-metrics:latest-$(ARCH) tigera/elasticsearch-metrics:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/elasticsearch-metrics:$(TEST_BUILD_TAG)
-
-goldmane.tar: ../go.mod $(shell find ../goldmane -name '*.go')
-	make -C ../goldmane image
-	docker tag calico/goldmane:latest-$(ARCH) calico/goldmane:$(TEST_BUILD_TAG)
-	docker save --output $@ calico/goldmane:$(TEST_BUILD_TAG)
-
-webhook.tar: ../go.mod $(shell find ../webhooks -name '*.go') $(shell find ../libcalico-go -name '*.go')
-	make -C ../webhooks image
-	docker tag tigera/webhooks:latest-$(ARCH) tigera/webhooks:$(TEST_BUILD_TAG)
-	docker save --output $@ tigera/webhooks:$(TEST_BUILD_TAG)
-
-whisker.tar: ../go.mod $(shell find ../whisker)
-	make -C ../whisker image
-	docker tag calico/whisker:latest-$(ARCH) calico/whisker:$(TEST_BUILD_TAG)
-	docker save --output $@ calico/whisker:$(TEST_BUILD_TAG)
-
-whisker-backend.tar: ../go.mod $(shell find ../whisker-backend -name '*.go')
-	make -C ../whisker-backend image
-	docker tag calico/whisker-backend:latest-$(ARCH) calico/whisker-backend:$(TEST_BUILD_TAG)
-	docker save --output $@ calico/whisker-backend:$(TEST_BUILD_TAG)
-
-load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
-	# Load the latest tar files onto the currently running kind cluster.
-	KUBECONFIG=$(KIND_KUBECONFIG) KIND=$(KIND) ./tests/k8st/load_images_on_kind_cluster.sh
-	# Restart the Calico containers so they launch with the newly loaded code.
-	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) delete pods -n calico-system --all
-	# calicoctl is deployed as a pod on the cluster and needs to be recreated.
-	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) apply -f tests/k8st/infra/calicoctl.yaml
-
-GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
-TSEE_TEST_LICENSE?=${HOME}/secrets/license.yaml
-
 #
 # Dual ToR Tests
 #
 .PHONY: dual-tor-test-legacy
-dual-tor-test-legacy: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup-legacy dual-tor-run-test dual-tor-cleanup
+dual-tor-test-legacy: kind-build-images .calico_test.created dual-tor-setup-legacy dual-tor-run-test dual-tor-cleanup
 
 .PHONY: dual-tor-test
-dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
+dual-tor-test: kind-build-images .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
 # TODO: dual-tor uses a custom kind build, and so doesn't leverage the common
 # kind logic from lib.Makefile.
@@ -668,10 +453,10 @@ LEGACY_ROUTING=false
 # Which early-network config file in the dual-tor-test directory to copy to the custom kind-node image
 NODE_ENC_FILE=cfg.yaml
 DUAL_TOR_DIR=tests/k8st/dual-tor
-dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
+dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl kind-build-images .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
-	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
+	docker save -o $(DUAL_TOR_DIR)/tmp/calico-node.tar tigera/node:$(KIND_TEST_BUILD_TAG)
 	docker build \
 		--build-arg KINDEST_NODE_VERSION=$(KINDEST_NODE_VERSION_DUAL_TOR) \
 		--build-arg EARLY_NETWORK_CONFIG_FILE=$(NODE_ENC_FILE) \
@@ -724,23 +509,9 @@ K8ST_REPORT_FILENAME ?= k8s-tests.xml
 
 .PHONY: k8s-test
 k8s-test:
-	$(MAKE) kind-k8st-cleanup
-	$(MAKE) kind-k8st-setup
+	$(MAKE) -C $(REPO_ROOT) kind-up
 	$(MAKE) kind-k8st-run-test
-
-TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-
-.PHONY: kind-k8st-setup
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kubectl $(TEST_LICENSE) $(CHARTS) kind-cluster-create
-	KUBECONFIG=$(KIND_KUBECONFIG) \
-	KIND=$(KIND) \
-	ARCH=$(ARCH) \
-	GIT_VERSION=$(GIT_VERSION) \
-	CALICO_API_GROUP=$(CALICO_API_GROUP) \
-	TSEE_TEST_LICENSE=$(TEST_LICENSE) \
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
-	CLUSTER_ROUTING=$(CLUSTER_ROUTING) \
-	./tests/k8st/deploy_resources_on_kind_cluster.sh
+	$(MAKE) -C $(REPO_ROOT) kind-down
 
 .PHONY: kind-k8st-run-test
 kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
@@ -755,16 +526,13 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 	    sh -c 'echo "container started.." && \
 	     cd /code/tests/k8st && PYTHONPATH=/code pytest $(K8ST_TO_RUN) -v --junit-xml="/code/report/$(K8ST_REPORT_FILENAME)"'
 
-.PHONY: kind-k8st-cleanup
-kind-k8st-cleanup: kind-cluster-destroy
-
 .PHONY: external-network-test
 external-network-test:
-	$(MAKE) kind-k8st-setup
+	$(MAKE) -C $(REPO_ROOT) kind-up
 	$(MAKE) external-network-setup
 	$(MAKE) external-network-run-test
 	$(MAKE) external-network-cleanup
-	$(MAKE) kind-k8st-cleanup
+	$(MAKE) -C $(REPO_ROOT) kind-down
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
@@ -793,7 +561,7 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -809,7 +577,7 @@ st: $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar workload.tar
 		   -e HOST_CHECKOUT_DIR=$(CURDIR) \
 		   -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 		   -e MY_IP=$(LOCAL_IP_ENV) \
-		   -e NODE_CONTAINER_NAME=tigera/node:$(TEST_BUILD_TAG) \
+		   -e NODE_CONTAINER_NAME=tigera/node:$(KIND_TEST_BUILD_TAG) \
 		   --rm -t \
 		   -v /var/run/docker.sock:/var/run/docker.sock \
 		   $(TEST_CONTAINER_NAME) \

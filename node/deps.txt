@@ -294,7 +294,6 @@ local:felix/dispatcher
 local:felix/environment
 local:felix/ethtool
 local:felix/generictables
-local:felix/hashutils
 local:felix/idalloc
 local:felix/ifacemonitor
 local:felix/ip
@@ -384,8 +383,10 @@ local:libcalico-go/lib/errors
 local:libcalico-go/lib/hash
 local:libcalico-go/lib/health
 local:libcalico-go/lib/ipam
+local:libcalico-go/lib/ipam/vmipam
 local:libcalico-go/lib/jitter
 local:libcalico-go/lib/json
+local:libcalico-go/lib/kubevirt
 local:libcalico-go/lib/labels
 local:libcalico-go/lib/logutils
 local:libcalico-go/lib/metricsserver

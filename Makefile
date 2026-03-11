@@ -58,7 +58,7 @@ clean:
 	$(MAKE) -C third_party/prometheus clean
 	$(MAKE) -C third_party/prometheus-operator clean
 	$(MAKE) -C third_party/snort3 clean
-	rm -rf ./bin
+	rm -rf ./bin .stamp.*
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive
 	rm -f manifests/ocp.tgz
@@ -328,17 +328,23 @@ K8S_NETPOL_SUPPORTED_FEATURES ?= "ClusterNetworkPolicy"
 K8S_NETPOL_UNSUPPORTED_FEATURES ?= ""
 CLUSTER_ROUTING ?= BIRD
 
+## Build all test images, create a kind cluster, and deploy Calico on it.
+.PHONY: kind-up
+kind-up: kind-build-images
+	$(MAKE) kind-cluster-create CALICO_API_GROUP=$(KIND_CALICO_API_GROUP)
+	$(MAKE) kind-deploy
+
 ## Create a kind cluster and run all e2e tests.
 e2e-test:
 	$(MAKE) -C e2e build
-	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) -C node kind-k8st-setup
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) kind-up
 	$(MAKE) e2e-run-test
 	# Disabling k8s CNP conformance test since its CRD it not installed by default.
 	#$(MAKE) e2e-run-cnp-test
 
 e2e-test-clusternetworkpolicy:
 	$(MAKE) -C e2e build
-	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) -C node kind-k8st-setup
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) $(MAKE) kind-up
 	$(MAKE) e2e-run-cnp-test
 
 ## Run the general e2e tests against a pre-existing kind cluster.

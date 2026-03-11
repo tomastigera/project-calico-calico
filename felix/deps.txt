@@ -296,7 +296,6 @@ local:felix/fv/test-workload
 local:felix/fv/tproxy/cmd
 local:felix/fv/utils
 local:felix/generictables
-local:felix/hashutils
 local:felix/idalloc
 local:felix/idalloc/collision
 local:felix/ifacemonitor

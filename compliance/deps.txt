@@ -277,7 +277,6 @@ local:felix/deltatracker
 local:felix/dispatcher
 local:felix/environment
 local:felix/generictables
-local:felix/hashutils
 local:felix/idalloc
 local:felix/ip
 local:felix/ipsets

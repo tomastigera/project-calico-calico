@@ -1627,7 +1627,7 @@ $(REPO_ROOT)/.$(KIND_NAME).created: $(KUBECTL) $(KIND)
 
 	touch $@
 
-kind-cluster-destroy: $(KIND) $(KUBECTL)
+kind-cluster-destroy kind-down: $(KIND) $(KUBECTL)
 	# We need to drain the cluster gracefully when shutting down to avoid a netdev unregister error from the kernel.
 	# This requires we execute CNI del on pods with pod networking.
 	-$(KIND) delete cluster --name $(KIND_NAME)
@@ -1703,6 +1703,277 @@ bin/yq:
 	mkdir -p bin
 	curl -sSfL --retry 5 https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_$(BUILDARCH).tar.gz | tar xz -C bin ./yq_linux_$(BUILDARCH) && \
 	mv bin/yq_linux_$(BUILDARCH) bin/yq
+
+###############################################################################
+# Common functions for setting up a kind cluster with Calico for testing.
+###############################################################################
+KIND_INFRA_DIR := $(REPO_ROOT)/hack/test/kind/infra
+KIND_TEST_BUILD_TAG = test-build
+
+# Calico images built locally with latest-$(ARCH) tags. kind-build-images
+# re-tags each as :test-build for the kind cluster.
+KIND_CALICO_IMAGES = \
+	tigera/node:$(KIND_TEST_BUILD_TAG) \
+	tigera/typha:$(KIND_TEST_BUILD_TAG) \
+	tigera/apiserver:$(KIND_TEST_BUILD_TAG) \
+	tigera/calicoctl:$(KIND_TEST_BUILD_TAG) \
+	tigera/cni:$(KIND_TEST_BUILD_TAG) \
+	tigera/csi:$(KIND_TEST_BUILD_TAG) \
+	tigera/node-driver-registrar:$(KIND_TEST_BUILD_TAG) \
+	tigera/pod2daemon-flexvol:$(KIND_TEST_BUILD_TAG) \
+	tigera/kube-controllers:$(KIND_TEST_BUILD_TAG) \
+	tigera/webhooks:$(KIND_TEST_BUILD_TAG)
+
+# Operator is built separately (build-operator.sh tags it directly as
+# :test-build), so it's not in KIND_CALICO_IMAGES.
+KIND_OPERATOR_IMAGE = docker.io/tigera/operator:$(KIND_TEST_BUILD_TAG)
+
+# All images loaded onto the kind cluster.
+KIND_IMAGES = $(KIND_OPERATOR_IMAGE) $(KIND_CALICO_IMAGES)
+
+# Enterprise-only: paths to license and pull secret for kind cluster setup.
+GCR_IO_PULL_SECRET ?= $(HOME)/secrets/docker_cfg.json
+TSEE_TEST_LICENSE ?= $(HOME)/secrets/license.yaml
+
+# Enterprise-only images (all images loaded onto the kind cluster).
+# Enterprise images built locally with latest-$(ARCH) tags. kind-build-images
+# re-tags each as :test-build for the kind cluster.
+KIND_ENTERPRISE_LOCAL_IMAGES = \
+	tigera/egress-gateway:$(KIND_TEST_BUILD_TAG) \
+	tigera/queryserver:$(KIND_TEST_BUILD_TAG) \
+	tigera/prometheus-service:$(KIND_TEST_BUILD_TAG) \
+	tigera/fluentd:$(KIND_TEST_BUILD_TAG) \
+	tigera/policy-recommendation:$(KIND_TEST_BUILD_TAG) \
+	tigera/voltron:$(KIND_TEST_BUILD_TAG) \
+	tigera/ui-apis:$(KIND_TEST_BUILD_TAG) \
+	tigera/es-gateway:$(KIND_TEST_BUILD_TAG) \
+	tigera/linseed:$(KIND_TEST_BUILD_TAG) \
+	tigera/intrusion-detection-controller:$(KIND_TEST_BUILD_TAG) \
+	tigera/webhooks-processor:$(KIND_TEST_BUILD_TAG) \
+	tigera/intrusion-detection-job-installer:$(KIND_TEST_BUILD_TAG) \
+	tigera/elasticsearch-metrics:$(KIND_TEST_BUILD_TAG) \
+	tigera/prometheus-operator:$(KIND_TEST_BUILD_TAG) \
+	tigera/prometheus-config-reloader:$(KIND_TEST_BUILD_TAG) \
+	tigera/eck-operator:$(KIND_TEST_BUILD_TAG)
+
+# Enterprise images pulled from a registry. Stamp rules pull and tag as
+# latest-$(ARCH); the common tagging loop handles the final tag.
+KIND_ENTERPRISE_PULLED_IMAGES = \
+	tigera/prometheus:$(KIND_TEST_BUILD_TAG) \
+	tigera/alertmanager:$(KIND_TEST_BUILD_TAG) \
+	tigera/manager:$(KIND_TEST_BUILD_TAG) \
+	tigera/kibana:$(KIND_TEST_BUILD_TAG) \
+	tigera/elasticsearch:$(KIND_TEST_BUILD_TAG)
+
+# All enterprise images = locally built + pulled from registry.
+KIND_CALICO_ENTERPRISE_IMAGES = $(KIND_ENTERPRISE_LOCAL_IMAGES) $(KIND_ENTERPRISE_PULLED_IMAGES)
+
+KIND_IMAGES += $(KIND_CALICO_ENTERPRISE_IMAGES)
+
+# .image.created markers: the per-component image build stamp files.
+# Each depends on its source files via deps.txt so Make knows when
+# to rebuild. The sub-make handles the actual build; we just ensure it
+# runs when sources are newer.
+KIND_IMAGE_MARKERS = \
+	$(REPO_ROOT)/node/.image.created-$(ARCH) \
+	$(REPO_ROOT)/typha/.image.created-$(ARCH) \
+	$(REPO_ROOT)/apiserver/.image.created-$(ARCH) \
+	$(REPO_ROOT)/cni-plugin/.image.created-$(ARCH) \
+	$(REPO_ROOT)/pod2daemon/.image.created-$(ARCH) \
+	$(REPO_ROOT)/calicoctl/.image.created-$(ARCH) \
+	$(REPO_ROOT)/kube-controllers/.image.created-$(ARCH) \
+	$(REPO_ROOT)/webhooks/.image.created-$(ARCH)
+
+$(REPO_ROOT)/node/.image.created-$(ARCH): $(call local-deps-go-files,node)
+	$(MAKE) -C $(REPO_ROOT)/node image
+
+$(REPO_ROOT)/typha/.image.created-$(ARCH): $(call local-deps-go-files,typha)
+	$(MAKE) -C $(REPO_ROOT)/typha image
+
+$(REPO_ROOT)/apiserver/.image.created-$(ARCH): $(call local-deps-go-files,apiserver)
+	$(MAKE) -C $(REPO_ROOT)/apiserver image
+
+$(REPO_ROOT)/cni-plugin/.image.created-$(ARCH): $(call local-deps-go-files,cni-plugin)
+	$(MAKE) -C $(REPO_ROOT)/cni-plugin image
+
+$(REPO_ROOT)/pod2daemon/.image.created-$(ARCH): $(call local-deps-go-files,pod2daemon)
+	$(MAKE) -C $(REPO_ROOT)/pod2daemon image
+
+$(REPO_ROOT)/calicoctl/.image.created-$(ARCH): $(call local-deps-go-files,calicoctl)
+	$(MAKE) -C $(REPO_ROOT)/calicoctl image
+
+$(REPO_ROOT)/kube-controllers/.image.created-$(ARCH): $(call local-deps-go-files,kube-controllers)
+	$(MAKE) -C $(REPO_ROOT)/kube-controllers image
+
+$(REPO_ROOT)/webhooks/.image.created-$(ARCH): $(call local-deps-go-files,webhooks)
+	$(MAKE) -C $(REPO_ROOT)/webhooks image
+
+# Operator is built from a separate repo/branch and depends on all other
+# images being built first.
+$(REPO_ROOT)/.stamp.operator: $(KIND_IMAGE_MARKERS) $(KIND_INFRA_DIR)/calico_versions.yml
+	cd $(KIND_INFRA_DIR) && BRANCH=$(OPERATOR_BRANCH) ./build-operator.sh
+	touch $@
+
+# Enterprise-only image markers for locally-built components. These follow
+# the same pattern as KIND_IMAGE_MARKERS: source deps so Make knows when
+# to rebuild. Components with deps.txt use local-deps-go-files; third_party
+# components without deps.txt approximate with find.
+KIND_ENTERPRISE_IMAGE_MARKERS = \
+	$(REPO_ROOT)/egress-gateway/.image.created-$(ARCH) \
+	$(REPO_ROOT)/queryserver/.image.created-$(ARCH) \
+	$(REPO_ROOT)/prometheus-service/.image.created-$(ARCH) \
+	$(REPO_ROOT)/fluentd/.image.created-$(ARCH) \
+	$(REPO_ROOT)/policy-recommendation/.image.created-$(ARCH) \
+	$(REPO_ROOT)/voltron/.image.created-$(ARCH) \
+	$(REPO_ROOT)/ui-apis/.image.created-$(ARCH) \
+	$(REPO_ROOT)/es-gateway/.image.created-$(ARCH) \
+	$(REPO_ROOT)/linseed/.image.created-$(ARCH) \
+	$(REPO_ROOT)/intrusion-detection-controller/.image.created-$(ARCH) \
+	$(REPO_ROOT)/webhooks-processor/.image.created-$(ARCH) \
+	$(REPO_ROOT)/intrusion-detection-controller/.dashboards-installer.image.created-$(ARCH) \
+	$(REPO_ROOT)/elasticsearch-metrics/.image.created-$(ARCH) \
+	$(REPO_ROOT)/third_party/prometheus-operator/.prometheus-operator.created-$(ARCH) \
+	$(REPO_ROOT)/third_party/prometheus-operator/.prometheus-config-reloader.created-$(ARCH) \
+	$(REPO_ROOT)/third_party/eck-operator/.eck-operator.created-$(ARCH)
+
+# Enterprise-only markers for images pulled from a registry. These have
+# no local source deps and are pulled once per stamp lifetime.
+KIND_ENTERPRISE_PULLED_IMAGE_MARKERS = \
+	$(REPO_ROOT)/.stamp.prometheus \
+	$(REPO_ROOT)/.stamp.alertmanager \
+	$(REPO_ROOT)/.stamp.manager \
+	$(REPO_ROOT)/.stamp.kibana \
+	$(REPO_ROOT)/.stamp.elastic
+
+## Build all component images needed for kind cluster testing, then tag them.
+.PHONY: kind-build-images
+kind-build-images: $(KIND_IMAGE_MARKERS) $(REPO_ROOT)/.stamp.operator $(KIND_ENTERPRISE_IMAGE_MARKERS) $(KIND_ENTERPRISE_PULLED_IMAGE_MARKERS)
+	@for img in $(KIND_CALICO_IMAGES); do \
+	  base=$${img%%:*}; \
+	  docker tag $$base:latest-$(ARCH) $$img; \
+	done
+	@for img in $(KIND_CALICO_ENTERPRISE_IMAGES); do \
+	  base=$${img%%:*}; \
+	  docker tag $$base:latest-$(ARCH) $$img; \
+	done
+
+# Create a kind cluster and deploy Calico on it via Helm. Assumes images are
+# already built and tagged as test-build in the local Docker daemon. If a
+# cluster already exists (stamp file present), the creation step is skipped.
+# Default to v3 CRDs for kind clusters. Override with KIND_CALICO_API_GROUP=crd.projectcalico.org/v1 if needed.
+KIND_CALICO_API_GROUP ?= projectcalico.org/v3
+
+# Load images, install Calico via Helm, and wait for readiness on an existing
+# kind cluster. Use kind-up for end-to-end bringup (images + cluster + deploy).
+.PHONY: kind-deploy
+kind-deploy:
+	$(MAKE) -C $(REPO_ROOT) chart CALICO_API_GROUP=$(KIND_CALICO_API_GROUP)
+	REPO_ROOT=$(REPO_ROOT) \
+	KUBECONFIG=$(KIND_KUBECONFIG) \
+	KIND=$(KIND) \
+	KIND_NAME=$(KIND_NAME) \
+	ARCH=$(ARCH) \
+	GIT_VERSION=$(GIT_VERSION) \
+	CALICO_API_GROUP=$(KIND_CALICO_API_GROUP) \
+	CLUSTER_ROUTING=$(CLUSTER_ROUTING) \
+	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	KIND_IMAGES="$(KIND_IMAGES)" \
+	$(REPO_ROOT)/hack/test/kind/deploy_resources.sh
+
+# Rebuild any images whose source files have changed, load onto the kind
+# cluster, and restart pods.
+.PHONY: kind-reload
+kind-reload: kind-build-images
+	KIND=$(KIND) KIND_NAME=$(KIND_NAME) $(REPO_ROOT)/hack/test/kind/load_images.sh $(KIND_IMAGES)
+	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) delete pods -n calico-system --all
+	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBECTL) apply -f $(KIND_INFRA_DIR)/calicoctl.yaml
+
+# Enterprise-only image build rules.
+
+# Locally-built enterprise components with deps.txt: these use the same
+# .image.created pattern as OSS components so Make tracks source changes.
+$(REPO_ROOT)/egress-gateway/.image.created-$(ARCH): $(call local-deps-go-files,egress-gateway)
+	$(MAKE) -C $(REPO_ROOT)/egress-gateway image
+
+$(REPO_ROOT)/queryserver/.image.created-$(ARCH): $(call local-deps-go-files,queryserver)
+	$(MAKE) -C $(REPO_ROOT)/queryserver image
+
+$(REPO_ROOT)/prometheus-service/.image.created-$(ARCH): $(call local-deps-go-files,prometheus-service)
+	$(MAKE) -C $(REPO_ROOT)/prometheus-service image
+
+$(REPO_ROOT)/fluentd/.image.created-$(ARCH): $(call local-deps-go-files,fluentd)
+	$(MAKE) -C $(REPO_ROOT)/fluentd image THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY_CD)
+
+$(REPO_ROOT)/policy-recommendation/.image.created-$(ARCH): $(call local-deps-go-files,policy-recommendation)
+	$(MAKE) -C $(REPO_ROOT)/policy-recommendation image
+
+$(REPO_ROOT)/voltron/.image.created-$(ARCH): $(call local-deps-go-files,voltron)
+	$(MAKE) -C $(REPO_ROOT)/voltron image
+
+$(REPO_ROOT)/ui-apis/.image.created-$(ARCH): $(call local-deps-go-files,ui-apis)
+	$(MAKE) -C $(REPO_ROOT)/ui-apis image
+
+$(REPO_ROOT)/es-gateway/.image.created-$(ARCH): $(call local-deps-go-files,es-gateway)
+	$(MAKE) -C $(REPO_ROOT)/es-gateway image
+
+$(REPO_ROOT)/linseed/.image.created-$(ARCH): $(call local-deps-go-files,linseed)
+	$(MAKE) -C $(REPO_ROOT)/linseed image
+
+$(REPO_ROOT)/intrusion-detection-controller/.image.created-$(ARCH): $(call local-deps-go-files,intrusion-detection-controller)
+	$(MAKE) -C $(REPO_ROOT)/intrusion-detection-controller image
+
+$(REPO_ROOT)/webhooks-processor/.image.created-$(ARCH): $(call local-deps-go-files,webhooks-processor)
+	$(MAKE) -C $(REPO_ROOT)/webhooks-processor image
+
+$(REPO_ROOT)/intrusion-detection-controller/.dashboards-installer.image.created-$(ARCH): $(call local-deps-go-files,intrusion-detection-controller)
+	$(MAKE) -C $(REPO_ROOT)/intrusion-detection-controller intrusion-detection-job-installer
+
+$(REPO_ROOT)/elasticsearch-metrics/.image.created-$(ARCH): $(call local-deps-go-files,elasticsearch-metrics)
+	$(MAKE) -C $(REPO_ROOT)/elasticsearch-metrics image
+
+# Third-party locally-built images: use find for source deps since these
+# don't have deps.txt. The component Makefiles create the marker files.
+$(REPO_ROOT)/third_party/prometheus-operator/.prometheus-operator.created-$(ARCH): $(shell find $(REPO_ROOT)/third_party/prometheus-operator -name '*.go')
+	$(MAKE) -C $(REPO_ROOT)/third_party/prometheus-operator image
+
+$(REPO_ROOT)/third_party/prometheus-operator/.prometheus-config-reloader.created-$(ARCH): $(shell find $(REPO_ROOT)/third_party/prometheus-operator -name '*.go')
+	$(MAKE) -C $(REPO_ROOT)/third_party/prometheus-operator image
+
+$(REPO_ROOT)/third_party/eck-operator/.eck-operator.created-$(ARCH): $(shell find $(REPO_ROOT)/third_party/eck-operator -name '*.go')
+	$(MAKE) -C $(REPO_ROOT)/third_party/eck-operator image
+
+# GCR-pulled images: no local source deps, use stamp files. Tag as
+# latest-$(ARCH) so the common tagging loop handles the final tag.
+$(REPO_ROOT)/.stamp.prometheus:
+	# TODO: Build this. We cannot at the moment because it relies on the host OS npm / go toolchain.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/prometheus:$(THIRD_PARTY_RELEASE_BRANCH) tigera/prometheus:latest-$(ARCH)
+	touch $@
+
+$(REPO_ROOT)/.stamp.alertmanager:
+	# TODO: Build this.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/alertmanager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/alertmanager:latest-$(ARCH)
+	touch $@
+
+$(REPO_ROOT)/.stamp.manager:
+	# TODO
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/manager:$(THIRD_PARTY_RELEASE_BRANCH) tigera/manager:latest-$(ARCH)
+	touch $@
+
+$(REPO_ROOT)/.stamp.kibana:
+	# TODO: Can we run without kibana? Requires operator change.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/kibana:$(THIRD_PARTY_RELEASE_BRANCH) tigera/kibana:latest-$(ARCH)
+	touch $@
+
+$(REPO_ROOT)/.stamp.elastic:
+	# TODO: Build this.
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH)
+	docker tag gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(THIRD_PARTY_RELEASE_BRANCH) tigera/elasticsearch:latest-$(ARCH)
+	touch $@
 
 ###############################################################################
 # Common functions for launching a local etcd instance.
