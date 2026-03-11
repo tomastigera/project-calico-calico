@@ -214,9 +214,11 @@ skip_redir_ifindex:
 			};
 
 			if (bpf_core_field_exists(((struct bpf_fib_lookup *)0)->mark)) {
-				fib_params(ctx)->mark = EXT_TO_SVC_MARK;
+				/* EXT_LOCAL and EGW are mutually exclusive marks for FIB. */
 				if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
-					fib_params(ctx)->mark |= CALI_SKB_MARK_EGRESS;
+					fib_params(ctx)->mark = CALI_SKB_MARK_EGRESS;
+				} else {
+					fib_params(ctx)->mark = EXT_TO_SVC_MARK;
 				}
 			}
 
@@ -379,9 +381,11 @@ try_fib_external:
 		};
 
 		if (bpf_core_field_exists(((struct bpf_fib_lookup *)0)->mark)) {
-			fib_params(ctx)->mark = EXT_TO_SVC_MARK;
+			/* EXT_LOCAL and EGW are mutually exclusive marks for FIB. */
 			if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
-				fib_params(ctx)->mark |= CALI_SKB_MARK_EGRESS;
+				fib_params(ctx)->mark = CALI_SKB_MARK_EGRESS;
+			} else {
+				fib_params(ctx)->mark = EXT_TO_SVC_MARK;
 			}
 			CALI_DEBUG("FIB mark=0x%x", fib_params(ctx)->mark);
 		}
