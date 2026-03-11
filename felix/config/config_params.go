@@ -77,10 +77,11 @@ const (
 
 // Default stats collection const used globally
 const (
-	DefaultAgeTimeout               = time.Duration(10) * time.Second
-	DefaultInitialReportingDelay    = time.Duration(5) * time.Second
-	DefaultExportingInterval        = time.Duration(1) * time.Second
-	DefaultConntrackPollingInterval = time.Duration(5) * time.Second
+	DefaultAgeTimeout                    = time.Duration(10) * time.Second
+	DefaultInitialReportingDelay         = time.Duration(5) * time.Second
+	DefaultExportingInterval             = time.Duration(1) * time.Second
+	DefaultConntrackPollingInterval      = time.Duration(5) * time.Second
+	DefaultPolicyActivityRefreshInterval = 1 * time.Hour
 )
 
 var SourcesInDescendingOrder = []Source{DisabledByLicenseCheck, InternalOverride, EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
@@ -541,7 +542,9 @@ type Config struct {
 	PolicyActivityLogsFileDirectory     string        `config:"string;/var/log/calico/policy"`
 	PolicyActivityLogsFileMaxFiles      int           `config:"int;5"`
 	PolicyActivityLogsFileMaxFileSizeMB int           `config:"int;100"`
-
+	// PolicyActivityRefreshInterval controls how often Felix re-evaluates policies for
+	// long-lived connections to keep policy activity timestamps current. [Default: 3600s]
+	PolicyActivityRefreshInterval   time.Duration `config:"seconds;3600;local"`
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
 	WindowsStatsDumpFilePath        string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`

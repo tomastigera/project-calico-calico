@@ -43,9 +43,11 @@ import (
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/goldmane"
 	"github.com/projectcalico/calico/felix/collector/local"
+	"github.com/projectcalico/calico/felix/collector/policy"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/metrics"
+	"github.com/projectcalico/calico/felix/fv/policyactivity"
 	"github.com/projectcalico/calico/felix/fv/tcpdump"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/goldmane/pkg/types"
@@ -589,6 +591,10 @@ func (f *Felix) FlowLogs() ([]flowlog.FlowLog, error) {
 	default:
 		panic("unrecognized flow log source")
 	}
+}
+
+func (f *Felix) PolicyActivityLogs() ([]policy.ActivityLog, error) {
+	return policyactivity.ReadPolicyActivityLogsFile(path.Join(cwLogDir, f.uniqueName))
 }
 
 func (f *Felix) FlowLogsFromLocalSocket() ([]flowlog.FlowLog, error) {

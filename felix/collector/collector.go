@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/collector/wafevents"
+	"github.com/projectcalico/calico/felix/config"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
@@ -143,11 +144,22 @@ type Config struct {
 	FelixHostName        string
 
 	PolicyStoreManager policystore.PolicyStoreManager
+
+	PolicyActivityRefreshInterval time.Duration
 }
 
 // namespacedEpKey is an interface for keys that have namespace information.
 type namespacedEpKey interface {
 	GetNamespace() string
+}
+
+// policyActivityEntry holds a snapshot of connection data needed for policy activity evaluation.
+// These are collected from epStats in the main goroutine and sent via channel to a separate
+// goroutine for evaluation under a single read lock.
+type policyActivityEntry struct {
+	Tuple tuple.Tuple
+	SrcEp calc.EndpointData
+	DstEp calc.EndpointData
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -157,30 +169,32 @@ type namespacedEpKey interface {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	dataplaneInfoReader    types.DataplaneInfoReader
-	packetInfoReader       types.PacketInfoReader
-	conntrackInfoReader    types.ConntrackInfoReader
-	processInfoCache       types.ProcessInfoCache
-	domainLookup           types.EgressDomainCache
-	luc                    *calc.LookupsCache
-	epStats                map[tuple.Tuple]*Data
-	ticker                 jitter.TickerInterface
-	tickerPolicyEval       jitter.TickerInterface
-	sigChan                chan os.Signal
-	config                 *Config
-	dumpLog                *log.Logger
-	ds                     chan *proto.DataplaneStats
-	wafEventsBatchC        chan []*proto.WAFEvent
-	wafEvents              []*proto.WAFEvent
-	metricReporters        []types.Reporter
-	dnsLogReporter         types.Reporter
-	l7LogReporter          types.Reporter
-	wafEventsReporter      types.Reporter
-	policyActivityReporter types.Reporter
-	policyStoreManager     policystore.PolicyStoreManager
-	displayDebugTraceLogs  bool
-	felixHostName          string
-	netlinkList            netlinkshim.Interface
+	dataplaneInfoReader         types.DataplaneInfoReader
+	packetInfoReader            types.PacketInfoReader
+	conntrackInfoReader         types.ConntrackInfoReader
+	processInfoCache            types.ProcessInfoCache
+	domainLookup                types.EgressDomainCache
+	luc                         *calc.LookupsCache
+	epStats                     map[tuple.Tuple]*Data
+	ticker                      jitter.TickerInterface
+	tickerPolicyEval            jitter.TickerInterface
+	tickerPolicyActivityRefresh jitter.TickerInterface
+	sigChan                     chan os.Signal
+	config                      *Config
+	dumpLog                     *log.Logger
+	ds                          chan *proto.DataplaneStats
+	wafEventsBatchC             chan []*proto.WAFEvent
+	wafEvents                   []*proto.WAFEvent
+	metricReporters             []types.Reporter
+	dnsLogReporter              types.Reporter
+	l7LogReporter               types.Reporter
+	wafEventsReporter           types.Reporter
+	policyActivityReporter      types.Reporter
+	policyActivityRefreshC      chan []policyActivityEntry
+	policyStoreManager          policystore.PolicyStoreManager
+	displayDebugTraceLogs       bool
+	felixHostName               string
+	netlinkList                 netlinkshim.Interface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -357,9 +371,10 @@ func (c *collector) SetNetlinkHandle(nl netlinkshim.Interface) {
 
 func (c *collector) startStatsCollectionAndReporting() {
 	var (
-		pktInfoC        <-chan types.PacketInfo
-		ctInfoC         <-chan []types.ConntrackInfo
-		wafEventsBatchC chan []*proto.WAFEvent
+		pktInfoC                   <-chan types.PacketInfo
+		ctInfoC                    <-chan []types.ConntrackInfo
+		wafEventsBatchC            chan []*proto.WAFEvent
+		policyActivityRefreshTickC <-chan time.Time
 	)
 
 	if c.packetInfoReader != nil {
@@ -367,6 +382,18 @@ func (c *collector) startStatsCollectionAndReporting() {
 	}
 	if c.conntrackInfoReader != nil {
 		ctInfoC = c.conntrackInfoReader.ConntrackInfoChan()
+	}
+	if c.policyActivityReporter != nil {
+		refreshInterval := c.config.PolicyActivityRefreshInterval
+		if refreshInterval == 0 {
+			refreshInterval = config.DefaultPolicyActivityRefreshInterval
+		}
+		log.Infof("Policy activity refresh enabled with interval %v", refreshInterval)
+		c.tickerPolicyActivityRefresh = jitter.NewTicker(refreshInterval*9/10, refreshInterval*1/10)
+		c.policyActivityRefreshC = make(chan []policyActivityEntry, 1)
+		policyActivityRefreshTickC = c.tickerPolicyActivityRefresh.Channel()
+		go c.evaluatePolicyActivity(c.policyActivityReporter)
+		defer close(c.policyActivityRefreshC)
 	}
 
 	// When a collector is started, we respond to the following events:
@@ -406,6 +433,8 @@ func (c *collector) startStatsCollectionAndReporting() {
 			wafEventsBatchC = nil
 		case <-c.tickerPolicyEval.Channel():
 			c.updatePendingRuleTraces()
+		case <-policyActivityRefreshTickC:
+			c.refreshLongLivedPolicyActivity()
 		}
 	}
 }
@@ -1292,26 +1321,27 @@ func (c *collector) updatePendingRuleTraces() {
 }
 
 func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
+	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
 	flow := TupleAsFlow(data.Tuple)
 
-	srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
-
-	// If endpoints have changed compared to what Data currently holds, skip evaluation.
-	if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
-		return
+	if isLocalWorkloadEp(data.DstEp) {
+		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+		})
 	}
 
-	c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-		// Evaluate ingress if destination is local workload endpoint
-		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal() {
-			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
-		}
-
-		// Evaluate egress if source is local workload endpoint
-		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal() {
+	if isLocalWorkloadEp(data.SrcEp) {
+		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
 			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
-		}
-	})
+		})
+	}
+}
+
+// isLocalWorkloadEp returns true if the endpoint is a non-nil local workload endpoint.
+func isLocalWorkloadEp(ep calc.EndpointData) bool {
+	return ep != nil && !ep.IsHostEndpoint() && ep.IsLocal()
 }
 
 // evaluatePendingRuleTrace evaluates the pending rule trace for the given direction and endpoint,
@@ -1326,6 +1356,86 @@ func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *pol
 		}
 	} else {
 		log.WithField("endpoint", ep.Key()).Trace("The endpoint is not yet tracked by the PolicyStore")
+	}
+}
+
+// refreshLongLivedPolicyActivity collects long-lived connections from epStats and sends them
+// to the policyActivityRefreshC channel for policy activity evaluation.
+func (c *collector) refreshLongLivedPolicyActivity() {
+	var entries []policyActivityEntry
+	for _, data := range c.epStats {
+		// Skip aggregated flow stats; only long-lived connections need re-evaluation.
+		if data == nil || !data.IsConnection {
+			continue
+		}
+
+		srcEp, dstEp := c.findEndpointBestMatch(data.Tuple)
+		if endpointChanged(data.SrcEp, srcEp) || endpointChanged(data.DstEp, dstEp) {
+			continue
+		}
+
+		entries = append(entries, policyActivityEntry{
+			Tuple: data.Tuple,
+			SrcEp: data.SrcEp,
+			DstEp: data.DstEp,
+		})
+	}
+
+	if len(entries) == 0 {
+		return
+	}
+
+	// Non-blocking send: if the previous batch is still being processed, skip this tick.
+	select {
+	case c.policyActivityRefreshC <- entries:
+	default:
+		log.Warn("Policy activity refresh channel full, skipping this tick")
+	}
+}
+
+// evaluatePolicyActivity runs in a separate goroutine, reading batches of connection
+// snapshots from policyActivityRefreshC. It acquires the policy store read lock once per batch,
+// evaluates all connections, then reports the results. This avoids acquiring/releasing the lock
+// per-connection and reduces contention with policy store writers.
+func (c *collector) evaluatePolicyActivity(reporter types.Reporter) {
+	for entries := range c.policyActivityRefreshC {
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			for i := range entries {
+				entry := &entries[i]
+				flow := TupleAsFlow(entry.Tuple)
+				c.evalPolicyActivityForEp(ps, reporter, entry, flow, rules.RuleDirIngress, entry.DstEp)
+				c.evalPolicyActivityForEp(ps, reporter, entry, flow, rules.RuleDirEgress, entry.SrcEp)
+			}
+		})
+	}
+}
+
+// evalPolicyActivityForEp evaluates the rule trace for a local workload endpoint
+// and reports the result if any rules matched. Must be called with the policy store read lock held.
+func (c *collector) evalPolicyActivityForEp(ps *policystore.PolicyStore, reporter types.Reporter, entry *policyActivityEntry, flow TupleAsFlow, direction rules.RuleDir, ep calc.EndpointData) {
+	if !isLocalWorkloadEp(ep) {
+		return
+	}
+	if protoEp := c.lookupProtoWorkloadEndpoint(ps, ep.Key()); protoEp != nil {
+		if trace := checker.Evaluate(direction, ps, protoEp, &flow); len(trace) > 0 {
+			sendPolicyActivityUpdate(reporter, entry, trace)
+		}
+	}
+}
+
+// sendPolicyActivityUpdate sends a metric.Update to the given reporter from a
+// policyActivityEntry snapshot. The reporter is passed explicitly to avoid unsynchronized
+// access to the collector's policyActivityReporter field from the goroutine.
+func sendPolicyActivityUpdate(reporter types.Reporter, entry *policyActivityEntry, ruleIDs []*calc.RuleID) {
+	mu := metric.Update{
+		UpdateType: metric.UpdateTypeReport,
+		Tuple:      entry.Tuple,
+		SrcEp:      entry.SrcEp,
+		DstEp:      entry.DstEp,
+		RuleIDs:    ruleIDs,
+	}
+	if err := reporter.Report(mu); err != nil {
+		log.WithError(err).Warn("Failed to report policy activity refresh")
 	}
 }
 
@@ -1379,7 +1489,7 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (tuple.Tuple, error
 	return tuple.Make(srcIP, dstIP, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
 }
 
-// reportDataplaneStatsUpdateErrorMetrics reports error statistics encoutered when updating Dataplane stats
+// reportDataplaneStatsUpdateErrorMetrics reports error statistics encountered when updating Dataplane stats
 func reportDataplaneStatsUpdateErrorMetrics(dataplaneErrorDelta uint32) {
 
 	if dataplaneStatsUpdateLastErrorReportTime.Before(time.Now().Add(-1 * time.Minute)) {
