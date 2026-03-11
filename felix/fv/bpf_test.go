@@ -6573,7 +6573,13 @@ func bpfWaitForPolicy(felix *infrastructure.Felix, iface, hook, search string) s
 }
 
 func bpfWaitForPolicyRule(felix *infrastructure.Felix, iface, hook, policy, rule string) string {
-	search := fmt.Sprintf("Start of rule %s %s", policy, rule)
+	// Extract the action value from the legacy format `action:"allow"` to match
+	// the new human-readable format `Rule: <policy>  Action: allow`.
+	action := rule
+	if strings.HasPrefix(rule, `action:"`) && strings.HasSuffix(rule, `"`) {
+		action = strings.TrimSuffix(strings.TrimPrefix(rule, `action:"`), `"`)
+	}
+	search := fmt.Sprintf("Rule: %s  Action: %s", policy, action)
 	out := ""
 	EventuallyWithOffset(1, func() string {
 		out = bpfDumpPolicy(felix, iface, hook)
