@@ -99,6 +99,22 @@ rules:
       - list
       - update
       - delete
+  # Tier-scoped policy resources are required by the calico-webhooks RBAC
+  # webhook, which performs tier-based authorization via SubjectAccessReview.
+  - apiGroups:
+      - "projectcalico.org"
+    resources:
+      - tier.globalnetworkpolicies
+      - tier.networkpolicies
+      - tier.stagedglobalnetworkpolicies
+      - tier.stagednetworkpolicies
+      - tier.stagedkubernetesnetworkpolicies
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - delete
   - apiGroups: ["networking.k8s.io"]
     resources:
       - networkpolicies

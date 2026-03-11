@@ -499,6 +499,7 @@ rules:
       - watch
       - create
       - update
+      - delete
   - apiGroups:
       - discovery.k8s.io
     resources:
@@ -721,6 +722,7 @@ rules:
       - get
       - create
       - update
+      - delete
   - apiGroups:
       - projectcalico.org
     resources:

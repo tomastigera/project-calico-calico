@@ -111,11 +111,7 @@ CHART=../bin/tigera-operator-$GIT_VERSION.tgz
 # Path to Enteprise product license
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/license.yaml}
 
-# Determine the helm values file to use based on the CALICO_API_GROUP env var.
 VALUES_FILE=$TEST_DIR/infra/values.yaml
-if [ "$CALICO_API_GROUP" == "projectcalico.org/v3" ]; then
-  VALUES_FILE=$TEST_DIR/infra/values-v3-crds.yaml
-fi
 
 # kubectl binary.
 : ${kubectl:=../hack/test/kind/kubectl}

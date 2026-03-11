@@ -152,19 +152,21 @@ EOF
             server_A_addr = server_B_addr = "172.31.91.1"
             server_C_addr = "172.31.101.1"
 
-            # Verify that each client reaches the correct expected external server
-            client_no_annotations.check_connected(server_A_addr, 80, command="wget")
-            self.assertIn("server A", client_no_annotations.last_output)
+            # Use retry_until_success for connectivity checks because the
+            # dataplane may take time to converge after encap mode changes.
+            def _retry_connect(client, server_addr, assert_text):
+                client.check_connected(server_addr, 80, command="wget")
+                self.assertIn(assert_text, client.last_output)
 
-            client_annotation_override.check_connected(server_B_addr, 80, command="wget")
-            self.assertIn("server B", client_annotation_override.last_output)
+            # Verify that each client reaches the correct expected external server
+            retry_until_success(_retry_connect, function_args=[client_no_annotations, server_A_addr, "server A"])
+
+            retry_until_success(_retry_connect, function_args=[client_annotation_override, server_B_addr, "server B"])
 
             # Verify that a client connected to gw_redgreen can reach both external
             # servers in rednet and greennet correctly
-            client_redgreen.check_connected(server_A_addr, 80, command="wget")
-            self.assertIn("server A", client_redgreen.last_output)
-            client_redgreen.check_connected(server_C_addr, 80, command="wget")
-            self.assertIn("server C", client_redgreen.last_output)
+            retry_until_success(_retry_connect, function_args=[client_redgreen, server_A_addr, "server A"])
+            retry_until_success(_retry_connect, function_args=[client_redgreen, server_C_addr, "server C"])
 
             # Create a namespace for the cluster server
             server_ns = "ns-server"
