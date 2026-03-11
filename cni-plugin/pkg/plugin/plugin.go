@@ -420,7 +420,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 			var hostVethName, contVethMac string
 			desiredVethName := "cali" + args.ContainerID[:min(11, len(args.ContainerID))]
 			hostVethName, contVethMac, err = d.DoNetworking(
-				ctx, calicoClient, args, result, desiredVethName, utils.DefaultRoutes, endpoint, map[string]string{}, nil)
+				ctx, calicoClient, args, result, desiredVethName, utils.DefaultRoutes, endpoint, map[string]string{}, nil, false)
 			if err != nil {
 				// Cleanup IP allocation and return the error.
 				utils.ReleaseIPAllocation(logger, conf, args)

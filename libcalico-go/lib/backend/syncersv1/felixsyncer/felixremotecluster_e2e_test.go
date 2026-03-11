@@ -846,8 +846,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				Affinity: &affinity,
 				Attributes: []model.AllocationAttribute{
 					{
-						AttrPrimary: &handle,
-						AttrSecondary: map[string]string{
+						HandleID: &handle,
+						ActiveOwnerAttrs: map[string]string{
 							ipam.AttributeNode: "test-node",
 						},
 					},
@@ -881,8 +881,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 				ipamBlock.Spec.Affinity = &remoteAffinity
 				ipamBlock.Spec.Attributes = []internalapi.AllocationAttribute{
 					{
-						AttrPrimary: &handle,
-						AttrSecondary: map[string]string{
+						HandleID: &handle,
+						ActiveOwnerAttrs: map[string]string{
 							ipam.AttributeNode: "remote-cluster/test-node",
 						},
 					},

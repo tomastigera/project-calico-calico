@@ -177,6 +177,7 @@ build-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning
 ###############################################################################
 # Unit Tests
 ###############################################################################
+
 fv:
 	@echo "No FV tests for CNI plugin"
 

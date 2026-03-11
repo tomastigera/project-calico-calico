@@ -353,8 +353,8 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 					v3Block.Spec.Affinity = &affinity
 				}
 				for _, attribute := range v3Block.Spec.Attributes {
-					if node, ok := attribute.AttrSecondary[ipam.AttributeNode]; ok {
-						attribute.AttrSecondary[ipam.AttributeNode] = clusterName + "/" + node
+					if node, ok := attribute.ActiveOwnerAttrs[ipam.AttributeNode]; ok {
+						attribute.ActiveOwnerAttrs[ipam.AttributeNode] = clusterName + "/" + node
 					}
 				}
 

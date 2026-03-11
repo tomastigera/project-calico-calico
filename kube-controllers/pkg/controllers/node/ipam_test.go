@@ -302,8 +302,8 @@ var _ = Describe("IPAM controller UTs", func() {
 		b.Allocations[0] = &idx
 		b.Unallocated = []int{1, 2, 3}
 		b.Attributes = append(b.Attributes, model.AllocationAttribute{
-			AttrPrimary: &handle,
-			AttrSecondary: map[string]string{
+			HandleID: &handle,
+			ActiveOwnerAttrs: map[string]string{
 				ipam.AttributeNode:      "cnode",
 				ipam.AttributePod:       "test-pod",
 				ipam.AttributeNamespace: "test-namespace",
@@ -314,7 +314,7 @@ var _ = Describe("IPAM controller UTs", func() {
 		expectedAllocation := &allocation{
 			ip:     "10.0.0.0",
 			handle: handle,
-			attrs:  b.Attributes[0].AttrSecondary,
+			attrs:  b.Attributes[0].ActiveOwnerAttrs,
 			block:  "10.0.0.0/30",
 		}
 
@@ -602,8 +602,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       "test-pod",
 						ipam.AttributeNamespace: "test-namespace",
@@ -705,29 +705,29 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: stringPtr("ipip-tunnel-addr-cnode"),
-					AttrSecondary: map[string]string{
+					HandleID: stringPtr("ipip-tunnel-addr-cnode"),
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode: "cnode",
 						ipam.AttributeType: ipam.AttributeTypeIPIP,
 					},
 				},
 				{
-					AttrPrimary: stringPtr("vxlan-tunnel-addr-cnode"),
-					AttrSecondary: map[string]string{
+					HandleID: stringPtr("vxlan-tunnel-addr-cnode"),
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode: "cnode",
 						ipam.AttributeType: ipam.AttributeTypeVXLAN,
 					},
 				},
 				{
-					AttrPrimary: stringPtr("wireguard-tunnel-addr-cnode"),
-					AttrSecondary: map[string]string{
+					HandleID: stringPtr("wireguard-tunnel-addr-cnode"),
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode: "cnode",
 						ipam.AttributeType: ipam.AttributeTypeWireguard,
 					},
 				},
 				{
-					AttrPrimary: stringPtr("aws-secondary-ifaces-cnode"),
-					AttrSecondary: map[string]string{
+					HandleID: stringPtr("aws-secondary-ifaces-cnode"),
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode: "cnode",
 						ipam.AttributeType: ipam.AttributeTypeAWSSecondary,
 					},
@@ -800,8 +800,8 @@ var _ = Describe("IPAM controller UTs", func() {
 				Unallocated: []int{1, 2, 3},
 				Attributes: []model.AllocationAttribute{
 					{
-						AttrPrimary: stringPtr(allocType + "-cnode"),
-						AttrSecondary: map[string]string{
+						HandleID: stringPtr(allocType + "-cnode"),
+						ActiveOwnerAttrs: map[string]string{
 							ipam.AttributeNode: "cnode",
 							ipam.AttributeType: allocType,
 						},
@@ -876,8 +876,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       "test-pod",
 						ipam.AttributeNamespace: "test-namespace",
@@ -957,8 +957,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -999,8 +999,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -1124,8 +1124,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -1150,8 +1150,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -1288,8 +1288,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       "test-pod",
 						ipam.AttributeNamespace: "test-namespace",
@@ -1369,8 +1369,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -1479,8 +1479,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &handle,
-					AttrSecondary: map[string]string{
+					HandleID: &handle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode:      "cnode",
 						ipam.AttributePod:       pod.Name,
 						ipam.AttributeNamespace: pod.Namespace,
@@ -2024,8 +2024,8 @@ var _ = Describe("IPAM controller UTs", func() {
 			Unallocated: []int{1, 2, 3},
 			Attributes: []model.AllocationAttribute{
 				{
-					AttrPrimary: &tunnelHandle,
-					AttrSecondary: map[string]string{
+					HandleID: &tunnelHandle,
+					ActiveOwnerAttrs: map[string]string{
 						ipam.AttributeNode: "dead-node",
 						ipam.AttributeType: ipam.AttributeTypeVXLAN,
 					},
@@ -2114,8 +2114,8 @@ var _ = Describe("IPAM controller UTs", func() {
 				Unallocated: []int{1, 2, 3},
 				Attributes: []model.AllocationAttribute{
 					{
-						AttrPrimary: &handle,
-						AttrSecondary: map[string]string{
+						HandleID: &handle,
+						ActiveOwnerAttrs: map[string]string{
 							ipam.AttributeNode: n.name,
 							ipam.AttributeType: ipam.AttributeTypeVXLAN,
 						},
@@ -2211,8 +2211,8 @@ var _ = Describe("IPAM controller UTs", func() {
 				Unallocated: []int{1, 2, 3},
 				Attributes: []model.AllocationAttribute{
 					{
-						AttrPrimary: &handle,
-						AttrSecondary: map[string]string{
+						HandleID: &handle,
+						ActiveOwnerAttrs: map[string]string{
 							ipam.AttributeNode: n.name,
 							ipam.AttributeType: ipam.AttributeTypeVXLAN,
 						},
@@ -2280,8 +2280,8 @@ func createBlock(pods []v1.Pod, host, cidrStr string) bapi.Update {
 	attrs := []model.AllocationAttribute{}
 	for i, pod := range pods {
 		attrs = append(attrs, model.AllocationAttribute{
-			AttrPrimary: &pod.Name,
-			AttrSecondary: map[string]string{
+			HandleID: &pod.Name,
+			ActiveOwnerAttrs: map[string]string{
 				ipam.AttributeNode:      host,
 				ipam.AttributePod:       pod.Name,
 				ipam.AttributeNamespace: pod.Namespace,

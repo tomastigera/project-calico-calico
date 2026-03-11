@@ -26,11 +26,11 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/generictables"
-	"github.com/projectcalico/calico/felix/hashutils"
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	calicohash "github.com/projectcalico/calico/libcalico-go/lib/hash"
 )
 
 const (
@@ -922,7 +922,7 @@ func (r *DefaultRuleRenderer) appendConntrackRules(rules []generictables.Rule, a
 }
 
 func EndpointChainName(prefix string, ifaceName string, maxLen int) string {
-	return hashutils.GetLengthLimitedID(
+	return calicohash.GetLengthLimitedID(
 		prefix,
 		ifaceName,
 		maxLen,

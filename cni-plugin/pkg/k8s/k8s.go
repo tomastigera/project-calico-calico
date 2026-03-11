@@ -33,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
@@ -46,6 +47,7 @@ import (
 	calicoclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	libipam "github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/calico/libcalico-go/lib/kubevirt"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
@@ -495,9 +497,17 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		utils.ReleaseIPAllocation(logger, conf, args)
 	}
 
+	// Check if IPAM returned empty routes (migration target pod case)
+	// calico-ipam returns empty routes for migration target pods to skip host-side route programming
+	skipHostSideRoutes := false
+	if conf.IPAM.Type == "calico-ipam" && len(result.Routes) == 0 {
+		skipHostSideRoutes = true
+		logger.Info("IPAM returned empty routes - skipping host-side route programming")
+	}
+
 	// Whether the endpoint existed or not, the veth needs (re)creating.
 	hostVethName, contVethMac, err := d.DoNetworking(
-		ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW)
+		ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW, skipHostSideRoutes)
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
 		releaseIPAM()
@@ -965,7 +975,9 @@ func parseIPAddrs(ipAddrsStr string, logger *logrus.Entry) ([]string, error) {
 	return ips, nil
 }
 
-func NewK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clientset, error) {
+// getK8sRestConfig creates a Kubernetes REST config from the CNI network configuration.
+// This helper function builds the config with kubeconfig file and overrides from the network config.
+func getK8sRestConfig(conf types.NetConf) (*rest.Config, error) {
 	// Some config can be passed in a kubeconfig file
 	kubeconfig := conf.Kubernetes.Kubeconfig
 
@@ -1001,14 +1013,32 @@ func NewK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clients
 	}
 
 	// Use the kubernetes client code to load the kubeconfig file and combine it with the overrides.
-	config, err := winutils.NewNonInteractiveDeferredLoadingClientConfig(
+	return winutils.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
 		configOverrides)
+}
+
+func NewK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clientset, error) {
+	// Get the Kubernetes REST config
+	config, err := getK8sRestConfig(conf)
 	if err != nil {
 		return nil, err
 	}
 	// Create the clientset
 	return kubernetes.NewForConfig(config)
+}
+
+// NewKubeVirtClient creates a KubeVirt client from the CNI network configuration.
+// Note: This will return an error if KubeVirt is not installed in the cluster.
+func NewKubeVirtClient(conf types.NetConf, logger *logrus.Entry) (kubevirt.VirtClientInterface, error) {
+	// Get the Kubernetes REST config
+	config, err := getK8sRestConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create KubeVirt client
+	return kubevirt.NewVirtClient(config)
 }
 
 func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotations map[string]string, err error) {

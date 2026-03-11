@@ -60,6 +60,7 @@ func (d *LinuxDataplane) DoNetworking(
 	endpoint *internalapi.WorkloadEndpoint,
 	annotations map[string]string,
 	ipv4GW net.IP,
+	skipHostSideRoutes bool,
 ) (hostVethName, contVethMAC string, err error) {
 	hostVethName = desiredVethName
 	d.logger.Infof("Setting the host side veth name to %s", hostVethName)
@@ -89,10 +90,15 @@ func (d *LinuxDataplane) DoNetworking(
 		return "", "", fmt.Errorf("failed to lookup %q: %v", hostVethName, err)
 	}
 
-	// Add the routes to host veth in the host namespace.
-	err = SetupRoutes(hostNlHandle, hostVeth, result)
-	if err != nil {
-		return "", "", fmt.Errorf("error adding host side routes for interface: %s, error: %s", hostVeth.Attrs().Name, err)
+	// Add the routes to host veth in the host namespace unless explicitly skipped
+	// (e.g., for KubeVirt migration target pods where Felix will program the route)
+	if !skipHostSideRoutes {
+		err = SetupRoutes(hostNlHandle, hostVeth, result)
+		if err != nil {
+			return "", "", fmt.Errorf("error adding host side routes for interface: %s, error: %s", hostVeth.Attrs().Name, err)
+		}
+	} else {
+		d.logger.Info("Skipping host-side route setup (skipHostSideRoutes=true)")
 	}
 
 	return hostVethName, contVethMAC, err

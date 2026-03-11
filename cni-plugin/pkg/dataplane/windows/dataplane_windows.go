@@ -141,6 +141,7 @@ func (d *windowsDataplane) DoNetworking(
 	endpoint *internalapi.WorkloadEndpoint,
 	annotations map[string]string,
 	ipv4GW net.IP,
+	skipHostSideRoutes bool,
 ) (hostVethName, contVethMAC string, err error) {
 	hostVethName = desiredVethName
 	if len(routes) > 0 {
