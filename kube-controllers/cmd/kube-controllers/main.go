@@ -190,14 +190,6 @@ func main() {
 	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
 	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
 
-	// KubeVirt informers are optional — only created if KubeVirt is installed.
-	// NOTE: KubeVirt detection only runs at startup. If KubeVirt CRDs are added
-	// to a running cluster, this pod must be restarted to pick them up.
-	vmInformer, vmiInformer, err := kubevirt.TryCreateInformers(k8sconfig, 5*time.Minute)
-	if err != nil {
-		log.WithError(err).Warn("Failed to create KubeVirt informers, proceeding without KubeVirt IPAM GC support")
-	}
-
 	stop := make(chan struct{})
 
 	// Create the context.
@@ -289,8 +281,7 @@ func main() {
 			dataFeed,
 			esClientBuilder,
 			cfg.KubeControllersConfigName == "default",
-			vmInformer,
-			vmiInformer,
+			k8sconfig,
 		)
 	}
 
@@ -636,7 +627,7 @@ func (cc *controllerControl) InitControllers(
 	dataFeed *utils.DataFeed,
 	esClientBuilder elasticsearch.ClientBuilder,
 	isDefaultInstance bool,
-	vmInformer, vmiInformer cache.SharedIndexInformer,
+	k8sconfig *restclient.Config,
 ) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
@@ -698,12 +689,10 @@ func (cc *controllerControl) InitControllers(
 		cc.controllerStates["NetworkPolicy"] = &controllerState{controller: policyController}
 	}
 	if cfg.Controllers.Node != nil {
-		nodeController := node.NewNodeController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.Node, nodeInformer, podInformer, dataFeed, vmInformer, vmiInformer)
+		deferredInformers := kubevirt.NewDeferredInformers(kubevirt.NewIndexerFunc(k8sconfig, 5*time.Minute), 30*time.Second, cc.stop)
+		nodeController := node.NewNodeController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.Node, nodeInformer, podInformer, dataFeed, deferredInformers)
 		cc.controllerStates["Node"] = &controllerState{controller: nodeController}
 		cc.registerInformers(podInformer, nodeInformer)
-		if vmInformer != nil {
-			cc.registerInformers(vmInformer, vmiInformer)
-		}
 	}
 	if cfg.Controllers.ServiceAccount != nil {
 		serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.ServiceAccount)
