@@ -247,9 +247,13 @@ func expectIstiodOpenShiftEnvVars(ctx context.Context, cli ctrlclient.Client) {
 		container = &pod.Spec.Containers[0]
 	}
 
+	// CA_TRUSTED_NODE_ACCOUNTS must reference the namespace where ztunnel actually runs.
+	// The upstream Istio OpenShift profile defaults to "kube-system/ztunnel", but the
+	// Tigera operator deploys ztunnel to calico-system. The operator overrides this via
+	// the trustedZtunnelNamespace Helm value. See: EV-6485.
 	expectedEnvVars := map[string]string{
 		"PLATFORM":                 "openshift",
-		"CA_TRUSTED_NODE_ACCOUNTS": "kube-system/ztunnel",
+		"CA_TRUSTED_NODE_ACCOUNTS": istioNamespace + "/ztunnel",
 	}
 
 	for envName, expectedValue := range expectedEnvVars {
