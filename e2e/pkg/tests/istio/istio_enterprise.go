@@ -13,11 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	appsv1 "k8s.io/api/apps/v1"
+	operatorv1 "github.com/tigera/operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -260,45 +260,46 @@ var _ = describe.EnterpriseDescribe(
 	},
 )
 
-// enableIstioAmbientMode creates the Istio CR and waits for the infrastructure to be ready.
+// enableIstioAmbientMode creates the Istio CR (if it doesn't already exist) and waits for
+// the "istio" TigeraStatus to report Available.
 func enableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
-	istioObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "operator.tigera.io/v1",
-			"kind":       "Istio",
-			"metadata": map[string]interface{}{
-				"name": "default",
-			},
-			"spec": map[string]interface{}{},
-		},
+	// Check if the Istio CR already exists.
+	existing := &operatorv1.Istio{}
+	getCtx, getCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer getCancel()
+	err := cli.Get(getCtx, types.NamespacedName{Name: "default"}, existing)
+	if err == nil {
+		logrus.Info("Istio CR already exists, skipping creation")
+	} else if apierrors.IsNotFound(err) {
+		istioObj := &operatorv1.Istio{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+		}
+		createCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		err = cli.Create(createCtx, istioObj)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create Istio CR")
+	} else {
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to check for existing Istio CR")
 	}
 
-	createCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	err := cli.Create(createCtx, istioObj)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create Istio CR")
-
-	// Wait for Istio DaemonSets to be ready.
-	waitForIstioDaemonSetsReady(ctx, cli)
+	// Wait for the "istio" TigeraStatus to report Available.
+	waitForIstioAvailable(ctx, cli)
 }
 
 // disableIstioAmbientMode deletes the Istio CR and waits for cleanup.
 func disableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
-	istioObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "operator.tigera.io/v1",
-			"kind":       "Istio",
-			"metadata": map[string]interface{}{
-				"name": "default",
-			},
-		},
+	istioObj := &operatorv1.Istio{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
 	}
 
 	deleteCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	err := cli.Delete(deleteCtx, istioObj)
 	if err != nil {
-		logrus.WithError(err).Warn("Istio CR deletion failed (may already be deleted)")
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		logrus.WithError(err).Warn("Istio CR deletion failed")
 		return
 	}
 
@@ -306,13 +307,8 @@ func disableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
 	gomega.Eventually(func() bool {
 		getCtx, getCancel := context.WithTimeout(ctx, 10*time.Second)
 		defer getCancel()
-		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "operator.tigera.io/v1",
-				"kind":       "Istio",
-			},
-		}
-		err := cli.Get(getCtx, ctrlclient.ObjectKey{Name: "default"}, obj)
+		obj := &operatorv1.Istio{}
+		err := cli.Get(getCtx, types.NamespacedName{Name: "default"}, obj)
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(istioDisableTimeout).WithPolling(istioPollInterval).Should(
 		gomega.BeTrue(),
@@ -320,55 +316,24 @@ func disableIstioAmbientMode(ctx context.Context, cli ctrlclient.Client) {
 	)
 }
 
-// waitForIstioDaemonSetsReady waits for ztunnel and istio-cni-node DaemonSets to be fully ready.
-func waitForIstioDaemonSetsReady(ctx context.Context, cli ctrlclient.Client) {
-	for _, dsName := range []string{"ztunnel", "istio-cni-node"} {
-		gomega.Eventually(func() error {
-			getCtx, getCancel := context.WithTimeout(ctx, 10*time.Second)
-			defer getCancel()
-			ds := &appsv1.DaemonSet{}
-			err := cli.Get(getCtx, ctrlclient.ObjectKey{Namespace: istioNamespace, Name: dsName}, ds)
-			if err != nil {
-				return fmt.Errorf("failed to get DaemonSet %s: %w", dsName, err)
-			}
-			if ds.Status.DesiredNumberScheduled == 0 {
-				return fmt.Errorf("DaemonSet %s has 0 desired pods", dsName)
-			}
-			if ds.Status.NumberReady != ds.Status.DesiredNumberScheduled {
-				return fmt.Errorf("DaemonSet %s: %d/%d ready",
-					dsName, ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
-			}
-			return nil
-		}).WithTimeout(istioEnableTimeout).WithPolling(istioPollInterval).Should(
-			gomega.Succeed(),
-			fmt.Sprintf("DaemonSet %s should be ready on all nodes", dsName),
-		)
-	}
-
-	// Also wait for istiod to be running.
+// waitForIstioAvailable waits for the "istio" TigeraStatus to report Available.
+// This is more implementation-agnostic than polling individual DaemonSets/Deployments.
+func waitForIstioAvailable(ctx context.Context, cli ctrlclient.Client) {
 	gomega.Eventually(func() error {
 		getCtx, getCancel := context.WithTimeout(ctx, 10*time.Second)
 		defer getCancel()
-		podList := &corev1.PodList{}
-		err := cli.List(getCtx, podList,
-			ctrlclient.InNamespace(istioNamespace),
-			ctrlclient.MatchingLabels{"app": "istiod"},
-		)
+		ts := &operatorv1.TigeraStatus{}
+		err := cli.Get(getCtx, types.NamespacedName{Name: "istio"}, ts)
 		if err != nil {
-			return fmt.Errorf("failed to list istiod pods: %w", err)
+			return fmt.Errorf("failed to get TigeraStatus 'istio': %w", err)
 		}
-		if len(podList.Items) == 0 {
-			return fmt.Errorf("no istiod pods found")
-		}
-		for _, pod := range podList.Items {
-			if pod.Status.Phase != corev1.PodRunning {
-				return fmt.Errorf("istiod pod %s is in phase %s, not Running", pod.Name, pod.Status.Phase)
-			}
+		if !ts.Available() {
+			return fmt.Errorf("TigeraStatus 'istio' is not yet Available (conditions: %v)", ts.Status.Conditions)
 		}
 		return nil
 	}).WithTimeout(istioEnableTimeout).WithPolling(istioPollInterval).Should(
 		gomega.Succeed(),
-		"istiod pod should be running",
+		"TigeraStatus 'istio' should be Available",
 	)
 }
 
