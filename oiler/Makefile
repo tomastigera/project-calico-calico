@@ -19,7 +19,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -49,7 +49,8 @@ sub-image-%:
 image: $(OILER_IMAGE)
 
 $(OILER_IMAGE): $(OILER_CONTAINER_CREATED)
-$(OILER_CONTAINER_CREATED): Dockerfile bin/oiler-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(OILER_CONTAINER_CREATED): $(IMAGE_DEPS) bin/oiler-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(OILER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

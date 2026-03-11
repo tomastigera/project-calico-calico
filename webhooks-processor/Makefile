@@ -19,9 +19,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -55,7 +53,8 @@ sub-image-%:
 image: $(WEBHOOKS_IMAGE)
 
 $(WEBHOOKS_IMAGE): $(WEBHOOKS_PROCESSOR_CONTAINER_CREATED)
-$(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): Dockerfile bin/webhooks-processor-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(WEBHOOKS_PROCESSOR_CONTAINER_CREATED): $(IMAGE_DEPS) bin/webhooks-processor-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(WEBHOOKS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

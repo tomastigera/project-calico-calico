@@ -15,9 +15,7 @@ include ../lib.Makefile
 ##############################################################################
 # Build
 ##############################################################################
-SRC_FILES=$(shell find cmd pkg -name '*.go') \
-	$(shell find ../felix/proto -name '*.go') \
-	$(shell find ../libcalico-go/lib -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 .PHONY: build
 build: bin/ingress-collector-$(ARCH)
@@ -42,7 +40,8 @@ sub-image-%:
 image: $(INGRESS_COLLECTOR_IMAGE)
 
 $(INGRESS_COLLECTOR_IMAGE): $(INGRESS_COLLECTOR_IMAGE_CREATED)
-$(INGRESS_COLLECTOR_IMAGE_CREATED): Dockerfile bin/ingress-collector-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(INGRESS_COLLECTOR_IMAGE_CREATED): $(IMAGE_DEPS) bin/ingress-collector-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

@@ -16,9 +16,7 @@ include ../lib.Makefile
 
 ###############################################################################
 
-# All Typha go files and those in libcalico-go.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_TYPHA_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print)
-SRC_FILES += $(shell find ../libcalico-go/ -type f -name '*.go' -print)
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 # Touchfile created when we make the typha image.
 TYPHA_CONTAINER_CREATED=.calico_typha.created-$(ARCH)
@@ -105,10 +103,11 @@ docker-image/LICENSE: ../LICENSE.md
 
 # This target actually builds the image if any of its dependencies have changed or if it's
 # missing from docker.
+IMAGE_DEPS = docker-image/Dockerfile docker-image/typha.cfg
 $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                             $(BINDIR)/wrapper-$(ARCH) \
-                            docker-image/Dockerfile \
-                            docker-image/typha.cfg \
+                            docker-image/LICENSE \
+                            $(IMAGE_DEPS) \
                             $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
@@ -120,8 +119,8 @@ $(TYPHA_CONTAINER_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
 
 $(TYPHA_CONTAINER_FIPS_CREATED): $(BINDIR)/calico-typha-$(ARCH) \
                                  $(BINDIR)/wrapper-$(ARCH) \
-                                 docker-image/Dockerfile \
-                                 docker-image/typha.cfg \
+                                 docker-image/LICENSE \
+                                 $(IMAGE_DEPS) \
                                  $(shell test "$(TYPHA_IMAGE_ID)" || echo force-rebuild)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin

@@ -1,6 +1,5 @@
 !!! GENERATED FILE, DO NOT EDIT !!!
-This file contains the list of modules that this package depends on
-in order to trigger CI on changes
+Run 'make gen-deps-files' to regenerate.
 
 go 1.25.7
 github.com/aws/aws-sdk-go v1.55.8
@@ -50,3 +49,24 @@ sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 sigs.k8s.io/randfill v1.0.0
 sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 sigs.k8s.io/yaml v1.6.0
+
+local:crypto/pkg/tls
+local:fluentd/eks
+local:lib/std/uniquelabels
+local:lib/std/uniquestr
+local:libcalico-go/lib/apis/internalapi
+local:libcalico-go/lib/backend/encap
+local:libcalico-go/lib/backend/model
+local:libcalico-go/lib/errors
+local:libcalico-go/lib/json
+local:libcalico-go/lib/namespace
+local:libcalico-go/lib/net
+local:libcalico-go/lib/resources
+local:linseed/pkg/apis/v1
+local:linseed/pkg/client
+local:linseed/pkg/client/rest
+local:lma/pkg/apis/v1
+local:lma/pkg/httputils
+local:lma/pkg/list
+local:lma/pkg/timeutils
+local:pkg/buildinfo

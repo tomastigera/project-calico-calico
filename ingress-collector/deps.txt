@@ -1,6 +1,5 @@
 !!! GENERATED FILE, DO NOT EDIT !!!
-This file contains the list of modules that this package depends on
-in order to trigger CI on changes
+Run 'make gen-deps-files' to regenerate.
 
 go 1.25.7
 github.com/beorn7/perks v1.0.1
@@ -24,3 +23,12 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
 google.golang.org/grpc v1.76.0
 google.golang.org/protobuf v1.36.11
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
+
+local:felix/proto
+local:ingress-collector/cmd/ingress-collector
+local:ingress-collector/pkg/collector
+local:ingress-collector/pkg/config
+local:ingress-collector/pkg/felixclient
+local:libcalico-go/lib/logutils
+local:libcalico-go/lib/uds
+local:pkg/buildinfo

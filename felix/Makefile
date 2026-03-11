@@ -57,10 +57,6 @@ WINDOWS_ARCHIVE_FILES := bin/tigera-felix.exe windows-packaging/README.txt windo
 # Name of the Windows release ZIP archive.
 WINDOWS_ARCHIVE := dist/tigera-felix-windows-$(VERSION).zip
 
-# All Felix go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
-# Add Felix cgo files
-SRC_FILES += $(shell find bpf/ -name '*.[ch]')
 FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
 
 ###############################################################################
@@ -69,6 +65,11 @@ FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
 include ../lib.Makefile
+
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
+## Append non-Go sources that also affect the build.
+SRC_FILES += $(GENERATED_FILES)
+SRC_FILES += $(shell find bpf/ -name '*.[ch]')
 
 # Set the platform correctly for building docker images.
 ifeq ($(ARCH),arm64)
@@ -312,12 +313,13 @@ FELIX_CONTAINER_CREATED=.calico_felix.created-$(ARCH)
 FELIX_IMAGE_WITH_TAG=$(FELIX_IMAGE):latest-$(ARCH)
 FELIX_IMAGE_ID=$(shell docker images -q $(FELIX_IMAGE_WITH_TAG))
 $(FELIX_IMAGE)-$(ARCH): $(FELIX_CONTAINER_CREATED)
-$(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
-                            docker-image/felix.cfg \
-                            docker-image/Dockerfile \
+IMAGE_DEPS = docker-image/Dockerfile docker-image/calico-felix-wrapper docker-image/felix.cfg
+# register is order-only (|) so binfmt setup doesn't trigger unnecessary rebuilds.
+$(FELIX_CONTAINER_CREATED): $(IMAGE_DEPS) \
                             ../metadata.mk \
-                            $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild)
-	$(DOCKER_BUILD) --network=host -t $(FELIX_IMAGE_WITH_TAG) -f docker-image/Dockerfile docker-image
+                            $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild) \
+                            | register
+	$(DOCKER_BUILD) --network=host -t $(FELIX_IMAGE_WITH_TAG) -f ./docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $(FELIX_CONTAINER_CREATED)
 

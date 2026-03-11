@@ -5,7 +5,7 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/es-gateway
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES        = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib/logutils -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 ES_GATEWAY_IMAGE ?=es-gateway
 BUILD_IMAGES     ?=$(ES_GATEWAY_IMAGE)
 
@@ -44,7 +44,8 @@ sub-image-%:
 image: $(ES_GATEWAY_IMAGE)
 
 $(ES_GATEWAY_IMAGE): $(ES_GATEWAY_CONTAINER_CREATED)
-$(ES_GATEWAY_CONTAINER_CREATED): Dockerfile bin/es-gateway-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(ES_GATEWAY_CONTAINER_CREATED): $(IMAGE_DEPS) bin/es-gateway-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

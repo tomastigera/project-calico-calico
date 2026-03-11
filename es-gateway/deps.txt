@@ -1,6 +1,5 @@
 !!! GENERATED FILE, DO NOT EDIT !!!
-This file contains the list of modules that this package depends on
-in order to trigger CI on changes
+Run 'make gen-deps-files' to regenerate.
 
 go 1.25.7
 github.com/beorn7/perks v1.0.1
@@ -64,3 +63,23 @@ sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 sigs.k8s.io/randfill v1.0.0
 sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 sigs.k8s.io/yaml v1.6.0
+
+local:crypto/pkg/tls
+local:es-gateway/cmd
+local:es-gateway/pkg/cache
+local:es-gateway/pkg/clients/elastic
+local:es-gateway/pkg/clients/internal/http
+local:es-gateway/pkg/clients/kibana
+local:es-gateway/pkg/clients/kubernetes
+local:es-gateway/pkg/config
+local:es-gateway/pkg/handlers
+local:es-gateway/pkg/handlers/health
+local:es-gateway/pkg/handlers/internal/common/http
+local:es-gateway/pkg/metrics
+local:es-gateway/pkg/middlewares
+local:es-gateway/pkg/proxy
+local:es-gateway/pkg/server
+local:libcalico-go/lib/logutils
+local:lma/pkg/httputils
+local:lma/pkg/logutils
+local:pkg/buildinfo

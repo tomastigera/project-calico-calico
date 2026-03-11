@@ -32,7 +32,7 @@ include ../lib.Makefile
 MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
 
-SRC_FILES=$(shell find cmd -name '*.go') $(shell find pkg -name '*.go') $(shell find ../libcalico-go -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 KUBE_CONTROLLER_CONTAINER_CREATED=.image.created-$(ARCH)
 KUBE_CONTROLLER_CONTAINER_FIPS_CREATED=.image.created-$(ARCH)-fips
 
@@ -104,14 +104,16 @@ sub-image-%:
 
 image: $(KUBE_CONTROLLER_CONTAINER_MARKER)
 
-$(KUBE_CONTROLLER_CONTAINER_CREATED): register Dockerfile docker-image/flannel-migration/Dockerfile $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH)
+IMAGE_DEPS = Dockerfile docker-image/flannel-migration/Dockerfile
+# register is order-only (|) so binfmt setup doesn't trigger unnecessary rebuilds.
+$(KUBE_CONTROLLER_CONTAINER_CREATED): $(IMAGE_DEPS) $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH) | register
 	cp ../LICENSE.md $(BINDIR)/LICENSE
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) -f docker-image/flannel-migration/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): register Dockerfile docker-image/flannel-migration/Dockerfile $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH)
+$(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): $(IMAGE_DEPS) $(BINDIR)/kube-controllers-linux-$(ARCH) $(BINDIR)/check-status-linux-$(ARCH) $(BINDIR)/wrapper-$(ARCH) $(BINDIR)/kubectl-$(ARCH) | register
 	cp ../LICENSE.md $(BINDIR)/LICENSE
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(KUBE_CONTROLLERS_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(FLANNEL_MIGRATION_IMAGE):latest-fips-$(ARCH) -f docker-image/flannel-migration/Dockerfile .

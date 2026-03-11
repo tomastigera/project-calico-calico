@@ -33,10 +33,7 @@ BUILD_DIR?=build
 TOP_SRC_DIRS=pkg
 TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
-SRC_FILES:= $(shell find cmd pkg -type f -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 
 build: bin/prometheus-service-$(ARCH)
@@ -61,7 +58,8 @@ PROMETHEUS_SERVICE_CONTAINER_CREATED=.$(PROMETHEUS_SERVICE_IMAGE).created-$(ARCH
 
 image: $(PROMETHEUS_SERVICE_IMAGE)
 $(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_CONTAINER_CREATED)
-$(PROMETHEUS_SERVICE_CONTAINER_CREATED): Dockerfile bin/prometheus-service-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(PROMETHEUS_SERVICE_CONTAINER_CREATED): $(IMAGE_DEPS) bin/prometheus-service-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 

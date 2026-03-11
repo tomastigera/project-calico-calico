@@ -22,12 +22,7 @@ include ../lib.Makefile
 BINDIR    ?= bin
 MMDB_CITY := geoip/dbip-city-lite.mmdb
 MMDB_ASN  := geoip/dbip-asn-lite.mmdb
-SRC_FILES  = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../licensing/client -name '*.go') \
-		$(shell find ../licensing/monitor -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 TEST_DIRS ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort | uniq)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
@@ -81,13 +76,15 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): $(MMDB_CITY) $(MMDB_ASN) docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+IDS_IMAGE_DEPS = docker-image/controller/Dockerfile
+$(IDS_CONTROLLER_CONTAINER_CREATED): $(IDS_IMAGE_DEPS) $(MMDB_CITY) $(MMDB_ASN) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
 
 $(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_CONTAINER_CREATED)
-$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
+JOB_INSTALLER_IMAGE_DEPS = docker-image/install/Dockerfile
+$(JOB_INSTALLER_CONTAINER_CREATED): $(JOB_INSTALLER_IMAGE_DEPS) $(BINDIR)/intrusion-detection-job-installer-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(JOB_INSTALLER_IMAGE)
 	touch $@

@@ -60,7 +60,8 @@ sub-image-%:
 image: $(FLUENTD_IMAGE)
 
 $(FLUENTD_IMAGE): $(FLUENTD_IMAGE_CREATED)
-$(FLUENTD_IMAGE_CREATED): Dockerfile eks/bin/eks-log-forwarder-startup-$(ARCH) ee_entrypoint.sh
+IMAGE_DEPS = Dockerfile ee_entrypoint.sh
+$(FLUENTD_IMAGE_CREATED): $(IMAGE_DEPS) eks/bin/eks-log-forwarder-startup-$(ARCH) | register
 	$(DOCKER_BUILD_THIRD_PARTY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

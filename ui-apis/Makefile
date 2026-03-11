@@ -19,12 +19,7 @@ include ../lib.Makefile
 BINDIR       ?= bin
 BUILD_DIR    ?= build
 TOP_SRC_DIRS  = pkg
-SRC_FILES     = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../compliance/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go') \
-		$(shell find ../linseed -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 TEST_DIRS    ?= $(shell find $(TOP_SRC_DIRS) -name '*_test.go' -exec dirname {} \; | sort | uniq)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
@@ -59,7 +54,8 @@ sub-image-%:
 image: $(UI_APIS_IMAGE)
 
 $(UI_APIS_IMAGE): $(UI_APIS_CONTAINER_CREATED)
-$(UI_APIS_CONTAINER_CREATED): register Dockerfile $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/dashboard-api-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(UI_APIS_CONTAINER_CREATED): $(IMAGE_DEPS) $(BINDIR)/ui-apis-$(ARCH) $(BINDIR)/dashboard-api-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(UI_APIS_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

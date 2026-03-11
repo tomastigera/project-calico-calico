@@ -1,6 +1,5 @@
 !!! GENERATED FILE, DO NOT EDIT !!!
-This file contains the list of modules that this package depends on
-in order to trigger CI on changes
+Run 'make gen-deps-files' to regenerate.
 
 go 1.25.7
 github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
@@ -105,3 +104,45 @@ sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 sigs.k8s.io/randfill v1.0.0
 sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 sigs.k8s.io/yaml v1.6.0
+
+local:apiserver/pkg/authentication
+local:crypto/pkg/tls
+local:key-cert-provisioner/pkg/cfg
+local:key-cert-provisioner/pkg/k8s
+local:key-cert-provisioner/pkg/tls
+local:lib/std/chanutil
+local:lib/std/time
+local:lib/std/uniquelabels
+local:lib/std/uniquestr
+local:libcalico-go/lib/apis/internalapi
+local:libcalico-go/lib/backend/encap
+local:libcalico-go/lib/backend/model
+local:libcalico-go/lib/errors
+local:libcalico-go/lib/json
+local:libcalico-go/lib/logutils
+local:libcalico-go/lib/names
+local:libcalico-go/lib/namespace
+local:libcalico-go/lib/net
+local:lma/pkg/auth
+local:lma/pkg/cache
+local:lma/pkg/k8s
+local:lma/pkg/logutils
+local:pkg/buildinfo
+local:pkg/nonclusterhost
+local:voltron/cmd/guardian
+local:voltron/cmd/voltron
+local:voltron/internal/pkg/bootstrap
+local:voltron/internal/pkg/client
+local:voltron/internal/pkg/config
+local:voltron/internal/pkg/proxy
+local:voltron/internal/pkg/regex
+local:voltron/internal/pkg/server
+local:voltron/internal/pkg/server/accesslog
+local:voltron/internal/pkg/server/metrics
+local:voltron/internal/pkg/utils
+local:voltron/internal/pkg/utils/cors
+local:voltron/pkg/bytes
+local:voltron/pkg/conn
+local:voltron/pkg/k8s
+local:voltron/pkg/tls
+local:voltron/pkg/tunnel

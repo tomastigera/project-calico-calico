@@ -19,9 +19,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -55,7 +53,8 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(POLICY_RECOMMENDATION_IMAGE): $(POLICY_RECOMMENDATION_CONTAINER_CREATED)
-$(POLICY_RECOMMENDATION_CONTAINER_CREATED): Dockerfile bin/policy-recommendation-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(POLICY_RECOMMENDATION_CONTAINER_CREATED): $(IMAGE_DEPS) bin/policy-recommendation-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(POLICY_RECOMMENDATION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

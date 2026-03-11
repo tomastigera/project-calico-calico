@@ -20,8 +20,7 @@ TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 ##############################################################################
 include ../lib.Makefile
 
-# All calicoq Go source files.
-SRC_FILES:=$(shell find calicoq -type f -name '*.go' -print)
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 build: bin/calicoq-$(ARCH)
 bin/calicoq-$(ARCH): $(SRC_FILES)
@@ -40,7 +39,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(CALICOQ_IMAGE): $(CALICOQ_IMAGE_CREATED)
-$(CALICOQ_IMAGE_CREATED): Dockerfile bin/calicoq-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(CALICOQ_IMAGE_CREATED): $(IMAGE_DEPS) bin/calicoq-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

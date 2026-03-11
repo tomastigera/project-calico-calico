@@ -22,7 +22,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -58,13 +58,15 @@ sub-image-%:
 image: $(WAF_HTTP_FILTER_IMAGE) $(GW_L7_COLLECTOR_IMAGE)
 
 $(WAF_HTTP_FILTER_IMAGE): $(WAF_HTTP_FILTER_CONTAINER_CREATED)
-$(WAF_HTTP_FILTER_CONTAINER_CREATED): Dockerfile bin/waf-http-filter-$(ARCH)
+WAF_IMAGE_DEPS = Dockerfile
+$(WAF_HTTP_FILTER_CONTAINER_CREATED): $(WAF_IMAGE_DEPS) bin/waf-http-filter-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(WAF_HTTP_FILTER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(WAF_HTTP_FILTER_IMAGE)
 	touch $@
 
 $(GW_L7_COLLECTOR_IMAGE): $(GW_L7_COLLECTOR_CONTAINER_CREATED)
-$(GW_L7_COLLECTOR_CONTAINER_CREATED): Dockerfile-l7-collector bin/gateway-l7-collector-$(ARCH)
+GW_L7_COLLECTOR_IMAGE_DEPS = Dockerfile-l7-collector
+$(GW_L7_COLLECTOR_CONTAINER_CREATED): $(GW_L7_COLLECTOR_IMAGE_DEPS) bin/gateway-l7-collector-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(GW_L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile-l7-collector .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(GW_L7_COLLECTOR_IMAGE)
 	touch $@

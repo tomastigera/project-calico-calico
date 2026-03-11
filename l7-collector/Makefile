@@ -16,8 +16,7 @@ BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE)
 ##############################################################################
 include ../lib.Makefile
 
-SRC_FILES=$(shell find cmd pkg uds -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # Building the binary
@@ -47,13 +46,15 @@ sub-image-%:
 image: $(L7_COLLECTOR_IMAGE) $(ENVOY_IMAGE)
 
 $(L7_COLLECTOR_IMAGE): $(L7_COLLECTOR_CONTAINER_CREATED)
-$(L7_COLLECTOR_CONTAINER_CREATED): Dockerfile bin/l7-collector-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(L7_COLLECTOR_CONTAINER_CREATED): $(IMAGE_DEPS) bin/l7-collector-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(L7_COLLECTOR_IMAGE)
 	touch $@
 
 $(ENVOY_IMAGE): $(ENVOY_IMAGE_CREATED)
-$(ENVOY_IMAGE_CREATED): register envoy/Dockerfile
+ENVOY_IMAGE_DEPS = envoy/Dockerfile
+$(ENVOY_IMAGE_CREATED): $(ENVOY_IMAGE_DEPS) | register
 	$(DOCKER_BUILD) -t $(ENVOY_IMAGE):latest-$(ARCH) -f envoy/Dockerfile envoy
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_IMAGE)
 	touch $@

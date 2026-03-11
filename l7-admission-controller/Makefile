@@ -4,7 +4,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/l7-admission-controller
 
 ###############################################################################
 
-SRC_FILES=$(shell find . -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
@@ -60,7 +60,8 @@ sub-image-%:
 image: $(L7_ADMISSION_CONTROLLER_IMAGE)
 
 $(L7_ADMISSION_CONTROLLER_IMAGE): $(L7_ADMISSION_CONTROLLER_IMAGE_CREATED)
-$(L7_ADMISSION_CONTROLLER_IMAGE_CREATED): Dockerfile bin/l7-admission-controller-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(L7_ADMISSION_CONTROLLER_IMAGE_CREATED): $(IMAGE_DEPS) bin/l7-admission-controller-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(L7_ADMISSION_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

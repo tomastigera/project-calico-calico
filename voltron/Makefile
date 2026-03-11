@@ -28,10 +28,7 @@ BRANCH_NAME ?= $(PIN_BRANCH)
 #  UNIT_TESTS=  : only run the unit tests matching the specified regexp
 
 BINDIR        ?= bin
-SRC_FILES = $(shell find . -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib/logutils -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 TEST_DIRS     ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort -u)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
@@ -74,13 +71,15 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(VOLTRON_IMAGE): $(VOLTRON_CONTAINER_CREATED)
-$(VOLTRON_CONTAINER_CREATED): docker-image/voltron/Dockerfile $(BINDIR)/voltron-$(ARCH)
+VOLTRON_IMAGE_DEPS = docker-image/voltron/Dockerfile
+$(VOLTRON_CONTAINER_CREATED): $(VOLTRON_IMAGE_DEPS) $(BINDIR)/voltron-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(VOLTRON_IMAGE):latest-$(ARCH) -f docker-image/voltron/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(VOLTRON_IMAGE)
 	touch $@
 
 $(GUARDIAN_IMAGE): $(GUARDIAN_CONTAINER_CREATED)
-$(GUARDIAN_CONTAINER_CREATED): docker-image/guardian/Dockerfile $(BINDIR)/guardian-$(ARCH)
+GUARDIAN_IMAGE_DEPS = docker-image/guardian/Dockerfile
+$(GUARDIAN_CONTAINER_CREATED): $(GUARDIAN_IMAGE_DEPS) $(BINDIR)/guardian-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(GUARDIAN_IMAGE):latest-$(ARCH) -f docker-image/guardian/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(GUARDIAN_IMAGE)
 	touch $@

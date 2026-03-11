@@ -32,13 +32,7 @@ include ../lib.Makefile
 ##############################################################################
 # Define some constants
 ##############################################################################
-NON_SRC_DIRS = test
-
-# All Compliance Server go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) -type f -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # Building the binaries
@@ -162,28 +156,32 @@ image: $(BUILD_IMAGES)
 
 # Build the tigera/compliance-server docker image, which contains only Compliance server.
 $(COMPLIANCE_SERVER_IMAGE): $(COMPLIANCE_SERVER_CONTAINER_CREATED)
-$(COMPLIANCE_SERVER_CONTAINER_CREATED): docker-image/server/Dockerfile bin/server-$(ARCH)
+COMPLIANCE_SERVER_IMAGE_DEPS = docker-image/server/Dockerfile
+$(COMPLIANCE_SERVER_CONTAINER_CREATED): $(COMPLIANCE_SERVER_IMAGE_DEPS) bin/server-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) -f docker-image/server/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SERVER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-controller docker image, which contains only Compliance controller.
 $(COMPLIANCE_CONTROLLER_IMAGE): $(COMPLIANCE_CONTROLLER_CONTAINER_CREATED)
-$(COMPLIANCE_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile bin/controller-$(ARCH)
+COMPLIANCE_CONTROLLER_IMAGE_DEPS = docker-image/controller/Dockerfile
+$(COMPLIANCE_CONTROLLER_CONTAINER_CREATED): $(COMPLIANCE_CONTROLLER_IMAGE_DEPS) bin/controller-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_CONTROLLER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-snapshotter docker image, which contains only Compliance snapshotter.
 $(COMPLIANCE_SNAPSHOTTER_IMAGE): $(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED)
-$(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED): docker-image/snapshotter/Dockerfile bin/snapshotter-$(ARCH)
+COMPLIANCE_SNAPSHOTTER_IMAGE_DEPS = docker-image/snapshotter/Dockerfile
+$(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED): $(COMPLIANCE_SNAPSHOTTER_IMAGE_DEPS) bin/snapshotter-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) -f docker-image/snapshotter/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SNAPSHOTTER_IMAGE)
 	touch $@
 
 # Build the tigera/compliance-reporter docker image, which contains only Compliance reporter.
 $(COMPLIANCE_REPORTER_IMAGE): $(COMPLIANCE_REPORTER_CONTAINER_CREATED)
-$(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/reporter-$(ARCH)
+COMPLIANCE_REPORTER_IMAGE_DEPS = docker-image/reporter/Dockerfile
+$(COMPLIANCE_REPORTER_CONTAINER_CREATED): $(COMPLIANCE_REPORTER_IMAGE_DEPS) bin/reporter-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) -f docker-image/reporter/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_REPORTER_IMAGE)
 	touch $@
@@ -191,7 +189,8 @@ $(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile bin/r
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): register docker-image/benchmarker/Dockerfile bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) bin/kubectl-$(ARCH)
+COMPLIANCE_BENCHMARKER_IMAGE_DEPS = docker-image/benchmarker/Dockerfile
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): $(COMPLIANCE_BENCHMARKER_IMAGE_DEPS) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) bin/kubectl-$(ARCH) | register
 	$(DOCKER_BUILD) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@

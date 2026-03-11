@@ -20,12 +20,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../compliance/pkg -name '*.go') \
-		$(shell find ../kube-controllers -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -59,7 +54,8 @@ sub-image-%:
 image: $(FIREWALL_INTEGRATION_IMAGE)
 
 $(FIREWALL_INTEGRATION_IMAGE): $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
-$(FIREWALL_INTEGRATION_CONTAINER_CREATED): Dockerfile bin/firewall-integration-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(FIREWALL_INTEGRATION_CONTAINER_CREATED): $(IMAGE_DEPS) bin/firewall-integration-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

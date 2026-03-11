@@ -1,6 +1,5 @@
 !!! GENERATED FILE, DO NOT EDIT !!!
-This file contains the list of modules that this package depends on
-in order to trigger CI on changes
+Run 'make gen-deps-files' to regenerate.
 
 go 1.25.7
 github.com/beorn7/perks v1.0.1
@@ -40,3 +39,19 @@ k8s.io/apimachinery v0.34.4
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
 k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+
+local:egress-gateway/cmd/egressd
+local:egress-gateway/controlplane
+local:egress-gateway/data
+local:egress-gateway/httpprobe
+local:egress-gateway/icmpprobe
+local:egress-gateway/netlinkshim
+local:egress-gateway/sync
+local:egress-gateway/util/net
+local:egress-gateway/util/netlink
+local:egress-gateway/util/proto
+local:felix/jitter
+local:felix/proto
+local:libcalico-go/lib/health
+local:libcalico-go/lib/logutils
+local:pkg/buildinfo

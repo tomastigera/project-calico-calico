@@ -21,14 +21,7 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-# All queryserver Go source files.
-SRC_FILES = $(shell find queryserver pkg -type f -name '*.go') \
-		$(shell find ../api/pkg -name '*.go') \
-		$(shell find ../calicoctl -name '*.go') \
-		$(shell find ../felix -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go') \
-		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../licensing/client -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # BUILD BINARY
@@ -59,7 +52,8 @@ sub-image-%:
 image: $(QUERYSERVER_IMAGE)
 
 $(QUERYSERVER_IMAGE): $(QUERYSERVER_CONTAINER_CREATED)
-$(QUERYSERVER_CONTAINER_CREATED): Dockerfile bin/queryserver-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(QUERYSERVER_CONTAINER_CREATED): $(IMAGE_DEPS) bin/queryserver-$(ARCH) | register
 	$(DOCKER_BUILD) -t $(QUERYSERVER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

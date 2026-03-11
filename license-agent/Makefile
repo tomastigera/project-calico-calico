@@ -15,9 +15,7 @@ include ../lib.Makefile
 BINDIR        ?= bin
 TEST_DIRS     ?= $(shell sh -c "find pkg -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
-SRC_FILES      = $(shell sh -c "find pkg cmd -name \\*.go") \
-			$(shell find ../libcalico-go/lib -name '*.go') \
-			$(shell find ../licensing/client -name '*.go')
+## SRC_FILES is auto-populated from deps.txt by lib.Makefile.
 
 ###############################################################################
 # This section builds the output binaries.
@@ -45,7 +43,8 @@ LICENSE_AGENT_CONTAINER_CREATED=.$(LICENSE_AGENT_IMAGE).created-$(ARCH)
 
 image: $(LICENSE_AGENT_IMAGE)
 $(LICENSE_AGENT_IMAGE): $(LICENSE_AGENT_CONTAINER_CREATED)
-$(LICENSE_AGENT_CONTAINER_CREATED): Dockerfile $(BINDIR)/license-agent-$(ARCH)
+IMAGE_DEPS = Dockerfile
+$(LICENSE_AGENT_CONTAINER_CREATED): $(IMAGE_DEPS) $(BINDIR)/license-agent-$(ARCH) | register
 	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
