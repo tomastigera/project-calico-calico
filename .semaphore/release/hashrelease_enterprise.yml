@@ -57,6 +57,7 @@ global_job_config:
 
 blocks:
   - name: Publish hashrelease
+    dependencies: []
     task:
       jobs:
         - name: Build and publish hashrelease
