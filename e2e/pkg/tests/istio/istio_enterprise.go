@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/calico/e2e/pkg/utils"
 	"github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
+	"github.com/projectcalico/calico/e2e/pkg/utils/images"
 )
 
 const (
@@ -82,7 +83,7 @@ var _ = describe.EnterpriseDescribe(
 		ginkgo.It("should encrypt traffic with ambient mode and enforce Calico NetworkPolicy", func(ctx context.Context) {
 			ginkgo.By("Setting up connection tester with a client and two servers")
 			checker := conncheck.NewConnectionTester(f)
-			defer checker.Stop()
+			ginkgo.DeferCleanup(checker.Stop)
 
 			// Create a server that will be "allowed" by policy.
 			allowedServer := conncheck.NewServer("allowed-svc", f.Namespace,
@@ -122,18 +123,16 @@ var _ = describe.EnterpriseDescribe(
 			// Phase 2: Enable Istio Ambient Mode.
 			ginkgo.By("Creating the Istio CR to enable ambient mode")
 			enableIstioAmbientMode(ctx, cli)
-			defer func() {
-				ginkgo.By("Cleaning up: disabling Istio ambient mode")
+			ginkgo.DeferCleanup(func() {
 				disableIstioAmbientMode(context.Background(), cli)
-			}()
+			})
 
 			// Phase 3: Apply ambient mode label to test namespace.
 			ginkgo.By(fmt.Sprintf("Labeling namespace %s with istio ambient mode", f.Namespace.Name))
 			applyAmbientLabel(ctx, f, f.Namespace.Name)
-			defer func() {
-				ginkgo.By("Cleaning up: removing ambient label from namespace")
+			ginkgo.DeferCleanup(func() {
 				removeAmbientLabel(context.Background(), f, f.Namespace.Name)
-			}()
+			})
 
 			// Phase 4: Verify connectivity with Istio ambient mode active.
 			ginkgo.By("Verifying connectivity to both servers with Istio ambient mode active")
@@ -154,15 +153,9 @@ var _ = describe.EnterpriseDescribe(
 			defer policyCancel()
 			err := cli.Create(policyCtx, policy)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create NetworkPolicy")
-			defer func() {
-				ginkgo.By("Cleaning up: deleting Calico NetworkPolicy")
-				delCtx, delCancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer delCancel()
-				err := cli.Delete(delCtx, policy)
-				if err != nil {
-					logrus.WithError(err).Warn("Failed to delete NetworkPolicy during cleanup")
-				}
-			}()
+			ginkgo.DeferCleanup(func() {
+				_ = ctrlclient.IgnoreNotFound(cli.Delete(context.Background(), policy))
+			})
 
 			// Phase 7: Verify policy enforcement — allowed server reachable, denied server blocked.
 			ginkgo.By("Verifying policy enforcement: allowed-svc reachable, denied-svc blocked")
@@ -214,27 +207,15 @@ var _ = describe.EnterpriseDescribe(
 		ginkgo.It("should allow UDP traffic to bypass ztunnel while Calico enforces UDP policy", func(ctx context.Context) {
 			ginkgo.By("Creating a UDP echo server pod")
 			udpServerPod := createUDPEchoServer(ctx, f)
-			defer func() {
-				ginkgo.By("Cleaning up: deleting UDP echo server pod")
-				delCtx, delCancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer delCancel()
-				err := f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(delCtx, udpServerPod.Name, metav1.DeleteOptions{})
-				if err != nil {
-					logrus.WithError(err).Warn("Failed to delete UDP echo server pod")
-				}
-			}()
+			ginkgo.DeferCleanup(func() {
+				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.Background(), udpServerPod.Name, metav1.DeleteOptions{})
+			})
 
 			ginkgo.By("Creating a UDP client pod")
 			udpClientPod := createUDPClient(ctx, f)
-			defer func() {
-				ginkgo.By("Cleaning up: deleting UDP client pod")
-				delCtx, delCancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer delCancel()
-				err := f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(delCtx, udpClientPod.Name, metav1.DeleteOptions{})
-				if err != nil {
-					logrus.WithError(err).Warn("Failed to delete UDP client pod")
-				}
-			}()
+			ginkgo.DeferCleanup(func() {
+				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.Background(), udpClientPod.Name, metav1.DeleteOptions{})
+			})
 
 			// Phase 1: Baseline UDP connectivity.
 			ginkgo.By("Verifying baseline UDP echo works")
@@ -243,17 +224,15 @@ var _ = describe.EnterpriseDescribe(
 			// Phase 2: Enable Istio and label namespace.
 			ginkgo.By("Enabling Istio ambient mode")
 			enableIstioAmbientMode(ctx, cli)
-			defer func() {
-				ginkgo.By("Cleaning up: disabling Istio ambient mode")
+			ginkgo.DeferCleanup(func() {
 				disableIstioAmbientMode(context.Background(), cli)
-			}()
+			})
 
 			ginkgo.By(fmt.Sprintf("Labeling namespace %s with istio ambient mode", f.Namespace.Name))
 			applyAmbientLabel(ctx, f, f.Namespace.Name)
-			defer func() {
-				ginkgo.By("Cleaning up: removing ambient label from namespace")
+			ginkgo.DeferCleanup(func() {
 				removeAmbientLabel(context.Background(), f, f.Namespace.Name)
-			}()
+			})
 
 			// Phase 3: UDP still works (bypasses ztunnel).
 			ginkgo.By("Verifying UDP echo still works with Istio enabled (bypasses ztunnel)")
@@ -270,15 +249,9 @@ var _ = describe.EnterpriseDescribe(
 			defer policyCancel()
 			err := cli.Create(policyCtx, udpDenyPolicy)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create UDP deny policy")
-			defer func() {
-				ginkgo.By("Cleaning up: deleting UDP deny policy")
-				delCtx, delCancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer delCancel()
-				err := cli.Delete(delCtx, udpDenyPolicy)
-				if err != nil {
-					logrus.WithError(err).Warn("Failed to delete UDP deny policy")
-				}
-			}()
+			ginkgo.DeferCleanup(func() {
+				_ = ctrlclient.IgnoreNotFound(cli.Delete(context.Background(), udpDenyPolicy))
+			})
 
 			// Phase 6: Verify UDP is blocked by Calico policy.
 			ginkgo.By("Verifying UDP echo is blocked by Calico policy")
@@ -500,8 +473,8 @@ func expectTrafficEncrypted(testClient *conncheck.Client, server *conncheck.Serv
 	gomega.Eventually(func() error {
 		output, err := conncheck.ExecInPod(testClient.Pod(), "sh", "-c",
 			fmt.Sprintf(
-				"timeout 5 tcpdump -Ai eth0 -c 20 2>&1 & sleep 1; "+
-					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; wait",
+				"tcpdump -Ai eth0 -c 20 2>&1 & TCPDUMP_PID=$!; sleep 2; "+
+					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null",
 				svcIP, svcPort,
 			))
 		if err != nil {
@@ -525,8 +498,8 @@ func expectTrafficUnencrypted(testClient *conncheck.Client, server *conncheck.Se
 	gomega.Eventually(func() error {
 		output, err := conncheck.ExecInPod(testClient.Pod(), "sh", "-c",
 			fmt.Sprintf(
-				"timeout 5 tcpdump -Ai eth0 -c 20 2>&1 & sleep 1; "+
-					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; wait",
+				"tcpdump -Ai eth0 -c 20 2>&1 & TCPDUMP_PID=$!; sleep 2; "+
+					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null",
 				svcIP, svcPort,
 			))
 		if err != nil {
@@ -554,7 +527,7 @@ func createUDPEchoServer(ctx context.Context, f *framework.Framework) *corev1.Po
 			Containers: []corev1.Container{
 				{
 					Name:    "echo",
-					Image:   "alpine/socat:latest",
+					Image:   images.Socat,
 					Command: []string{"socat", "-v", "UDP-LISTEN:8080,fork,reuseaddr", "PIPE"},
 					Ports: []corev1.ContainerPort{
 						{ContainerPort: 8080, Protocol: corev1.ProtocolUDP},
@@ -607,7 +580,7 @@ func createUDPClient(ctx context.Context, f *framework.Framework) *corev1.Pod {
 			Containers: []corev1.Container{
 				{
 					Name:    "client",
-					Image:   "nicolaka/netshoot:latest",
+					Image:   images.Netshoot,
 					Command: []string{"/bin/bash", "-c", "sleep infinity"},
 				},
 			},
@@ -700,7 +673,11 @@ func expectNoUDPInZtunnelLogs(ctx context.Context, f *framework.Framework) {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get ztunnel logs")
 
 	for _, line := range strings.Split(logs, "\n") {
-		gomega.Expect(line).NotTo(gomega.ContainSubstring("UDP"),
-			"ztunnel logs should not contain UDP entries (UDP bypasses ztunnel)")
+		// Only check ztunnel access log lines (connection tracking entries) for UDP.
+		// Other log lines (startup, config, debug) may legitimately mention "UDP".
+		if strings.Contains(line, "direction=") {
+			gomega.Expect(strings.ToUpper(line)).NotTo(gomega.ContainSubstring("UDP"),
+				"ztunnel access log should not contain UDP traffic entries (UDP bypasses ztunnel): %s", line)
+		}
 	}
 }

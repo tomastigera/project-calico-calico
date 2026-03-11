@@ -4,6 +4,7 @@ package istio
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -75,10 +76,9 @@ var _ = describe.EnterpriseDescribe(
 			// Enable Istio ambient mode so the operator renders the OpenShift profile.
 			ginkgo.By("Ensuring Istio ambient mode is enabled")
 			enableIstioAmbientMode(ctx, cli)
-			defer func() {
-				ginkgo.By("Cleaning up: disabling Istio ambient mode")
+			ginkgo.DeferCleanup(func() {
 				disableIstioAmbientMode(context.Background(), cli)
-			}()
+			})
 
 			// Verify all Istio pods start without permission or path errors.
 			ginkgo.By("Verifying all Istio pods are Running without errors")
@@ -293,23 +293,23 @@ func expectOperatorNADRBAC(ctx context.Context, cli ctrlclient.Client) {
 
 	for _, role := range operatorRoles {
 		for _, rule := range role.Rules {
-			if !containsString(rule.APIGroups, "k8s.cni.cncf.io") {
+			if !slices.Contains(rule.APIGroups, "k8s.cni.cncf.io") {
 				continue
 			}
-			if !containsString(rule.Resources, "network-attachment-definitions") {
+			if !slices.Contains(rule.Resources, "network-attachment-definitions") {
 				continue
 			}
 
 			// Create rule: can create any NAD (no resourceNames restriction).
-			if containsString(rule.Verbs, "create") && len(rule.ResourceNames) == 0 {
+			if slices.Contains(rule.Verbs, "create") && len(rule.ResourceNames) == 0 {
 				foundNADCreate = true
 			}
 
 			// Manage rule: get/update/delete scoped to istio-cni.
-			if containsString(rule.ResourceNames, "istio-cni") &&
-				containsString(rule.Verbs, "get") &&
-				containsString(rule.Verbs, "update") &&
-				containsString(rule.Verbs, "delete") {
+			if slices.Contains(rule.ResourceNames, "istio-cni") &&
+				slices.Contains(rule.Verbs, "get") &&
+				slices.Contains(rule.Verbs, "update") &&
+				slices.Contains(rule.Verbs, "delete") {
 				foundNADManage = true
 			}
 		}
@@ -350,10 +350,10 @@ func expectClusterRoleSCCRules(ctx context.Context, cli ctrlclient.Client, parti
 	foundSCCRule := false
 	for _, role := range matchingRoles {
 		for _, rule := range role.Rules {
-			if containsString(rule.APIGroups, "security.openshift.io") &&
-				containsString(rule.Resources, "securitycontextconstraints") &&
-				containsString(rule.Verbs, "use") &&
-				containsString(rule.ResourceNames, "privileged") {
+			if slices.Contains(rule.APIGroups, "security.openshift.io") &&
+				slices.Contains(rule.Resources, "securitycontextconstraints") &&
+				slices.Contains(rule.Verbs, "use") &&
+				slices.Contains(rule.ResourceNames, "privileged") {
 				foundSCCRule = true
 				break
 			}
@@ -373,13 +373,4 @@ func findVolume(volumes []corev1.Volume, name string) *corev1.Volume {
 		}
 	}
 	return nil
-}
-
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
 }
