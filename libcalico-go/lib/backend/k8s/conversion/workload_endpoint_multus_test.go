@@ -903,6 +903,96 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					}))
 				})
 			})
+			When("the network-status has namespace-qualified names (e.g. default/calico-l2)", func() {
+				It("strips the namespace prefix from NetworkName and uses it as fallback namespace", func() {
+					kvps, err := multusWorkloadEndpointConverter{}.PodToWorkloadEndpoints(&k8sapi.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "simplePod",
+							Namespace: "testNamespace",
+							Annotations: map[string]string{
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "testNamespace/calico-default-network",
+										Interface: "eth0",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+									{
+										Name:      "other-ns/calico-l2",
+										Interface: "net1",
+										IPs:       []string{"10.0.0.5"},
+										Mac:       "62:45:f5:10:97:c1",
+									},
+								}),
+							},
+						},
+						Spec: k8sapi.PodSpec{
+							NodeName: "test-node",
+						},
+						Status: k8sapi.PodStatus{
+							PodIP: "192.168.91.113",
+						},
+					})
+
+					Expect(err).ShouldNot(HaveOccurred())
+
+					var weps []*internalapi.WorkloadEndpoint
+					for _, kvp := range kvps {
+						weps = append(weps, kvp.Value.(*internalapi.WorkloadEndpoint))
+					}
+
+					// Default interface: namespace from pod, name stripped
+					Expect(weps[0].Labels[apiv3.LabelNetwork]).To(Equal("calico-default-network"))
+					Expect(weps[0].Labels[apiv3.LabelNetworkNamespace]).To(Equal("testNamespace"))
+
+					// Secondary interface: namespace from qualified name (no networks annotation to provide it)
+					Expect(weps[1].Labels[apiv3.LabelNetwork]).To(Equal("calico-l2"))
+					Expect(weps[1].Labels[apiv3.LabelNetworkNamespace]).To(Equal("other-ns"))
+				})
+
+				It("prefers namespace from networks annotation over the qualified name prefix", func() {
+					kvps, err := multusWorkloadEndpointConverter{}.PodToWorkloadEndpoints(&k8sapi.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "simplePod",
+							Namespace: "testNamespace",
+							Annotations: map[string]string{
+								nettypes.NetworkAttachmentAnnot: "explicit-ns/calico-l2",
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "testNamespace/calico-default-network",
+										Interface: "eth0",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+									{
+										Name:      "other-ns/calico-l2",
+										Interface: "net1",
+										IPs:       []string{"10.0.0.5"},
+										Mac:       "62:45:f5:10:97:c1",
+									},
+								}),
+							},
+						},
+						Spec: k8sapi.PodSpec{
+							NodeName: "test-node",
+						},
+						Status: k8sapi.PodStatus{
+							PodIP: "192.168.91.113",
+						},
+					})
+
+					Expect(err).ShouldNot(HaveOccurred())
+
+					var weps []*internalapi.WorkloadEndpoint
+					for _, kvp := range kvps {
+						weps = append(weps, kvp.Value.(*internalapi.WorkloadEndpoint))
+					}
+
+					// Secondary interface: namespace from networks annotation takes precedence
+					Expect(weps[1].Labels[apiv3.LabelNetwork]).To(Equal("calico-l2"))
+					Expect(weps[1].Labels[apiv3.LabelNetworkNamespace]).To(Equal("explicit-ns"))
+				})
+			})
 		})
 	})
 })

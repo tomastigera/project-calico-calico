@@ -199,9 +199,19 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 				}
 			}
 
+			// Split namespace-qualified network name (e.g. "default/calico-l2")
+			// that Multus writes into network-status.
+			netName := networkStatus.Name
+			if parts := strings.SplitN(networkStatus.Name, "/", 2); len(parts) == 2 {
+				if netNamespace == "" {
+					netNamespace = parts[0]
+				}
+				netName = parts[1]
+			}
+
 			podIfaces = append(podIfaces, &PodInterface{
 				IsDefault:          isDefault, // first one is always the default interface
-				NetworkName:        networkStatus.Name,
+				NetworkName:        netName,
 				NetworkNamespace:   netNamespace,
 				InsidePodIfaceName: networkStatus.Interface,
 				HostSideIfaceName:  calculateHostSideVethName(pod.Namespace, pod.Name, i),
