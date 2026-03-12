@@ -93,4 +93,3 @@ func encryptionMessage(expectEncrypted bool) string {
 	}
 	return "Traffic should be unencrypted (plaintext HTTP visible in tcpdump)"
 }
-
