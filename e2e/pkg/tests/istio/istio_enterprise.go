@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/e2e/pkg/describe"
@@ -94,19 +93,10 @@ var _ = describe.EnterpriseDescribe(
 				conncheck.WithServerLabels(map[string]string{"app": "denied-svc", "role": "server"}),
 			)
 
-			// Client pod with privileged security context for tcpdump.
-			clientCustomizer := func(pod *corev1.Pod) {
-				pod.Spec.SecurityContext = &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)}
-				pod.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
-					RunAsUser: ptr.To[int64](0),
-					Capabilities: &corev1.Capabilities{
-						Add: []corev1.Capability{"NET_RAW", "NET_ADMIN"},
-					},
-				}
-			}
+			// Client pod with capture capabilities for tcpdump encryption verification.
 			testClient := conncheck.NewClient("curl-client", f.Namespace,
 				conncheck.WithClientLabels(map[string]string{"app": "curl-client"}),
-				conncheck.WithClientCustomizer(clientCustomizer),
+				conncheck.WithCapture(),
 			)
 
 			checker.AddServer(allowedServer)
@@ -141,7 +131,7 @@ var _ = describe.EnterpriseDescribe(
 			// Phase 5: Verify traffic encryption via tcpdump.
 			// With ambient mode active, TCP traffic should be encrypted by ztunnel.
 			ginkgo.By("Verifying traffic is encrypted (tcpdump should not show plaintext HTTP)")
-			expectTrafficEncrypted(testClient, allowedServer)
+			checker.ExpectEncrypted(testClient, allowedServer.ClusterIP())
 
 			// Phase 6: Apply Calico NetworkPolicy — allow only the allowed-svc.
 			ginkgo.By("Applying Calico NetworkPolicy to allow only the allowed server")
@@ -175,14 +165,14 @@ var _ = describe.EnterpriseDescribe(
 
 			// Phase 9: Verify traffic still encrypted after policy deletion.
 			ginkgo.By("Verifying traffic is still encrypted after policy deletion")
-			expectTrafficEncrypted(testClient, allowedServer)
+			checker.ExpectEncrypted(testClient, allowedServer.ClusterIP())
 
 			// Phase 10: Remove ambient label, verify traffic is no longer encrypted.
 			ginkgo.By("Removing ambient label from namespace")
 			removeAmbientLabel(ctx, f, f.Namespace.Name)
 
 			ginkgo.By("Verifying traffic is no longer encrypted after label removal")
-			expectTrafficUnencrypted(testClient, allowedServer)
+			checker.ExpectPlaintext(testClient, allowedServer.ClusterIP())
 
 			// Phase 11: Disable Istio and verify baseline restored.
 			ginkgo.By("Disabling Istio ambient mode")
@@ -426,59 +416,6 @@ func newUDPDenyPolicy(namespace, clientApp string) *v3.NetworkPolicy {
 		},
 	}
 	return policy
-}
-
-// expectTrafficEncrypted uses tcpdump to verify traffic to the server is encrypted.
-// With ztunnel active, the HTTP request content should not appear in plaintext.
-func expectTrafficEncrypted(testClient *conncheck.Client, server *conncheck.Server) {
-	svcIP := server.Service().Spec.ClusterIP
-	svcPort := server.Service().Spec.Ports[0].Port
-
-	// Send HTTP traffic while capturing with tcpdump.
-	// If encrypted, we should NOT see "GET / HTTP" in the capture.
-	gomega.Eventually(func() error {
-		output, err := conncheck.ExecInPod(testClient.Pod(), "sh", "-c",
-			fmt.Sprintf(
-				"tcpdump -Ai eth0 -c 20 2>&1 & TCPDUMP_PID=$!; sleep 2; "+
-					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null",
-				svcIP, svcPort,
-			))
-		if err != nil {
-			return fmt.Errorf("exec failed: %w", err)
-		}
-		if strings.Contains(output, "GET / HTTP") {
-			return fmt.Errorf("traffic appears unencrypted: found plaintext HTTP in tcpdump output")
-		}
-		return nil
-	}).WithTimeout(60*time.Second).WithPolling(10*time.Second).Should(
-		gomega.Succeed(),
-		"Traffic should be encrypted (no plaintext HTTP visible in tcpdump)",
-	)
-}
-
-// expectTrafficUnencrypted uses tcpdump to verify traffic to the server is NOT encrypted.
-func expectTrafficUnencrypted(testClient *conncheck.Client, server *conncheck.Server) {
-	svcIP := server.Service().Spec.ClusterIP
-	svcPort := server.Service().Spec.Ports[0].Port
-
-	gomega.Eventually(func() error {
-		output, err := conncheck.ExecInPod(testClient.Pod(), "sh", "-c",
-			fmt.Sprintf(
-				"tcpdump -Ai eth0 -c 20 2>&1 & TCPDUMP_PID=$!; sleep 2; "+
-					"wget -q -O /dev/null http://%s:%d/ 2>&1; sleep 2; kill $TCPDUMP_PID 2>/dev/null; wait $TCPDUMP_PID 2>/dev/null",
-				svcIP, svcPort,
-			))
-		if err != nil {
-			return fmt.Errorf("exec failed: %w", err)
-		}
-		if !strings.Contains(output, "HTTP") {
-			return fmt.Errorf("traffic appears encrypted: no plaintext HTTP visible in tcpdump output")
-		}
-		return nil
-	}).WithTimeout(60*time.Second).WithPolling(10*time.Second).Should(
-		gomega.Succeed(),
-		"Traffic should be unencrypted (plaintext HTTP visible in tcpdump)",
-	)
 }
 
 // createUDPEchoServer creates a pod running socat as a UDP echo server on port 8080.
