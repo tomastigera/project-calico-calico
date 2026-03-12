@@ -8,8 +8,6 @@ import (
 	"time"
 
 	gomega "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/test/e2e/framework/kubectl"
 )
 
 // ExpectEncrypted verifies that TCP traffic from the client to the target is encrypted.
@@ -28,12 +26,16 @@ func (c *connectionTester) ExpectPlaintext(client *Client, target Target) {
 
 // verifyEncryption captures traffic with tcpdump while sending an HTTP request, then checks
 // for plaintext HTTP patterns in the capture output.
+//
+// TODO: Hook encryption verification into the Execute() parallel loop so that multiple
+// encryption checks can run concurrently alongside connectivity checks. Currently these
+// run serially per client/target pair.
 func (c *connectionTester) verifyEncryption(client *Client, target Target, expectEncrypted bool) {
 	pod := client.Pod()
 	dest := target.Destination()
 
 	gomega.Eventually(func() error {
-		output, err := execInPodWithTimeout(pod, captureCommand(dest), 15*time.Second)
+		output, err := ExecInPod(pod, "sh", "-c", captureCommand(dest))
 		if err != nil {
 			return fmt.Errorf("tcpdump exec failed: %w", err)
 		}
@@ -92,10 +94,3 @@ func encryptionMessage(expectEncrypted bool) string {
 	return "Traffic should be unencrypted (plaintext HTTP visible in tcpdump)"
 }
 
-// execInPodWithTimeout executes a command in a pod with a custom timeout.
-func execInPodWithTimeout(pod *v1.Pod, cmd string, timeout time.Duration) (string, error) {
-	args := []string{"exec", pod.Name, "--", "sh", "-c", cmd}
-	return kubectl.NewKubectlCommand(pod.Namespace, args...).
-		WithTimeout(time.After(timeout)).
-		Exec()
-}
