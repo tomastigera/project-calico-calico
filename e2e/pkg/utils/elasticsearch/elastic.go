@@ -142,13 +142,24 @@ func (c *TestConfig) MarshalYAML() (any, error) {
 
 var elasticClient *elastic.Client
 
-// PortForward sets up port forwarding to the Elasticsearch service in the cluster.
+// PortForward sets up port forwarding to the Elasticsearch and Manager services in the cluster.
+// It allocates random local ports to avoid conflicts when tests run in parallel, and stores them
+// in the config package so that ElasticsearchURL() and ManagerURL() return the correct addresses.
 // It returns a function that can be called to stop the port forwarding.
 func PortForward() func() {
 	stopCh := make(chan time.Time, 1)
 	kubectl := utils.Kubectl{}
-	kubectl.PortForward("tigera-elasticsearch", "svc/tigera-secure-es-http", "9200", "", stopCh)
-	kubectl.PortForward("calico-system", "svc/calico-manager", "9443", "", stopCh)
+
+	esPort, err := kubectl.PortForward("tigera-elasticsearch", "svc/tigera-secure-es-http", "9200", "", stopCh)
+	Expect(err).NotTo(HaveOccurred(), "failed to set up port forward for Elasticsearch")
+	config.SetElasticsearchPort(esPort)
+
+	mgrPort, err := kubectl.PortForward("calico-system", "svc/calico-manager", "9443", "", stopCh)
+	Expect(err).NotTo(HaveOccurred(), "failed to set up port forward for Manager")
+	config.SetManagerPort(mgrPort)
+
+	// Reset the cached elastic client so InitClient creates a new one using the new port.
+	elasticClient = nil
 
 	return func() {
 		stopCh <- time.Now()

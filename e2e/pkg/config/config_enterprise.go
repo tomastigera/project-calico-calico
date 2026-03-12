@@ -14,16 +14,37 @@
 
 package config
 
+import "fmt"
+
+// Default ports used when no port forwarding has been configured.
+const (
+	defaultElasticsearchPort = 9200
+	defaultManagerPort       = 9443
+)
+
+var (
+	elasticsearchPort = defaultElasticsearchPort
+	managerPort       = defaultManagerPort
+)
+
+// SetElasticsearchPort sets the local port allocated for Elasticsearch port forwarding.
+func SetElasticsearchPort(port int) {
+	elasticsearchPort = port
+}
+
+// SetManagerPort sets the local port allocated for Manager port forwarding.
+func SetManagerPort(port int) {
+	managerPort = port
+}
+
 // ElasticsearchURL returns the URL of the Elasticsearch instance to use for tests.
-// Currently hardcoded to localhost:9200 as tests that access ES are expected to configure
-// temporary port forwarding to the ES instance.
+// The port is set dynamically by SetElasticsearchPort when port forwarding is configured.
 func ElasticsearchURL() string {
-	return "https://localhost:9200"
+	return fmt.Sprintf("https://localhost:%d", elasticsearchPort)
 }
 
 // ManagerURL returns the URL of the Calico Manager instance to use for tests.
-// Currently hardcoded to localhost:9443 as tests that access the Manager are expected to configure
-// temporary port forwarding to the Manager instance.
+// The port is set dynamically by SetManagerPort when port forwarding is configured.
 func ManagerURL() string {
-	return "https://localhost:9443"
+	return fmt.Sprintf("https://localhost:%d", managerPort)
 }
