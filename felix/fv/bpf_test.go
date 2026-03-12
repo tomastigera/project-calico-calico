@@ -1324,6 +1324,37 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					out, _ = tc.Felixes[0].ExecCombinedOutput("ip", "link", "show", "dev", "bpfout.cali")
 					Expect(out).To(Equal("Device \"bpfout.cali\" does not exist.\n"))
 				})
+
+				It("should report felix_bpf_lb_maintenance metric when node is marked for maintenance", func() {
+					k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
+
+					// Metric should start at 0.
+					maintenanceMetric := tc.Felixes[0].PromMetric("felix_bpf_lb_maintenance")
+					Eventually(maintenanceMetric.Int, "10s", "500ms").Should(Equal(0))
+
+					// Set the maintenance annotation on the node.
+					node, err := k8sClient.CoreV1().Nodes().Get(context.Background(), tc.Felixes[0].Hostname, metav1.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					if node.Annotations == nil {
+						node.Annotations = map[string]string{}
+					}
+					node.Annotations["lb.projectcalico.org/maintenance"] = "exclude-local-backends"
+					_, err = k8sClient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					// Metric should become 1.
+					Eventually(maintenanceMetric.Int, "10s", "500ms").Should(Equal(1))
+
+					// Remove the maintenance annotation.
+					node, err = k8sClient.CoreV1().Nodes().Get(context.Background(), tc.Felixes[0].Hostname, metav1.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					delete(node.Annotations, "lb.projectcalico.org/maintenance")
+					_, err = k8sClient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					// Metric should return to 0.
+					Eventually(maintenanceMetric.Int, "10s", "500ms").Should(Equal(0))
+				})
 			}
 		})
 

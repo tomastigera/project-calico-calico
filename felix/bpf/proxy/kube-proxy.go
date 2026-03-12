@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -28,6 +29,17 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 )
+
+var (
+	gaugeNodeMaintenance = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_lb_maintenance",
+		Help: "Whether this node's loadbalancer maintenance mode is enabled (1) or disabled (0).",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeNodeMaintenance)
+}
 
 // KubeProxy is a wrapper of Proxy that deals with higher level issue like
 // configuration, restarting etc.
@@ -269,9 +281,11 @@ func (kp *KubeProxy) OnUpdate(msg any) {
 	case *proto.HostMetadataV4V6Update:
 		hostname = update.Hostname
 		log.WithField("msg", update).Debugf("kube-proxy OnUpdate: host metadata update")
+		kp.checkHostnameUpdateMaintenanceMetric(hostname, &update.LoadbalancerMaintenance)
 	case *proto.HostMetadataV4V6Remove:
 		hostname = update.Hostname
 		log.WithField("msg", update).Debugf("kube-proxy OnUpdate: host metadata remove")
+		kp.checkHostnameUpdateMaintenanceMetric(hostname, nil)
 	default:
 		return
 	}
@@ -282,6 +296,18 @@ func (kp *KubeProxy) OnUpdate(msg any) {
 	}
 
 	kp.pendingHostMetadataUpdates[hostname] = msg
+}
+
+func (kp *KubeProxy) checkHostnameUpdateMaintenanceMetric(hostname string, lbm *proto.LoadbalancerMaintenance) {
+	if hostname == kp.hostname {
+		m := float64(0)
+		if lbm != nil {
+			if *lbm == proto.LoadbalancerMaintenance_LB_MAINT_EXCLUDE_LOCAL_BACKENDS {
+				m = 1
+			}
+		}
+		gaugeNodeMaintenance.Set(m)
+	}
 }
 
 // CompleteDeferredWork implements the manager interface.
