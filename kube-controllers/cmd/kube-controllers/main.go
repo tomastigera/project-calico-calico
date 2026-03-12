@@ -61,6 +61,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/tier"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/usage"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
@@ -655,6 +656,17 @@ func (cc *controllerControl) InitControllers(
 			licenseController := license.NewStatusController(ctx, v3c, licenseInformer)
 			cc.controllerStates["LicenseStatus"] = &controllerState{controller: licenseController}
 			cc.registerInformers(licenseInformer)
+
+			// Enable the Tier controller, which manages tier deletion via finalizers.
+			// It watches tiers and all policy types so it can react to policy deletions.
+			tierInformer := calicoFactory.Projectcalico().V3().Tiers().Informer()
+			gnpInformer := calicoFactory.Projectcalico().V3().GlobalNetworkPolicies().Informer()
+			npInformer := calicoFactory.Projectcalico().V3().NetworkPolicies().Informer()
+			sgnpInformer := calicoFactory.Projectcalico().V3().StagedGlobalNetworkPolicies().Informer()
+			snpInformer := calicoFactory.Projectcalico().V3().StagedNetworkPolicies().Informer()
+			tierController := tier.NewController(ctx, v3c, tierInformer, gnpInformer, npInformer, sgnpInformer, snpInformer)
+			cc.controllerStates["Tier"] = &controllerState{controller: tierController}
+			cc.registerInformers(tierInformer, gnpInformer, npInformer, sgnpInformer, snpInformer)
 		}
 	}
 

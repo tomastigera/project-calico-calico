@@ -123,7 +123,7 @@ func serveWebhookTLS(cmd *cobra.Command, args []string) {
 	}
 	cs, err := kubernetes.NewForConfig(rc)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to create clientset")
+		logrus.WithError(err).Fatal("Failed to create Kubernetes clientset")
 	}
 	calico, err := clientset.NewForConfig(rc)
 	if err != nil {
@@ -151,7 +151,7 @@ func serveWebhookTLS(cmd *cobra.Command, args []string) {
 }
 
 func registerHooks(ctx context.Context, cs kubernetes.Interface, calico clientset.Interface) {
-	rbac.RegisterHook(cs, utils.HandleFn(handleFn))
+	rbac.RegisterHook(cs, calico.ProjectcalicoV3().Tiers(), utils.HandleFn(handleFn))
 	auditlogs.RegisterHook(auditLogPath, utils.HandleFn(handleFn))
 	managedcluster.RegisterHook(cs, mcmAddr, mcmCAType, mcmSecret, multiTenant, utils.HandleFn(handleFn))
 	managedcluster.StartCleanupController(ctx, calico)
