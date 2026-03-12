@@ -81,6 +81,7 @@ var features = map[string]bool{
 	"QoS":                 true,
 	"Datapath":            true,
 	"EgressGateway":       true,
+	"Istio":               true,
 }
 
 // RequiresNoEncap marks tests that require unencapsulated traffic to function.
