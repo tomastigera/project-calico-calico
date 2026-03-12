@@ -293,6 +293,7 @@ type Config struct {
 	FlowLogsFileIncludeService     bool
 	FlowLogsFileDomainsLimit       int
 	SidecarAccelerationEnabled     bool
+	WorkloadSourceSpoofing         bool
 
 	DebugSimulateDataplaneHangAfter  time.Duration
 	DebugConsoleEnabled              bool
