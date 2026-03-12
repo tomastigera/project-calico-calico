@@ -60,6 +60,9 @@ type WinFV struct {
 	client clientv3.Interface
 
 	backend CalicoBackEnd
+
+	// flowLogOffset skips entries that existed before traffic was generated.
+	flowLogOffset int
 }
 
 func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
@@ -166,7 +169,12 @@ func (f *WinFV) Restart() {
 
 func (f *WinFV) RestartFelix() {
 	if IsRunningHPC() {
-		log.Infof("Skip restarting Felix, running on HPC...")
+		// On HPC, Felix restarts automatically when it detects config
+		// changes via the datastore. Wait for Felix to fully restart
+		// before generating traffic, otherwise ETW events from allowed
+		// connections may be missed during the restart window.
+		log.Info("Waiting for Felix to restart after config change...")
+		time.Sleep(60 * time.Second)
 		return
 	}
 	log.Infof("Restarting Felix...")
@@ -288,8 +296,38 @@ func (f *WinFV) AddConfigItems(configs map[string]any) error {
 	return nil
 }
 
+// SnapshotFlowLogOffset records the current number of entries in the flow log
+// file. Subsequent calls to FlowLogs() will only return entries after this
+// offset, ignoring stale entries from previous Felix instances.
+func (f *WinFV) SnapshotFlowLogOffset() {
+	all, err := flowlogs.ReadFlowLogsFile(f.flowLogDir)
+	if err != nil {
+		log.WithError(err).Warn("Failed to snapshot flow log offset, using 0")
+		f.flowLogOffset = 0
+		return
+	}
+	f.flowLogOffset = len(all)
+	log.WithField("offset", f.flowLogOffset).Info("Snapshotted flow log offset")
+}
+
 func (f *WinFV) FlowLogs() ([]flowlog.FlowLog, error) {
-	return flowlogs.ReadFlowLogsFile(f.flowLogDir)
+	all, err := flowlogs.ReadFlowLogsFile(f.flowLogDir)
+	if err != nil {
+		return nil, err
+	}
+	returned := len(all) - f.flowLogOffset
+	if returned < 0 {
+		returned = 0
+	}
+	log.WithFields(log.Fields{
+		"offset":   f.flowLogOffset,
+		"total":    len(all),
+		"returned": returned,
+	}).Info("FlowLogs offset filter applied")
+	if f.flowLogOffset >= len(all) {
+		return nil, nil
+	}
+	return all[f.flowLogOffset:], nil
 }
 
 type JsonMappingV1 struct {
