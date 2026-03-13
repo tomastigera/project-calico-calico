@@ -66,7 +66,7 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred(), "Failed to get Calico client")
 			ipPools := v3.IPPoolList{}
 			err = cli.List(context.Background(), &ipPools)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "Failed to list IPPools")
 
 			// Find the AWS-backed IP pools that banzai created and index by zone.
 			haveSomeAWSPools := false
@@ -89,7 +89,7 @@ var _ = describe.CalicoDescribe(
 
 			// Find a zone with an IP pool and at least two nodes.
 			nodes, err := f.ClientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "Failed to list nodes")
 
 			nodesByZone = map[string][]v1.Node{}
 			numEGWsByNode = map[string]int{}
@@ -199,8 +199,8 @@ var _ = describe.CalicoDescribe(
 			})
 			clientPod = podClient.Create(context.Background(), clientPod)
 			evt, err := waitForFailedPodSandbox(f, clientPod)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(evt).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred(), "Timed out waiting for FailedCreatePodSandBox event")
+			Expect(evt).NotTo(BeNil(), "Expected FailedCreatePodSandBox event for pod in wrong zone")
 		})
 
 		It("should block assignment of IP from AWS pool without the corresponding resource request", func() {
@@ -214,8 +214,8 @@ var _ = describe.CalicoDescribe(
 			clientPod.Spec.Containers[0].Resources.Limits = nil
 			clientPod = podClient.Create(context.Background(), clientPod)
 			evt, err := waitForFailedPodSandbox(f, clientPod)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(evt).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred(), "Timed out waiting for FailedCreatePodSandBox event")
+			Expect(evt).NotTo(BeNil(), "Expected FailedCreatePodSandBox event for pod without resource request")
 		})
 
 		Context("AWS Elastic IPs", func() {
@@ -338,7 +338,7 @@ var _ = describe.CalicoDescribe(
 			AfterEach(func() {
 				if ipamConf != nil {
 					err := cli.Delete(context.Background(), ipamConf)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred(), "Failed to delete IPAMConfiguration")
 				}
 			})
 
@@ -386,7 +386,7 @@ func expectInternalConnectivityWithOwnIP(
 
 func numEGWsOnNode(f *framework.Framework, nodeName string) int {
 	egPods, err := f.ClientSet.CoreV1().Pods(egressGatewayNS).List(context.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to list egress gateway pods")
 	numEGWs := 0
 	for _, p := range egPods.Items {
 		if p.GetLabels()["egress-code"] != "" {
@@ -432,7 +432,7 @@ func awsClientCustomizer(spec podSpec) func(*v1.Pod) {
 		}
 		if len(spec.IPPoolNames) > 0 {
 			poolsJSON, err := json.Marshal(spec.IPPoolNames)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "Failed to marshal IP pool names")
 			pod.Annotations["cni.projectcalico.org/ipv4pools"] = string(poolsJSON)
 		}
 		if spec.IP != "" {
@@ -440,7 +440,7 @@ func awsClientCustomizer(spec podSpec) func(*v1.Pod) {
 		}
 		if len(spec.ElasticIPs) > 0 {
 			eipsJSON, err := json.Marshal(spec.ElasticIPs)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "Failed to marshal elastic IPs")
 			pod.Annotations["cni.projectcalico.org/awsElasticIPs"] = string(eipsJSON)
 
 			// Workaround the fact that AWS-backed pods in our particular set-up don't have connectivity to
