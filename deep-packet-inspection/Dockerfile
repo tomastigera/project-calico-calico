@@ -1,10 +1,10 @@
-# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2026 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 ARG THIRD_PARTY_RELEASE_BRANCH
 
-FROM ${THIRD_PARTY_REGISTRY}/snort:v3.10.0.0-${THIRD_PARTY_RELEASE_BRANCH} AS snort
+FROM ${THIRD_PARTY_REGISTRY}/snort:v3.10.2.0-${THIRD_PARTY_RELEASE_BRANCH} AS snort
 
 FROM scratch AS source
 

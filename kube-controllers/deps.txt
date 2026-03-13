@@ -283,6 +283,7 @@ local:libcalico-go/lib/health
 local:libcalico-go/lib/ipam
 local:libcalico-go/lib/jitter
 local:libcalico-go/lib/json
+local:libcalico-go/lib/kubevirt
 local:libcalico-go/lib/labels
 local:libcalico-go/lib/logutils
 local:libcalico-go/lib/metricsserver
