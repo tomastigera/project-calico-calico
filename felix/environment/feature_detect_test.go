@@ -719,7 +719,9 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 6.15.0",
 			Features{
+				BPFKprobes:         true,
 				NFLogSize:          true,
+				NFQueueBypass:      true,
 				IPIPDeviceIsL3:     true,
 				KernelHasUDPGSOFix: false,
 			},
@@ -728,7 +730,9 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 6.16.0",
 			Features{
+				BPFKprobes:         true,
 				NFLogSize:          true,
+				NFQueueBypass:      true,
 				IPIPDeviceIsL3:     true,
 				KernelHasUDPGSOFix: true,
 			},
