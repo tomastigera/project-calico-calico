@@ -33,6 +33,15 @@ import (
 	"github.com/projectcalico/calico/e2e/pkg/utils/images"
 )
 
+// egressNATMode controls natOutgoing on the egress IPPool and, correspondingly,
+// which IP checkEgressIPs matches: pod IP (no NAT) or host/node IP (NAT enabled).
+type egressNATMode bool
+
+const (
+	egressPodIP  egressNATMode = false // natOutgoing disabled — match gateway pod IP
+	egressHostIP egressNATMode = true  // natOutgoing enabled  — match gateway host/node IP
+)
+
 type icmpProbe struct {
 	ips      []string
 	interval int
@@ -70,7 +79,7 @@ var _ = describe.CalicoDescribe(
 
 		Context("Egress IP network test", func() {
 			BeforeEach(func() {
-				cli, nodesInfoGetter = setupEgressIPTest(f, "!all()")
+				cli, nodesInfoGetter = setupEgressIPTest(f, "!all()", egressPodIP)
 				checker = conncheck.NewConnectionTester(f)
 			})
 			AfterEach(func() {
@@ -118,7 +127,7 @@ var _ = describe.CalicoDescribe(
 				Expect(err).NotTo(HaveOccurred(), "Failed to create egw policy")
 				DeferCleanup(func() {
 					err := cli.Delete(context.Background(), egwPolicy)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred(), "Failed to delete EgressGatewayPolicy")
 				})
 
 				clientAnnotations := map[string]string{
@@ -137,7 +146,7 @@ var _ = describe.CalicoDescribe(
 				extNode.MustExec(shell, shellOpt, fmt.Sprintf("sudo ip r a %s/32 via %s", cc.Pod().Status.PodIP, cc.Pod().Status.HostIP))
 				defer extNode.MustExec(shell, shellOpt, fmt.Sprintf(" sudo ip r del %s", cc.Pod().Status.PodIP))
 
-				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[0]})
+				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[0]}, egressPodIP)
 
 				// Delete the client pod and recreate it on node 1 — should use local gateway gwRed[1].
 				checker.StopClient(cc)
@@ -150,12 +159,12 @@ var _ = describe.CalicoDescribe(
 				checker.AddClient(cc)
 				checker.Deploy()
 
-				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[1]})
+				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[1]}, egressPodIP)
 
 				// Delete the gw pod in node1 — should fall back to gwRed[0].
 				removeGateway(f, cli, gwRed[1].Status.PodIP, []*v1.Pod{gwRed[1]}, true)
 
-				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[0]})
+				checkEgressIPs(checker, cc, extClientIP, echoserverPort, []*v1.Pod{gwRed[0]}, egressPodIP)
 			})
 
 			It("should route egress traffic via different egress gateways based on destination", func() {
@@ -218,7 +227,7 @@ var _ = describe.CalicoDescribe(
 				Expect(err).NotTo(HaveOccurred(), "Failed to create egw policy")
 				DeferCleanup(func() {
 					err := cli.Delete(context.Background(), egwPolicy)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred(), "Failed to delete EgressGatewayPolicy")
 				})
 
 				clientAnnotations := map[string]string{
@@ -236,13 +245,13 @@ var _ = describe.CalicoDescribe(
 				defer extNode.MustExec(shell, shellOpt, fmt.Sprintf(" sudo ip r del %s", cc.Pod().Status.PodIP))
 
 				By("checking access to the 1st IP of external node via gateway blue")
-				checkEgressIPs(checker, cc, extClientIPs[0], echoserverPort, []*v1.Pod{gwBlue})
+				checkEgressIPs(checker, cc, extClientIPs[0], echoserverPort, []*v1.Pod{gwBlue}, egressPodIP)
 
 				By("checking access to the 2nd IP of external node via gateway blue")
-				checkEgressIPs(checker, cc, extClientIPs[1], echoserverPort, []*v1.Pod{gwBlue})
+				checkEgressIPs(checker, cc, extClientIPs[1], echoserverPort, []*v1.Pod{gwBlue}, egressPodIP)
 
 				By("checking access to the 3rd IP of external node via gateway red")
-				checkEgressIPs(checker, cc, extClientIPs[2], echoserverPort, []*v1.Pod{gwRed})
+				checkEgressIPs(checker, cc, extClientIPs[2], echoserverPort, []*v1.Pod{gwRed}, egressPodIP)
 			})
 
 			It("should support multiple gateways", func() {
@@ -278,7 +287,7 @@ var _ = describe.CalicoDescribe(
 
 				By("check connection and client address")
 				Eventually(func() string {
-					return checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0})
+					return checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0}, egressPodIP)
 				}, "30s", "2s").ShouldNot(BeEmpty())
 
 				By("create second gateway pod on node 1")
@@ -288,7 +297,7 @@ var _ = describe.CalicoDescribe(
 				gatewayRoutes[gw.Status.PodIP] = gw.Status.HostIP
 				gw1 := gw
 
-				checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0, gw1})
+				checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0, gw1}, egressPodIP)
 
 				By("create third gateway pod on node 2")
 				gw = createGateway(f, cli, f.Namespace.Name, nodesInfoGetter.GetNames()[2], "gw2", "egress-ippool-1", opts)
@@ -297,17 +306,17 @@ var _ = describe.CalicoDescribe(
 				gatewayRoutes[gw.Status.PodIP] = gw.Status.HostIP
 				gw2 := gw
 
-				egressIP := checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0, gw1, gw2})
+				egressIP := checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0, gw1, gw2}, egressPodIP)
 
 				By("remove the gateway pod used for latest egress traffic and check egress ip")
 				gwList := removeGateway(f, cli, egressIP, []*v1.Pod{gw0, gw1, gw2}, true)
 
-				egressIP = checkEgressIPs(checker, cc, extIP, echoserverPort, gwList)
+				egressIP = checkEgressIPs(checker, cc, extIP, echoserverPort, gwList, egressPodIP)
 
 				By("remove the gateway pod used for latest egress traffic and check egress ip")
 				gwList = removeGateway(f, cli, egressIP, gwList, true)
 
-				egressIP = checkEgressIPs(checker, cc, extIP, echoserverPort, gwList)
+				egressIP = checkEgressIPs(checker, cc, extIP, echoserverPort, gwList, egressPodIP)
 
 				By("remove the gateway pod used for latest egress traffic and check egress ip")
 				removeGateway(f, cli, egressIP, gwList, true)
@@ -326,7 +335,7 @@ var _ = describe.CalicoDescribe(
 				gw0 = gw
 
 				By("check connection and client address")
-				checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0})
+				checkEgressIPs(checker, cc, extIP, echoserverPort, []*v1.Pod{gw0}, egressPodIP)
 			})
 
 			Context("EGW readiness: with two EGWs and ICMP readiness probes enabled and a client pod", func() {
@@ -429,7 +438,7 @@ var _ = describe.CalicoDescribe(
 							}
 							return false, fmt.Errorf("couldn't find readiness in pod status: %s", pod)
 						})
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred(), "Timed out waiting for gateway pod %s to become not-ready", gw1.Name)
 
 						Eventually(func() int {
 							if hops, err := getNextHopsForPod(f, f.Namespace.Name, client); err != nil {
@@ -444,7 +453,7 @@ var _ = describe.CalicoDescribe(
 						ruleActive = false
 
 						err = e2epod.WaitTimeoutForPodReadyInNamespace(context.Background(), f.ClientSet, gw1.Name, gw1.Namespace, 60*time.Second)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred(), "Gateway pod did not become ready after ICMP rule removal")
 
 						Eventually(func() int {
 							if hops, err := getNextHopsForPod(f, f.Namespace.Name, client); err != nil {
@@ -460,7 +469,7 @@ var _ = describe.CalicoDescribe(
 
 		Context("Egress IP Maintenance Annotations", func() {
 			BeforeEach(func() {
-				cli, nodesInfoGetter = setupEgressIPTest(f, "all()")
+				cli, nodesInfoGetter = setupEgressIPTest(f, "all()", egressPodIP)
 				checker = conncheck.NewConnectionTester(f)
 			})
 			AfterEach(func() {
@@ -531,16 +540,16 @@ var _ = describe.CalicoDescribe(
 
 // setupEgressIPTest initialises the client, cleans the datastore, fetches nodes,
 // enables egress-IP support, and creates the egress IPPool with the given nodeSelector.
-func setupEgressIPTest(f *framework.Framework, nodeSelector string) (ctrlclient.Client, utils.NodesInfoGetter) {
+func setupEgressIPTest(f *framework.Framework, nodeSelector string, mode egressNATMode) (ctrlclient.Client, utils.NodesInfoGetter) {
 	cli, err := client.NewAPIClient(f.ClientConfig())
-	Expect(err).ShouldNot(HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred(), "Failed to create API client")
 
 	// Get ipipMode, vxlanMode for the default IPPool.
 	ipipMode, vxlanMode := getPoolNetworkingMode(cli, "default-ipv4-ippool")
 
 	// Get three nodes.
 	nodes, err := e2enode.GetReadySchedulableNodes(context.Background(), f.ClientSet)
-	Expect(err).ShouldNot(HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred(), "Failed to get schedulable nodes")
 	if len(nodes.Items) == 0 {
 		framework.Failf("No nodes exist, can't continue test.")
 	}
@@ -554,7 +563,7 @@ func setupEgressIPTest(f *framework.Framework, nodeSelector string) (ctrlclient.
 	err = utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
 		spec.EgressIPSupport = "EnabledPerNamespaceOrPerPod"
 	})
-	Expect(err).ShouldNot(HaveOccurred())
+	Expect(err).ShouldNot(HaveOccurred(), "Failed to enable EgressIPSupport in FelixConfiguration")
 	WaitForCalicoReady(f.ClientSet)
 
 	pool := v3.NewIPPool()
@@ -564,9 +573,9 @@ func setupEgressIPTest(f *framework.Framework, nodeSelector string) (ctrlclient.
 	pool.Spec.IPIPMode = ipipMode
 	pool.Spec.VXLANMode = vxlanMode
 	pool.Spec.NodeSelector = nodeSelector
-	pool.Spec.NATOutgoing = false
+	pool.Spec.NATOutgoing = bool(mode)
 	err = cli.Create(context.Background(), pool)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to create egress IPPool")
 
 	return cli, nodesInfoGetter
 }
@@ -574,7 +583,7 @@ func setupEgressIPTest(f *framework.Framework, nodeSelector string) (ctrlclient.
 // teardownEgressIPTest deletes the egress IPPool created by setup.
 func teardownEgressIPTest(cli ctrlclient.Client) {
 	err := cli.Delete(context.Background(), &v3.IPPool{ObjectMeta: metav1.ObjectMeta{Name: "egress-ippool-1"}})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to delete egress IPPool")
 }
 
 // removeGateway removes a gateway pod with a given IP and returns the list of remaining gateway pods.
@@ -589,17 +598,17 @@ func removeGateway(f *framework.Framework, cli ctrlclient.Client, ip string, gws
 		}
 	}
 
-	Expect(gw).NotTo(BeNil())
+	Expect(gw).NotTo(BeNil(), "No gateway pod found with IP %s", ip)
 
 	deployName := gw.Labels["app.kubernetes.io/name"]
 	ns := gw.Namespace
 	err := cli.Delete(context.Background(), &operatorv1.EgressGateway{
 		ObjectMeta: metav1.ObjectMeta{Name: deployName, Namespace: ns},
 	})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to delete EgressGateway %s/%s", deployName, ns)
 	if waitToDisappear {
 		err = e2epod.WaitForPodNotFoundInNamespace(context.Background(), f.ClientSet, gw.Name, f.Namespace.Name, time.Second*45)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "Gateway pod %s did not disappear in time", gw.Name)
 	}
 
 	return remainPods
@@ -653,7 +662,7 @@ func createGateway(
 	}
 
 	err := cli.Create(context.Background(), egw)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred(), "Failed to create EgressGateway %s", podName)
 
 	// Wait for the resulting pod to be running.
 	labelSelector := fmt.Sprintf("app.kubernetes.io/name=%s", podName)
@@ -774,10 +783,15 @@ func fetchExtClientIP(checker conncheck.ConnectionTester, cc *conncheck.Client, 
 }
 
 // checkEgressIPs verifies the echoserver sees a source IP matching one of the expected gateway IPs.
-func checkEgressIPs(checker conncheck.ConnectionTester, cc *conncheck.Client, destination, port string, gws []*v1.Pod) string {
+// With egressHostIP (natOutgoing) it checks host/node IPs; with egressPodIP it checks pod IPs.
+func checkEgressIPs(checker conncheck.ConnectionTester, cc *conncheck.Client, destination, port string, gws []*v1.Pod, mode egressNATMode) string {
 	expectedIPs := map[string]bool{}
 	for _, gw := range gws {
-		expectedIPs[gw.Status.PodIP] = true
+		if mode == egressHostIP {
+			expectedIPs[gw.Status.HostIP] = true
+		} else {
+			expectedIPs[gw.Status.PodIP] = true
+		}
 	}
 
 	ip := fetchExtClientIP(checker, cc, destination, port, false)
@@ -855,7 +869,7 @@ func checkClientMaintenanceAnnotations(f *framework.Framework, ns string, client
 func getPoolNetworkingMode(client ctrlclient.Client, poolName string) (v3.IPIPMode, v3.VXLANMode) {
 	var pool v3.IPPool
 	err := client.Get(context.Background(), ctrlclient.ObjectKey{Name: poolName}, &pool)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to get IPPool %s", poolName)
 	logrus.Infof("Get pool %s config, ipipMode %s, vxlanMode %s", poolName, pool.Spec.IPIPMode, pool.Spec.VXLANMode)
 	return pool.Spec.IPIPMode, pool.Spec.VXLANMode
 }
@@ -864,8 +878,8 @@ func WaitForCalicoReady(clientset clientset.Interface) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	calicoSystemPodsList, err := clientset.CoreV1().Pods("calico-system").List(ctx, metav1.ListOptions{})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred(), "Failed to list pods in calico-system")
 	numCaliSys := len(calicoSystemPodsList.Items)
 	err = e2epod.WaitForPodsRunningReady(context.Background(), clientset, "calico-system", numCaliSys, 5*time.Minute)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred(), "Calico system pods did not become ready")
 }
