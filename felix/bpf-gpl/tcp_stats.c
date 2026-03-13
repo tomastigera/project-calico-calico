@@ -12,6 +12,7 @@ const volatile struct cali_stats_globals __globals;
 #include "events.h"
 #include "tcp_stats.h"
 #include "socket_lookup.h"
+#define CALI_TCP_ONLY 1
 #include "skb.h"
 #undef GLOBAL_FLAGS
 #define GLOBAL_FLAGS 0
