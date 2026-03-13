@@ -176,10 +176,6 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 		By("Creating default FelixConfiguration")
 		teardownFelixConfig := createDefaultFelixConfig(calicoClient)
 		teardowns = append(teardowns, teardownFelixConfig)
-
-		By("Applying 4-shard ES index template for bulk indexing throughput")
-		teardownBulkTemplate := createBulkOptimizeIndexTemplate(esClient)
-		teardowns = append(teardowns, teardownBulkTemplate)
 	})
 
 	AfterEach(func() {
@@ -222,8 +218,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			nsGroups := []namespaceGroup{nsGroup}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			// Execute our request, querying the last 3 days with a bit of a buffer, since From is exclusive.
 			queryTimeRange := &lmav1.TimeRange{
@@ -290,8 +286,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			nsGroups := []namespaceGroup{highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			// Execute our request, querying the last 3 days with a bit of a buffer, since From is exclusive.
 			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
@@ -407,8 +403,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			// Execute our request
 			queryTimeRange := &lmav1.TimeRange{
@@ -611,8 +607,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			nsGroups := []namespaceGroup{veryHighFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			// Execute our request
 			queryTimeRange := &lmav1.TimeRange{
@@ -875,8 +871,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces1, highL3FlowNamespaces2, lowScaleNamespaces, veryHighFlowNamespaces}
 				testUser := testUser{Username: "test-sg-user"}
 				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, testUser, clusterInfo)
-				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 				teardowns = append(teardowns, scenarioTeardowns...)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 				// Query against the last seven days. This allows us to check the behaviour of cache approximation when the request duration exceeds the cache duration.
 				_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory, customSgConfig)
@@ -987,8 +983,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				nsGroups := []namespaceGroup{veryHighFlowNamespaces, highFlowNamespaces}
 				u := testUser{Username: "test-sg-user"}
 				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
-				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 				teardowns = append(teardowns, scenarioTeardowns...)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 				// Replicate the same scenario as above, in a managed cluster.
 				managedHighFlowNamespaces := newNamespaceGroup("managed-high-flow-logs", 1, 6000, dataTimeRange, false)
@@ -997,8 +993,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				mu := testUser{Username: "managed-test-sg-user"}
 				managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
 				managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, mu, *managedClusterInfo)
-				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 				teardowns = append(teardowns, managedScenarioTeardowns...)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 				// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
 				// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
@@ -1074,8 +1070,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				nsGroups := []namespaceGroup{highFlowNamespaces, highL3FlowNamespaces, lowScaleNamespaces}
 				u := testUser{Username: "test-sg-user"}
 				userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, nsGroups, u, clusterInfo)
-				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 				teardowns = append(teardowns, scenarioTeardowns...)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 				// Execute our request against the default cluster, validating that we see a response derived from the cache.
 				var statsResp *uiapisv1.ServiceGraphStatsResponse
@@ -1110,8 +1106,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				managedTestUser := testUser{Username: "managed-test-sg-user"}
 				managedClusterInfo = &bapi.ClusterInfo{Cluster: "managed-cluster", Tenant: clusterInfo.Tenant}
 				managedUserInfo, managedScenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, managedNsGroups, managedTestUser, *managedClusterInfo)
-				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 				teardowns = append(teardowns, managedScenarioTeardowns...)
+				Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 				// Create the managed cluster itself. We ensure we do this after the flows for the managed cluster are created, to ensure that flows are available for the managed cluster as soon as /stats discovers it.
 				// This is not exactly realistic - once a managed cluster is created, it will have virtually no flows as it just begins to push them upon connection. However, for testing purposes, seeding these
@@ -1170,8 +1166,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				Namespaces: []string{"app-backend"}, // Scope user to only app-backend namespace
 			}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, []namespaceGroup{nsGroup}, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
 
@@ -1250,8 +1246,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 				To:   time.Now(),
 			}
 			userInfo, scenarioTeardowns, err := setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, []namespaceGroup{nsGroup}, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 
 			_, sgStatsHandler = createServiceGraphHandlers(linseedCli, k8sClient, ctrlClient, clientSetFactory)
 
@@ -1289,8 +1285,8 @@ var _ = Describe("/serviceGraph/stats tests", func() {
 			nsGroup := newNamespaceGroup("app", 5, 10, dataTimeRange, false)
 			testUser := testUser{Username: "test-sg-user"}
 			userInfo, scenarioTeardowns, err = setupServiceGraphScenario(k8sClient, linseedCli, lmaClient, []namespaceGroup{nsGroup}, testUser, clusterInfo)
-			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			teardowns = append(teardowns, scenarioTeardowns...)
+			Expect(err).NotTo(HaveOccurred(), "Failed to setup service graph scenario")
 			customSgConfig = getDefaultServiceGraphConfig()
 			customSgConfig.ServiceGraphCacheDataPrefetch = false
 			timeRange = &lmav1.TimeRange{
@@ -1691,7 +1687,7 @@ func setupServiceGraphScenario(
 		By("Creating test namespaces")
 		teardownNamespaces, err := nsGroup.createNamespaces(ctx, k8sClient)
 		if err != nil {
-			return nil, nil, err
+			return nil, teardowns, err
 		}
 		teardowns = append(teardowns, teardownNamespaces)
 
@@ -1699,7 +1695,7 @@ func setupServiceGraphScenario(
 		By("Inserting flow logs via Linseed in chunks")
 		err = nsGroup.createFlows(ctx, linseedCli, clusterInfo.Cluster)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create flows: %w", err)
+			return nil, teardowns, fmt.Errorf("failed to create flows: %w", err)
 		}
 	}
 
@@ -1713,7 +1709,7 @@ func setupServiceGraphScenario(
 	flowIndex := index.FlowLogMultiIndex
 	err := testutils.RefreshIndex(ctx, lmaClient, flowIndex.Index(clusterInfo))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to refresh ES index: %w", err)
+		return nil, teardowns, fmt.Errorf("failed to refresh ES index: %w", err)
 	}
 
 	// Wait for the ES index to be ready
@@ -2137,29 +2133,6 @@ func createDefaultFelixConfig(calicoClient *calicoclientset.Clientset) func() {
 	}
 }
 
-// createBulkOptimizeIndexTemplate creates an index template that will be merged with the index template created by Linseed.
-// Raising the shard count increases the insertion throughput (and therefore test speed) by ~15% while lowering memory
-// usage by ~10%.
-func createBulkOptimizeIndexTemplate(esClient *elastic.Client) func() {
-	ctx := context.Background()
-
-	_, err := esClient.IndexPutIndexTemplate("fv-bulk-optimize").
-		BodyJson(map[string]any{
-			"index_patterns": []string{"tigera_secure_ee_flows*"},
-			"priority":       1000,
-			"template": map[string]any{
-				"settings": map[string]any{
-					"index.number_of_shards": 4,
-				},
-			},
-		}).Do(ctx)
-	Expect(err).NotTo(HaveOccurred(), "Failed to create bulk optimization index template")
-
-	return func() {
-		_, _ = esClient.IndexDeleteIndexTemplate("fv-bulk-optimize").Do(context.Background())
-	}
-}
-
 func intPtr(i int64) *int64 {
 	return &i
 }
@@ -2294,6 +2267,7 @@ func (f failingClient) NewClientSetForApplication(cluster string) (k8s.ClientSet
 	}
 	return css, nil
 }
+
 func (f failingClient) Count(ctx context.Context, params lsv1.Params) (*lsv1.CountResponse, error) {
 	select {
 	case <-time.After(f.config.flowLogCountDelay):
@@ -2322,9 +2296,11 @@ func (f failingClient) Aggregations(ctx context.Context, params lsv1.Params) (el
 func (f failingClient) List(ctx context.Context, params lsv1.Params) (*lsv1.List[lsv1.FlowLog], error) {
 	return &lsv1.List[lsv1.FlowLog]{}, nil
 }
+
 func (f failingClient) ListInto(ctx context.Context, params lsv1.Params, listable lsv1.Listable) error {
 	return nil
 }
+
 func (f failingClient) Create(ctx context.Context, logs []lsv1.FlowLog) (*lsv1.BulkResponse, error) {
 	return &lsv1.BulkResponse{}, nil
 }

@@ -21,6 +21,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -53,6 +54,18 @@ func describe(name string, testFn func(string)) bool {
 }
 
 var updateError = false
+var watchStarted chan struct{}
+
+func InterceptWatch(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.ObjectList, opts ...runtimeClient.ListOption) (watch.Interface, error) {
+	w, err := client.Watch(ctx, obj, opts...)
+	if err == nil {
+		select {
+		case watchStarted <- struct{}{}:
+		default:
+		}
+	}
+	return w, err
+}
 
 func InterceptUpdate(ctx context.Context, client runtimeClient.WithWatch, obj runtimeClient.Object, opts ...runtimeClient.UpdateOption) error {
 	if updateError {
@@ -79,11 +92,12 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 	Context("Watch is up and running", func() {
 		BeforeEach(func() {
+			watchStarted = make(chan struct{}, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Watch: InterceptWatch}).Build()
 
 			statusUpdater = NewRequestRecordingStatusUpdater(NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig))
 			myClusters = &clusters{
@@ -97,6 +111,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx)
 			}()
+			Eventually(watchStarted, "5s").Should(Receive())
 		})
 		AfterEach(func() {
 			cancel()
@@ -159,11 +174,12 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 	When("Watch is down", func() {
 		BeforeEach(func() {
+			watchStarted = make(chan struct{}, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Watch: InterceptWatch}).Build()
 
 			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
@@ -178,6 +194,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx)
 			}()
+			Eventually(watchStarted, "5s").Should(Receive())
 		})
 		AfterEach(func() {
 			cancel()
@@ -206,12 +223,13 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 		var statusCancel context.CancelFunc
 
 		BeforeEach(func() {
+			watchStarted = make(chan struct{}, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			statusCtx, statusCancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Watch: InterceptWatch}).Build()
 
 			su := NewStatusUpdater(statusCtx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
@@ -225,6 +243,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx)
 			}()
+			Eventually(watchStarted, "5s").Should(Receive())
 		})
 		AfterEach(func() {
 			cancel()
@@ -255,11 +274,15 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 	When("ManagedCluster update fails", func() {
 		BeforeEach(func() {
+			watchStarted = make(chan struct{}, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Update: InterceptUpdate}).Build()
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Update: InterceptUpdate,
+				Watch:  InterceptWatch,
+			}).Build()
 
 			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
@@ -272,6 +295,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx)
 			}()
+			Eventually(watchStarted, "5s").Should(Receive())
 		})
 		AfterEach(func() {
 			cancel()
@@ -346,11 +370,12 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 		const clusterNameNeverConnected = "never-connected-cluster"
 
 		BeforeEach(func() {
+			watchStarted = make(chan struct{}, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Watch: InterceptWatch}).Build()
 
 			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
@@ -405,6 +430,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			go func() {
 				_ = myClusters.watchK8s(ctx)
 			}()
+			Eventually(watchStarted, "5s").Should(Receive())
 			Eventually(func() v3.ManagedClusterStatusValue {
 				mc := &v3.ManagedCluster{}
 				_ = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterNameConnected, Namespace: clusterNamespace}, mc)

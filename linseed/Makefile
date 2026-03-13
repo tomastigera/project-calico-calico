@@ -115,6 +115,7 @@ st:
 # But this can be overridden by pre-setting TENANT_ID_ENV.
 TENANT_ID_ENV ?= -e LINSEED_EXPECTED_TENANT_ID="tenant-a"
 LOG_LEVEL_ENV ?= -e LINSEED_LOG_LEVEL="debug"
+FLOWS_SHARDS_ENV ?= -e LINSEED_ELASTIC_FLOWS_INDEX_SHARDS=1
 run-image: stop-image stop-elastic run-elastic k8s-setup gen-certs
 	docker run --detach \
 		--net=host \
@@ -133,6 +134,7 @@ run-image: stop-image stop-elastic run-elastic k8s-setup gen-certs
 		-e LINSEED_ENABLE_METRICS="true" \
 		$(LOG_LEVEL_ENV) \
 		$(TENANT_ID_ENV) \
+		$(FLOWS_SHARDS_ENV) \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.
 	while ! curl -k http://localhost:8080/readiness; do echo "Waiting for linseed to come up..."; sleep 2; done
