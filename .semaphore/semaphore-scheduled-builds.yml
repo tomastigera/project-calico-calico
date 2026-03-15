@@ -905,6 +905,8 @@ blocks:
           - gcloud auth activate-service-account --key-file=$HOME/secrets/secret.google-service-account-key.json
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
       jobs:
         - name: "Felix: Build and cache FV prerequisites"
           priority:
@@ -950,6 +952,7 @@ blocks:
       epilogue:
         always:
           commands:
+            - ./.semaphore/analyze-test-failures --ut || true
             # test-results publish (via os.MkdirTemp) writes intermediate JSON
             # to /tmp, which is a tmpfs (RAM-backed) and can OOM on f1-standard-2
             # machines when reports are large.  We add swap and redirect TMPDIR to
@@ -1056,6 +1059,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: "Felix: nftables tests on Ubuntu 22.04"
     run:
       when: "true"
@@ -1079,6 +1084,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: "Felix: BPF tests on Ubuntu 24.04 (iptables)"
     run:
       when: "true"
@@ -1102,6 +1109,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: "Felix: BPF tests on Ubuntu 22.04 (nftables)"
     run:
       when: "true"
@@ -1129,6 +1138,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: "Felix: BPF program-loading check on 25.10 (nftables)"
     run:
       when: "true"
@@ -1155,6 +1166,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: "Felix: BPF tests on Ubuntu 25.10 with jitharden=2 (nftables)"
     run:
       when: "true"
@@ -1182,6 +1195,8 @@ blocks:
             - source felix/.semaphore/fv-epilogue
       secrets:
         - name: google-service-account-for-gce
+        - name: gemini-api-key
+        - name: fv-tests-guru-github-token
   - name: Publish tigera/istio-ztunnel images
     run:
       when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
