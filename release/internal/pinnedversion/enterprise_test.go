@@ -54,7 +54,7 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 		})
 		t.Run("with operator", func(t *testing.T) {
 			got := v.GetComponentImageNames(true)
-			want := []string{"alertmanager", "compliance-server", managerComponentName, "tigera/operator", "tigera/operator-init"}
+			want := []string{"alertmanager", "compliance-server", managerComponentName, "tigera/operator"}
 			if diff := cmp.Diff(got, want, cmpopts.SortSlices(func(a, b string) bool {
 				return a < b
 			})); diff != "" {

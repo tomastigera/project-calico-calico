@@ -34,15 +34,3 @@ func (c Component) String() string {
 	}
 	return fmt.Sprintf("%s/%s:%s", strings.TrimSuffix(c.Registry, "/"), c.Image, c.Version)
 }
-
-type OperatorComponent struct {
-	Component
-}
-
-func (c OperatorComponent) InitImage() Component {
-	return Component{
-		Version:  c.Version,
-		Image:    fmt.Sprintf("%s-init", c.Image),
-		Registry: c.Registry,
-	}
-}
