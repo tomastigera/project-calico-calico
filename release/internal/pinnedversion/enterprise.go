@@ -137,7 +137,7 @@ func (p *EnterprisePinnedVersion) GetComponentImageNames(includeOperator bool) [
 }
 
 // ImageComponents returns a map of all components that produce images
-// including Tigera operator and its init image if includeOperator is true.
+// including Tigera operator if includeOperator is true.
 func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[string]registry.Component {
 	components := make(map[string]registry.Component)
 	for name, component := range p.Components {
@@ -153,7 +153,7 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 		components[name] = component
 	}
 	if includeOperator {
-		maps.Copy(components, p.operatorComponents())
+		components[p.TigeraOperator.Image] = p.TigeraOperator
 	}
 	return components
 }
