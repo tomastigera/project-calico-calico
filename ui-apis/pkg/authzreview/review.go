@@ -4,12 +4,14 @@ package authzreview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
@@ -56,11 +58,11 @@ type Reviewer interface {
 
 type csFactoryContextKey struct{}
 
-// ContextWithClientSetFactory returns a new context carrying the given ClientSetFactory. When
-// the reviewer falls back to the AuthorizationReview CRD for managed clusters, it prefers this
-// factory over the static one configured at construction time. This allows callers (e.g., the
-// dashboard in Calico Cloud mode) to supply a per-request factory that authenticates as the end
-// user rather than the application service account.
+// ContextWithClientSetFactory returns a new context carrying the given ClientSetFactory.
+// When present, the reviewer prefers this factory over the static one configured at
+// construction time for all managed cluster operations. This allows callers (e.g., the
+// dashboard in Calico Cloud mode) to supply a per-request factory that authenticates as
+// the end user rather than the application service account.
 func ContextWithClientSetFactory(ctx context.Context, f lmak8s.ClientSetFactory) context.Context {
 	return context.WithValue(ctx, csFactoryContextKey{}, f)
 }
@@ -104,12 +106,21 @@ func (r *reviewer) Review(
 		return permissionsToStatus(results).AuthorizedResourceVerbs, nil
 	}
 
-	// Managed cluster: need a ClientSetFactory.
-	if r.csFactory == nil {
+	// Managed cluster: need a ClientSetFactory. Prefer a per-request factory from
+	// the context if one was provided. In Calico Cloud, the dashboard's per-request
+	// factory authenticates as the end user (via JWT bearer token), which is required
+	// because voltron/guardian won't allow the application SA to impersonate through
+	// the tunnel. If no context factory is available, fall back to the static
+	// application-identity factory.
+	csFactory := clientSetFactoryFromContext(ctx)
+	if csFactory == nil {
+		csFactory = r.csFactory
+	}
+	if csFactory == nil {
 		return nil, fmt.Errorf("cannot review managed cluster %q: no ClientSetFactory configured", cluster)
 	}
 
-	cs, err := r.csFactory.NewClientSetForApplication(cluster)
+	cs, err := csFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client set for cluster %q: %w", cluster, err)
 	}
@@ -120,20 +131,15 @@ func (r *reviewer) Review(
 		return permissionsToStatus(results).AuthorizedResourceVerbs, nil
 	}
 
-	// If the error is forbidden or unauthorized, fall back to the API server implementation (older cluster).
-	if kerrors.IsForbidden(err) || kerrors.IsUnauthorized(err) {
-		log.WithError(err).WithField("cluster", cluster).Info("Calculator returned permission error, falling back to API server implementation")
+	// If the error is forbidden or unauthorized, fall back to the AuthorizationReview
+	// CRD (older cluster that doesn't grant RBAC list access). We use
+	// aggregateContains because the calculator wraps errors in a utilerrors.Aggregate,
+	// which supports errors.Is() but not errors.As(). The kerrors.IsX helpers use
+	// errors.As() internally, so they won't match through an aggregate directly.
+	if aggregateContains(err, kerrors.IsForbidden) || aggregateContains(err, kerrors.IsUnauthorized) {
+		log.WithError(err).WithField("cluster", cluster).Info("Calculator returned permission error, falling back to AuthorizationReview CRD")
 
-		// Prefer a per-request factory from the context if one was provided. In Calico Cloud,
-		// the dashboard's per-request factory authenticates as the end user (via JWT bearer
-		// token), which is required because voltron/guardian won't allow the application SA
-		// to impersonate or be impersonated through the tunnel. If no context factory is
-		// available, fall back to the static application-identity factory.
-		fallbackFactory := clientSetFactoryFromContext(ctx)
-		if fallbackFactory == nil {
-			fallbackFactory = r.csFactory
-		}
-		fallbackCS, csErr := fallbackFactory.NewClientSetForApplication(cluster)
+		fallbackCS, csErr := csFactory.NewClientSetForApplication(cluster)
 		if csErr != nil {
 			return nil, fmt.Errorf("failed to create fallback client set for cluster %q: %w", cluster, csErr)
 		}
@@ -165,4 +171,23 @@ func (r *reviewer) ReviewForLogs(
 	cluster string,
 ) ([]v3.AuthorizedResourceVerbs, error) {
 	return r.Review(ctx, usr, cluster, authReviewAttrListEndpoints)
+}
+
+// aggregateContains checks whether err (or any error within a utilerrors.Aggregate)
+// matches the given predicate. This is needed because utilerrors.Aggregate supports
+// errors.Is() but not errors.As(), so kerrors.IsForbidden() and similar helpers that
+// rely on errors.As() internally won't match through an aggregate.
+func aggregateContains(err error, predicate func(error) bool) bool {
+	if predicate(err) {
+		return true
+	}
+	var agg utilerrors.Aggregate
+	if errors.As(err, &agg) {
+		for _, e := range agg.Errors() {
+			if aggregateContains(e, predicate) {
+				return true
+			}
+		}
+	}
+	return false
 }
