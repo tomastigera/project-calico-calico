@@ -101,11 +101,17 @@ var (
 	}
 )
 
-var skipRPMsFlag = &cli.BoolFlag{
-	Name:    "skip-rpms",
-	Usage:   "Skip building or publishing RPMs",
-	Sources: cli.EnvVars("SKIP_RPMS"),
+var skipNonClusterPackagesFlag = &cli.BoolFlag{
+	Name:    "skip-non-cluster-packages",
+	Usage:   "Skip building or publishing non-cluster host packages",
+	Sources: cli.EnvVars("SKIP_SKIP_NON_CLUSTER_PACKAGES"),
 	Value:   false,
+}
+
+var gpgKeyIDFlag = &cli.StringFlag{
+	Name:    "gpg-key-id",
+	Usage:   "The GPG key ID to use for package signing",
+	Sources: cli.EnvVars("GPG_KEY_ID"),
 }
 
 var hashreleaseNameFlag = &cli.StringFlag{

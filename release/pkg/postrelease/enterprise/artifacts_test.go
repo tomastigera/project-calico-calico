@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,22 @@ import (
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
 
+var aptRepoExpectedFiles = []string{
+	"Contents-%s.gz",
+	"InRelease",
+	"Release",
+	"Release.gpg",
+	"main/Contents-%s.gz",
+	"main/binary-%s/Packages",
+	"main/binary-%s/Packages.gz",
+	"main/binary-%s/Release",
+}
+
+var (
+	fluentBitVersionKey = "FLUENT_BIT_VERSION"
+	fluentBitPath       = "fluent-bit"
+)
+
 func validateURL(t testing.TB, url, desc string) {
 	t.Helper()
 	resp, err := http.Head(url)
@@ -25,7 +42,7 @@ func validateURL(t testing.TB, url, desc string) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("could not access %s via %s: %v", desc, url, err)
+		t.Fatalf("could not access %s via %s: URL returned HTTP status code %d", desc, url, resp.StatusCode)
 	}
 	t.Logf("Successfully accessed %s at %s", desc, url)
 }
@@ -146,11 +163,37 @@ func resolveRPMVersion(t testing.TB, rpmVersion string) string {
 	t.Helper()
 
 	// hack/generate-package-version.sh
-	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-package-version.sh"), []string{repoRootDir, "rpm", rpmVersion})
+	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-package-version.sh"), []string{repoRootDir, "rpm", "", rpmVersion})
 	if err != nil {
 		t.Fatalf("failed to determine full RPM version for %s: %v", rpmVersion, err)
 	}
 	return strings.TrimSpace(v)
+}
+
+func fetchFluentBitVersion(t testing.TB) string {
+	t.Helper()
+
+	args := []string{"-Po", fmt.Sprintf(`%s.*=\K(.*)`, fluentBitVersionKey), "Makefile"}
+	out, err := command.RunInDir(filepath.Join(repoRootDir, fluentBitPath), "grep", args)
+	if err != nil {
+		t.Fatal(fmt.Errorf("failed to determine fluent-bit version version from %s/Makefile: %w", fluentBitPath, err))
+	}
+	return out
+}
+
+// resolveDebVersion uses the generate-package-version.sh script to figure out what version should
+// be in the target filename. Note that we have to call url.QueryEscape, and not url.PathEscape
+// as one might normally assume, in order for S3/CloudFront to accept the URL, as some path-safe
+// characters, such as `+`, may be in the filename but S3 will not accept them.
+func resolveDEBVersion(t testing.TB, debVersion, debComponent string) string {
+	t.Helper()
+
+	// hack/generate-package-version.sh
+	v, err := command.RunInDir(repoRootDir, filepath.Join(repoRootDir, "hack", "generate-package-version.sh"), []string{repoRootDir, "deb", debComponent, debVersion})
+	if err != nil {
+		t.Fatalf("failed to determine full debian package version for %s: %v", debComponent, err)
+	}
+	return url.QueryEscape(strings.TrimSpace(v))
 }
 
 func determineRPMVersion(t testing.TB, dir, key string) string {
@@ -170,7 +213,7 @@ func TestRPMS(t *testing.T) {
 	ver := version.New(releaseVersion)
 	stream := ver.PrimaryStream()
 	selinuxVersion := determineRPMVersion(t, "selinux", "CALICO_SELINUX_VERSION")
-	fluentBitVersion := determineRPMVersion(t, "fluent-bit", "FLUENT_BIT_VERSION")
+	fluentBitVersion := determineRPMVersion(t, "fluent-bit", fluentBitVersionKey)
 
 	t.Run("RHEL yum/dnf repo file", func(t *testing.T) {
 		t.Parallel()
@@ -199,4 +242,57 @@ func TestRPMS(t *testing.T) {
 			validateURL(t, fmt.Sprintf("%s/rpms/%s/rhel%s/RPMS/x86_64/calico-fluent-bit-%s-1.el%s.x86_64.rpm", artifactsBaseURL, stream, rhel, resolveRPMVersion(t, fluentBitVersion), rhel), fmt.Sprintf("calico-fluent-bit RPM for RHEL %s", rhel))
 		}
 	})
+}
+
+func TestDEBS(t *testing.T) {
+	checkVersion(t, releaseVersion)
+
+	ver := version.New(releaseVersion)
+	stream := ver.PrimaryStream()
+	fluentBitVersion := fetchFluentBitVersion(t)
+
+	t.Run("Apt sources file", func(t *testing.T) {
+		t.Parallel()
+		for _, component := range calico.NonClusterHostDebComponents {
+			validateURL(t, fmt.Sprintf("%s/debs/%s/%s.sources", artifactsBaseURL, stream, component), fmt.Sprintf("apt sources file for component %s", component))
+		}
+	})
+
+	t.Run("Apt repository structure", func(t *testing.T) {
+		t.Parallel()
+		for _, component := range calico.NonClusterHostDebComponents {
+			baseURL := fmt.Sprintf("%s/debs/%s/dists/%s", artifactsBaseURL, stream, component)
+			for _, arch := range calico.NonClusterHostArchs {
+				for _, fileName := range aptRepoExpectedFiles {
+					if strings.Contains(fileName, "%s") {
+						fileName = fmt.Sprintf(fileName, arch)
+					}
+					url := fmt.Sprintf("%s/%s", baseURL, fileName)
+					validateURL(t, url, fmt.Sprintf("apt repo file %s", component))
+				}
+			}
+		}
+	})
+
+	t.Run("Uploaded calico-node", func(t *testing.T) {
+		t.Parallel()
+		for _, arch := range calico.NonClusterHostArchs {
+			for _, component := range calico.NonClusterHostDebComponents {
+				packageVersion := resolveDEBVersion(t, releaseVersion, component)
+				URL := fmt.Sprintf("%s/debs/%s/pool/main/c/calico-node/calico-node_%s_%s.deb", artifactsBaseURL, stream, packageVersion, arch)
+				validateURL(t, URL, fmt.Sprintf("calico-node deb for %s on %s", component, arch))
+			}
+		}
+	})
+	t.Run("Uploaded calico-fluent-bit", func(t *testing.T) {
+		t.Parallel()
+		for _, arch := range calico.NonClusterHostArchs {
+			for _, component := range calico.NonClusterHostDebComponents {
+				fluentBitVersion := resolveDEBVersion(t, fluentBitVersion, component)
+				URL := fmt.Sprintf("%s/debs/%s/pool/main/c/calico-fluent-bit/calico-fluent-bit_%s_%s.deb", artifactsBaseURL, stream, fluentBitVersion, arch)
+				validateURL(t, URL, fmt.Sprintf("calico-fluent-bit deb for %s on %s", component, arch))
+			}
+		}
+	})
+
 }

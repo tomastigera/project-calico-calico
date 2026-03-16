@@ -172,11 +172,13 @@ type EnteprisePinnedVersions struct {
 func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, error) {
 	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
+	logrus.Info("Getting product branch")
 	productBranch, err := utils.GitBranch(p.RootDir)
 	if err != nil {
 		return nil, err
 	}
 	p.productBranch = productBranch
+	logrus.Info("Getting product version")
 	productVer, err := command.GitVersion(p.RootDir, true)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to determine product git version")
@@ -184,14 +186,17 @@ func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, e
 	}
 	releaseName := fmt.Sprintf("%s-%s-%s", time.Now().Format("2006-01-02"), version.DeterminePublishStream(productBranch, productVer), RandomWord())
 	p.releaseName = strings.ReplaceAll(releaseName, ".", "-")
+	logrus.Info("Getting Operator version")
 	operatorVer, err := p.OperatorCfg.GitVersion()
 	if err != nil {
 		return nil, err
 	}
+	logrus.Info("Getting manager version")
 	managerVer, err := p.ManagerCfg.GitVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine manager git version: %w", err)
 	}
+	logrus.Info("Getting Calico branch")
 	calicoVer, err := utils.DetermineCalicoVersion(p.RootDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine calico version: %w", err)
@@ -199,6 +204,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, e
 	parts := strings.Split(calicoVer, ".")
 	p.calicoStream = fmt.Sprintf("%s.%s", parts[0], parts[1])
 
+	logrus.Info("Generating pinned versions file")
 	p.versionData = version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
 	if err := generateEnterprisePinnedVersionFile(p); err != nil {
 		return nil, err

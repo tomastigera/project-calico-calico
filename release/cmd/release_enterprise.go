@@ -113,8 +113,9 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 		skipReleaseVersionCheckFlag,
 		skipBranchCheckFlag,
 		skipValidationFlag,
-		skipRPMsFlag,
+		skipNonClusterPackagesFlag,
 		awsProfileFlag,
+		gpgKeyIDFlag,
 	}
 
 	return &cli.Command{
@@ -161,7 +162,8 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithChartVersion(versions.HelmRelease),
 				calico.WithDryRun(false),
-				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
+				calico.WithNonClusterHostPackages(!c.Bool(skipNonClusterPackagesFlag.Name)),
+				calico.WithGPGKeyID(c.String(gpgKeyIDFlag.Name)),
 			}
 			if v := c.String(awsProfileFlag.Name); v != "" {
 				opts = append(opts, calico.WithAWSProfile(v))
@@ -311,6 +313,7 @@ func enterpriseReleasePublishCommand(cfg *Config) *cli.Command {
 				calico.WithPublishWindowsArchive(c.Bool(publishWindowsArchiveFlag.Name)),
 				calico.WithPublishToS3(c.Bool(publishToS3Flag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
+				calico.WithGPGKeyID(c.String(gpgKeyIDFlag.Name)),
 			}
 			if hashrelRegistry != "" {
 				entOpts = append(entOpts, calico.WithEnterpriseHashreleaseRegistry(hashrelRegistry))

@@ -61,9 +61,16 @@ func WithPublishToS3(publish bool) EnterpriseOption {
 	}
 }
 
-func WithRPMs(rpm bool) EnterpriseOption {
+func WithNonClusterHostPackages(nchPackages bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
-		r.rpm = rpm
+		r.nchPackages = nchPackages
+		return nil
+	}
+}
+
+func WithGPGKeyID(gpgKeyID string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.gpgKeyID = gpgKeyID
 		return nil
 	}
 }

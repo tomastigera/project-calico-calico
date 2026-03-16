@@ -25,14 +25,16 @@ global_job_config:
     # OIDC-related credentials
     - name: oidc-credentials-gcp-tigera-dev-ci
     - name: oidc-credentials-gcp-hashrelease-publish
+    # The GPG signing key for apt repositories
+    - name: marvin-release-signing-gpg
 
   prologue:
     commands:
       - chmod 0600 ~/.keys/*
       - ssh-add ~/.keys/*
 
-      # Install createrepo-c for RPMs
-      - sudo apt-get -qq update && sudo apt-get -qq install --no-install-recommends createrepo-c
+      # Install createrepo-c for RPMs and reprepro for debs
+      - install-package createrepo-c reprepro gpg
 
       # Checkout the code and unshallow it.
       - checkout
@@ -51,9 +53,14 @@ global_job_config:
             --credential-source-type="text"
       - gcloud auth login --quiet --cred-file="${GOOGLE_APPLICATION_CREDENTIALS}"
       - gcloud config set project --quiet "${OIDC_GCP_PROJECT_NAME}"
+
       # Configure docker to use the gcloud credential helper
       - gcloud auth configure-docker --quiet
       - gcloud auth configure-docker --quiet us-central1-docker.pkg.dev
+
+      # Import our release GPG key
+      - gpg --import /home/semaphore/secrets/marvin-release-key.gpg
+      - export GPG_KEY_ID=${MARVIN_GPG_KEY_ID}
 
 blocks:
   - name: Publish hashrelease
