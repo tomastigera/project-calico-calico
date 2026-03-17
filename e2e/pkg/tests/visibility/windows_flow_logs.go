@@ -65,16 +65,22 @@ var _ = describe.CalicoDescribe(
 			checker = conncheck.NewConnectionTester(f)
 
 			// Save original Felix config and apply test-specific settings.
+			// Use Eventually to retry on conflict (the felixconfig may be modified
+			// by other controllers between our Get and Update).
 			originalFC := v3.NewFelixConfiguration()
 			err = cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
 			Expect(err).NotTo(HaveOccurred())
 
-			testFC := originalFC.DeepCopy()
-			testFC.Spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 1 * time.Second}
-			testFC.Spec.FlowLogsFileAggregationKindForAllowed = ptr.To(0)
-			testFC.Spec.FlowLogsDynamicAggregationEnabled = ptr.To(false)
-			err = cli.Update(ctx, testFC)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				fc := v3.NewFelixConfiguration()
+				if err := cli.Get(ctx, types.NamespacedName{Name: "default"}, fc); err != nil {
+					return err
+				}
+				fc.Spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 1 * time.Second}
+				fc.Spec.FlowLogsFileAggregationKindForAllowed = ptr.To(0)
+				fc.Spec.FlowLogsDynamicAggregationEnabled = ptr.To(false)
+				return cli.Update(ctx, fc)
+			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 			// The FelixConfiguration changes above trigger a Felix restart.
 			// Sleep to allow Felix to begin restarting, then wait for the
@@ -87,14 +93,16 @@ var _ = describe.CalicoDescribe(
 				"--timeout=120s")
 
 			DeferCleanup(func() {
-				fc := v3.NewFelixConfiguration()
-				err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc)
-				Expect(err).NotTo(HaveOccurred())
-				fc.Spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
-				fc.Spec.FlowLogsFileAggregationKindForAllowed = originalFC.Spec.FlowLogsFileAggregationKindForAllowed
-				fc.Spec.FlowLogsDynamicAggregationEnabled = originalFC.Spec.FlowLogsDynamicAggregationEnabled
-				err = cli.Update(context.Background(), fc)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					fc := v3.NewFelixConfiguration()
+					if err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc); err != nil {
+						return err
+					}
+					fc.Spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
+					fc.Spec.FlowLogsFileAggregationKindForAllowed = originalFC.Spec.FlowLogsFileAggregationKindForAllowed
+					fc.Spec.FlowLogsDynamicAggregationEnabled = originalFC.Spec.FlowLogsDynamicAggregationEnabled
+					return cli.Update(context.Background(), fc)
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
 			})
 		})
 
