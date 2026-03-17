@@ -7,6 +7,7 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -52,16 +53,16 @@ type RescheduleFunc func() error
 func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 	// Closed within runLoop
 	ch := make(chan struct{})
-	var started bool
+	var started atomic.Bool
 
 	initFunc := func() {
-		started = true
+		started.Store(true)
 	}
 	runFunc := func(ctx context.Context, f func(), period time.Duration, rescheduleFunc func(), reschedulePeriod time.Duration) error {
 		return runLoop(ctx, initFunc, f, period, ch, rescheduleFunc, reschedulePeriod)
 	}
 	rescheduleFunc := func() (err error) {
-		if !started {
+		if !started.Load() {
 			err = errors.New("RunFunc has not yet started")
 			return
 		}
@@ -90,11 +91,11 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 	// there may be a better way to implement this communication method.
 	defer close(rescheduleCh)
 
-	var done bool
+	var done atomic.Bool
 	cond := sync.NewCond(&sync.Mutex{})
 	// This ensures that the f() wait loop always terminates.
 	defer func() {
-		done = true
+		done.Store(true)
 		cond.L.Lock()
 		cond.Broadcast()
 		cond.L.Unlock()
@@ -103,11 +104,15 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 	initFunc()
 	go func() {
 		for {
-			if done {
+			if done.Load() {
 				return
 			}
 			f()
 			cond.L.Lock()
+			if done.Load() {
+				cond.L.Unlock()
+				return
+			}
 			cond.Wait()
 			cond.L.Unlock()
 		}
