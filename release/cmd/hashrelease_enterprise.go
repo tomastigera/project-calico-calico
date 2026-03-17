@@ -121,7 +121,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			productRegistries := c.StringSlice(registryFlag.Name)
 
 			// Build the operator
-			if err := pinnedversion.GenerateEnterpriseOperatorComponents(cfg.TmpDir, hashrel.Source); err != nil {
+			pinnedComponentsFile, err := pinnedversion.GenerateEnterpriseOperatorComponents(cfg.TmpDir, hashrel.Source)
+			if err != nil {
 				return fmt.Errorf("failed to generate enterprise operator components: %v", err)
 			}
 			operatorOpts := []operator.Option{
@@ -135,7 +136,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				operator.WithVersion(data.OperatorVersion()),
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
-				operator.WithCalicoVersion(data.ProductVersion()),
+				// Use the pinned components file instead of version as manager has a different version for hashrelease builds.
+				operator.WithPinnedComponents(pinnedComponentsFile),
 			}
 			if len(productRegistries) > 0 {
 				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
