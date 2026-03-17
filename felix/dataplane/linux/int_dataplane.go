@@ -679,7 +679,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
-	dp.liveMigrationMonitor = newLiveMigrationMonitor(config.LiveMigrationRouteConvergenceTime)
+	dp.liveMigrationMonitor = newLiveMigrationMonitor(config.LiveMigrationRouteConvergenceTime, config.IPAMClient)
 	dp.RegisterManager(dp.liveMigrationMonitor)
 
 	dp.ifaceMonitor.StateCallback = dp.onIfaceStateChange
