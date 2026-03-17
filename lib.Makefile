@@ -869,7 +869,7 @@ trigger-auto-pin-update-process-wrapped: create-pin-update-head trigger-pin-upda
 static-checks: $(LOCAL_CHECKS)
 	$(MAKE) golangci-lint
 
-LINT_ARGS ?= --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
+LINT_ARGS ?= --max-issues-per-linter 0 --max-same-issues 0 --timeout 15m
 
 .PHONY: golangci-lint
 golangci-lint: $(GENERATED_FILES)
