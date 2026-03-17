@@ -209,7 +209,7 @@ func (o *OperatorManager) PreBuildValidation() error {
 		errStack = errors.Join(errStack, fmt.Errorf("there are uncommitted changes in the repository, please commit or stash them"))
 	}
 	if o.isHashRelease {
-		if o.calicoVersion == "" || o.pinnedComponentsFile == "" {
+		if o.calicoVersion == "" && o.pinnedComponentsFile == "" {
 			errStack = errors.Join(errStack, errors.New("hashrelease requires either a calico version or the pinned components file to be specified"))
 		}
 		if o.calicoDir == "" {
