@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -59,7 +59,7 @@ type ReportData struct {
 
 func (r *ReportData) UID() string {
 	name := fmt.Sprintf("%s::%s::%s", r.ReportName, r.StartTime.Format(time.RFC3339), r.EndTime.Format(time.RFC3339))
-	id := uuid.NewV5(uuid.NamespaceURL, name) // V5 uuids are deterministic
+	id := uuid.NewSHA1(uuid.NameSpaceURL, []byte(name)) // V5 uuids are deterministic
 
 	// Encode the report name and report type name into the UID - we use this so that we can perform RBAC without
 	// needing to download the report.
