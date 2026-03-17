@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	uuid2 "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -91,7 +91,7 @@ func connectToNGINXAndGetSourceIP(
 	filePath string,
 	timeout string,
 ) string {
-	uuid := uuid2.NewV4().String()
+	uuid := uuid.NewString()
 	target := conncheck.NewDomainTarget(fmt.Sprintf("http://%s/%s?%s", extIP, filePath, uuid))
 	EventuallyWithOffset(2, func() error {
 		_, err := checker.Connect(cc, target)
