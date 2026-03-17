@@ -312,10 +312,10 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 
 // GenerateEnterpriseOperatorComponents generates the pinned_components.yaml for operator.
 // It also copies the generated file to the output directory if provided.
-func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
+func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (string, error) {
 	pinnedVersion, err := retrieveEnterprisePinnedVersion(srcDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	components := pinnedVersion.ImageComponents(false)
@@ -329,7 +329,7 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
 	operatorComponentsFile, err := os.Create(operatorComponentsFilePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = operatorComponentsFile.Close() }()
 
@@ -338,14 +338,16 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
 	defer func() { _ = enc.Close() }()
 
 	if err = enc.Encode(pinnedVersion); err != nil {
-		return fmt.Errorf("encode operator components file: %w", err)
+		return "", fmt.Errorf("encode operator components file: %w", err)
 	}
-	if outputDir != "" {
-		if err := utils.CopyFile(operatorComponentsFilePath, filepath.Join(outputDir, operatorComponentsFileName)); err != nil {
-			return fmt.Errorf("copy operator components file: %w", err)
-		}
+	if outputDir == "" {
+		return operatorComponentsFilePath, nil
 	}
-	return nil
+	outFilePath := filepath.Join(outputDir, operatorComponentsFileName)
+	if err := utils.CopyFile(operatorComponentsFilePath, outFilePath); err != nil {
+		return "", fmt.Errorf("copy operator components file: %w", err)
+	}
+	return outFilePath, nil
 }
 
 // LoadEnterpriseHashrelease loads the hashrelease from the pinned version file.
