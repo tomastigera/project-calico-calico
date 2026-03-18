@@ -45,8 +45,8 @@ func TestOnDemand(t *testing.T) {
 		done.Store(true)
 	}()
 
-	enqueue(1)
 	wg.Add(1)
+	enqueue(1)
 	g.Eventually(func() int64 { return last.Load() }, 10*time.Second, 1*time.Second).Should(Equal(int64(1)))
 
 	// wait for wake.Wait() in run() to be called before adding items to enqueue and sending wake.Signal()

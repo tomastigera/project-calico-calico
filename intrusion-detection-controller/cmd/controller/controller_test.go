@@ -123,12 +123,9 @@ func TestLicenseLoop_ControllersKeepRunningOnLicenseExpiry(t *testing.T) {
 	lc.setFeature(false)
 	licenseChangedChan <- struct{}{}
 
-	// Give the loop time to process the license change.
-	time.Sleep(100 * time.Millisecond)
-
 	// Controller must still be running — NOT closed.
-	g.Expect(c1.running.Load()).Should(BeTrue(), "controller should still be running after license expiry")
-	g.Expect(c1.closed.Load()).Should(BeFalse(), "controller should not be closed on license expiry")
+	g.Consistently(func() bool { return c1.running.Load() }, 200*time.Millisecond, 10*time.Millisecond).Should(BeTrue(), "controller should still be running after license expiry")
+	g.Consistently(func() bool { return c1.closed.Load() }, 200*time.Millisecond, 10*time.Millisecond).Should(BeFalse(), "controller should not be closed on license expiry")
 
 	// Now shutdown — this is the only time Close() should be called.
 	close(shutdownChan)
@@ -160,9 +157,9 @@ func TestLicenseLoop_NoLicenseNoStart(t *testing.T) {
 		close(done)
 	}()
 
-	// Send a license change (still no license) and then shutdown.
+	// Send a license change (still no license); controller should stay stopped.
 	licenseChangedChan <- struct{}{}
-	time.Sleep(50 * time.Millisecond)
+	g.Consistently(func() bool { return c1.running.Load() }, 200*time.Millisecond, 10*time.Millisecond).Should(BeFalse())
 	close(shutdownChan)
 
 	g.Eventually(done, 5*time.Second, 10*time.Millisecond).Should(BeClosed())
@@ -197,8 +194,7 @@ func TestLicenseLoop_LateArrivalLicense(t *testing.T) {
 	}()
 
 	// No license yet — controller should not be running.
-	time.Sleep(50 * time.Millisecond)
-	g.Expect(c1.running.Load()).Should(BeFalse())
+	g.Consistently(func() bool { return c1.running.Load() }, 200*time.Millisecond, 10*time.Millisecond).Should(BeFalse())
 
 	// License arrives.
 	lc.setFeature(true)
@@ -238,11 +234,11 @@ func TestLicenseLoop_ControllersStartedOnlyOnce(t *testing.T) {
 	// Wait for initial start.
 	g.Eventually(func() bool { return c1.running.Load() }, 5*time.Second, 10*time.Millisecond).Should(BeTrue())
 
-	// Send several license-changed signals.
+	// Send several license-changed signals; Run() should not be called again.
 	for range 5 {
 		licenseChangedChan <- struct{}{}
 	}
-	time.Sleep(100 * time.Millisecond)
+	g.Consistently(func() int32 { return c1.runCount.Load() }, 200*time.Millisecond, 10*time.Millisecond).Should(Equal(int32(1)))
 
 	close(shutdownChan)
 	g.Eventually(done, 5*time.Second, 10*time.Millisecond).Should(BeClosed())
