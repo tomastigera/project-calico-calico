@@ -14,7 +14,7 @@
 
 ARG CALICO_BASE
 
-# FIXME(jiawei): iptables package is dropped in UBI 10. We can move to UBI 10
+# FIXME(jiawei): iptables package is dropped in RHEL 10. We can move to RHEL 10
 # once we have confirmed that iptables is no longer required.
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS builder
 
