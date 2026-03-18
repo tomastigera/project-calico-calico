@@ -106,6 +106,7 @@ local:licensing/client/features
 local:pkg/buildinfo
 local:webhooks/cmd
 local:webhooks/pkg/auditlogs
+local:webhooks/pkg/clusterinfo
 local:webhooks/pkg/managedcluster
 local:webhooks/pkg/rbac
 local:webhooks/pkg/uisettings
