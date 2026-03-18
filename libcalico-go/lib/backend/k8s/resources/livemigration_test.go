@@ -147,7 +147,7 @@ var _ = Describe("LiveMigrationClient", func() {
 			Expect(kvp).NotTo(BeNil())
 			lm := kvp.Value.(*internalapi.LiveMigration)
 			Expect(lm.Spec.Source).To(BeNil())
-			Expect(lm.Spec.Target).NotTo(BeNil())
+			Expect(lm.Spec.Destination).NotTo(BeNil())
 		})
 	})
 
@@ -343,7 +343,7 @@ var _ = Describe("LiveMigrationClient", func() {
 				lm := event.New.Value.(*internalapi.LiveMigration)
 				Expect(lm.Name).To(Equal("vmim-sched"))
 				Expect(lm.Spec.Source).To(BeNil())
-				Expect(lm.Spec.Target).NotTo(BeNil())
+				Expect(lm.Spec.Destination).NotTo(BeNil())
 			case <-timer.C:
 				Fail("expected a watch event for Scheduling phase VMIM")
 			}
