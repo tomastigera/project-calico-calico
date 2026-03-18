@@ -92,7 +92,7 @@ blocks:
         - name: banzai-secrets
       prologue:
         commands:
-          - artifact pull workflow _output/hashrelease/hashrelease.yaml -d release/_output/hashrelease/hashrelease.yaml
+          - artifact pull workflow hashrelease.yaml -d release/_output/hashrelease/hashrelease.yaml
       jobs:
         - name: "Run hashrelease enterprise smoke tests"
           execution_time_limit:
