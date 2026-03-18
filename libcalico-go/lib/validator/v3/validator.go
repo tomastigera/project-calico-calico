@@ -398,6 +398,7 @@ func init() {
 	registerStructValidator(validate, validateBGPPeerSpec, api.BGPPeerSpec{})
 	registerStructValidator(validate, validateBGPFilterRuleV4, api.BGPFilterRuleV4{})
 	registerStructValidator(validate, validateBGPFilterRuleV6, api.BGPFilterRuleV6{})
+	registerStructValidator(validate, validateBGPFilterOperation, api.BGPFilterOperation{})
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
 	registerStructValidator(validate, validateStagedNetworkPolicy, api.StagedNetworkPolicy{})
@@ -2187,6 +2188,24 @@ func validateEgressGatewayPolicy(structLevel validator.StructLevel) {
 	if noOp {
 		structLevel.ReportError(reflect.ValueOf(egwp.Rules), "Rules", "",
 			reason("No destination or gateway is set in any rule of the egress gateway policy."), "")
+	}
+}
+
+func validateBGPFilterOperation(structLevel validator.StructLevel) {
+	op := structLevel.Current().Interface().(api.BGPFilterOperation)
+	count := 0
+	if op.AddCommunity != nil {
+		count++
+	}
+	if op.PrependASPath != nil {
+		count++
+	}
+	if op.SetPriority != nil {
+		count++
+	}
+	if count != 1 {
+		structLevel.ReportError(op, "BGPFilterOperation", "",
+			reason("exactly one operation must be set"), "")
 	}
 }
 
