@@ -70,7 +70,7 @@ blocks:
         - name: Build and publish hashrelease
           commands:
             - make hashrelease
-            - artifact push workflow _output/hashrelease/hashrelease.yaml
+            - artifact push workflow _output/hashrelease/hashrelease.yaml -d hashrelease.yaml
       prologue:
         commands:
           - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
