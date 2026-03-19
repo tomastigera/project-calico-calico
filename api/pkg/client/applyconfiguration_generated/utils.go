@@ -58,14 +58,24 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &projectcalicov3.BGPDaemonStatusApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilter"):
 		return &projectcalicov3.BGPFilterApplyConfiguration{}
+	case v3.SchemeGroupVersion.WithKind("BGPFilterAddCommunity"):
+		return &projectcalicov3.BGPFilterAddCommunityApplyConfiguration{}
+	case v3.SchemeGroupVersion.WithKind("BGPFilterCommunityMatch"):
+		return &projectcalicov3.BGPFilterCommunityMatchApplyConfiguration{}
+	case v3.SchemeGroupVersion.WithKind("BGPFilterOperation"):
+		return &projectcalicov3.BGPFilterOperationApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilterPrefixLengthV4"):
 		return &projectcalicov3.BGPFilterPrefixLengthV4ApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilterPrefixLengthV6"):
 		return &projectcalicov3.BGPFilterPrefixLengthV6ApplyConfiguration{}
+	case v3.SchemeGroupVersion.WithKind("BGPFilterPrependASPath"):
+		return &projectcalicov3.BGPFilterPrependASPathApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilterRuleV4"):
 		return &projectcalicov3.BGPFilterRuleV4ApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilterRuleV6"):
 		return &projectcalicov3.BGPFilterRuleV6ApplyConfiguration{}
+	case v3.SchemeGroupVersion.WithKind("BGPFilterSetPriority"):
+		return &projectcalicov3.BGPFilterSetPriorityApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPFilterSpec"):
 		return &projectcalicov3.BGPFilterSpecApplyConfiguration{}
 	case v3.SchemeGroupVersion.WithKind("BGPPassword"):
