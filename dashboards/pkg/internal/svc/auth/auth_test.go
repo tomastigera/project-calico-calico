@@ -28,7 +28,7 @@ func TestAuthService(t *testing.T) {
 	logger := logging.New("TestAuthService")
 
 	newSubject := func(t *testing.T, cfg *config.Config, dexOptions ...lmaauth.DexOption) (*AuthService, *rsa.PrivateKey, *k8sfake.Clientset) {
-		fakeClient := k8sfake.NewClientset()
+		fakeClient := k8sfake.NewSimpleClientset() //nolint:staticcheck // NewClientset doesn't support TokenReview
 
 		jwtToken, err := jwt.NewBuilder().Issuer("fake-issuer").Build()
 		require.NoError(t, err)
