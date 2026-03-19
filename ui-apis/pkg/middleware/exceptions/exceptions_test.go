@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	applyconfigv3 "github.com/tigera/api/pkg/client/applyconfiguration_generated/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -83,6 +84,14 @@ func (f *FakeAlertExceptions) Watch(ctx context.Context, opts metav1.ListOptions
 }
 
 func (f *FakeAlertExceptions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v3.AlertException, err error) {
+	return nil, nil
+}
+
+func (f *FakeAlertExceptions) Apply(ctx context.Context, alertException *applyconfigv3.AlertExceptionApplyConfiguration, opts metav1.ApplyOptions) (*v3.AlertException, error) {
+	return nil, nil
+}
+
+func (f *FakeAlertExceptions) ApplyStatus(ctx context.Context, alertException *applyconfigv3.AlertExceptionApplyConfiguration, opts metav1.ApplyOptions) (*v3.AlertException, error) {
 	return nil, nil
 }
 
