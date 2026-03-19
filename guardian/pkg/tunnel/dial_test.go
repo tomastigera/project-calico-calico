@@ -32,13 +32,11 @@ import (
 	"github.com/projectcalico/calico/guardian/test/utils"
 )
 
-// handleConnection accepts a connection from the listener, sets up a yamux session,
-// reads a message from the client, and writes a response. Errors are reported via
-// errCh rather than calling Expect() (which would panic from a non-test goroutine).
-// doneCh is closed when the function completes all its work.
-func handleConnection(t *testing.T, listener net.Listener, errCh chan<- error, doneCh chan<- struct{}) {
-	defer close(doneCh)
-
+// handleConnection accepts a connection, sets up a yamux session, reads a
+// message from the client, writes a response, then waits for clientDoneCh
+// before returning. This ensures the server doesn't tear down its session
+// while the client is still reading.
+func handleConnection(t *testing.T, listener net.Listener, errCh chan<- error, clientDoneCh <-chan struct{}) {
 	conn, err := listener.Accept()
 	if err != nil {
 		errCh <- fmt.Errorf("Accept: %v", err)
@@ -79,6 +77,10 @@ func handleConnection(t *testing.T, listener net.Listener, errCh chan<- error, d
 		errCh <- fmt.Errorf("stream.Write: %v", err)
 		return
 	}
+
+	// Wait for the client to finish before returning, so our deferred
+	// session/stream/conn close doesn't race with the client's read.
+	<-clientDoneCh
 }
 
 func TestDial(t *testing.T) {
@@ -95,7 +97,7 @@ func TestDial(t *testing.T) {
 		t.Cleanup(func() { closeOnce.Do(func() { close(clientDoneCh) }) })
 		go handleConnection(t, listener, errCh, clientDoneCh)
 
-		dialer, err := tunnel.NewTLSSessionDialer(listener.Addr().String(), nil)
+		dialer, err := tunnel.NewTLSSessionDialer(listener.Addr().String(), nil, tunnel.WithDialerKeepAliveSettings(false, time.Second))
 		Expect(err).NotTo(HaveOccurred())
 
 		assertExpectations(t, dialer, clientDoneCh, &closeOnce)
@@ -139,7 +141,7 @@ func TestDial(t *testing.T) {
 
 		dialer, err := tunnel.NewTLSSessionDialer(listener.Addr().String(), &tls.Config{
 			RootCAs: certPool,
-		})
+		}, tunnel.WithDialerKeepAliveSettings(false, time.Second))
 		Expect(err).NotTo(HaveOccurred())
 		assertExpectations(t, dialer, clientDoneCh, &closeOnce)
 

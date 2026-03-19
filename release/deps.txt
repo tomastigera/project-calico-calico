@@ -96,6 +96,7 @@ gopkg.in/yaml.v3 v3.0.1
 
 local:libcalico-go/lib/logutils
 local:release/cmd
+local:release/internal/aptrepo
 local:release/internal/ci
 local:release/internal/command
 local:release/internal/hashreleaseserver

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ var (
 	defaultLogSeverity        = "Info"
 	globalFelixConfigName     = "default"
 	felixNodeConfigNamePrefix = "node."
+	globalBGPConfigName       = "default"
 )
 
 type runConf struct {
@@ -1282,9 +1283,16 @@ func checkConflictingNodes(ctx context.Context, client client.Interface, node *i
 	return
 }
 
-// ensureDefaultConfig ensures all of the required default settings are
-// configured.
-func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c client.Interface, node *internalapi.Node, osType string, kubeadmConfig, rancherState *v1.ConfigMap) error {
+// ensureDefaultConfig ensures all of the required default settings are configured.
+func ensureDefaultConfig(
+	ctx context.Context,
+	cfg *apiconfig.CalicoAPIConfig,
+	c client.Interface,
+	node *internalapi.Node,
+	osType string,
+	kubeadmConfig,
+	rancherState *v1.ConfigMap,
+) error {
 	// Ensure the ClusterInformation is populated.
 	// Get the ClusterType from ENV var. This is set from the manifest.
 	clusterType := os.Getenv("CLUSTER_TYPE")
@@ -1418,6 +1426,33 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 		}
 	}
 
+	return ensureDefaultBGPConfigExists(ctx, c)
+}
+
+func ensureDefaultBGPConfigExists(ctx context.Context, c client.Interface) error {
+	_, err := c.BGPConfigurations().Get(ctx, globalBGPConfigName, options.GetOptions{})
+	if err == nil {
+		log.Debug("Default BGPConfig exists.")
+		return nil
+	}
+
+	_, ok := err.(cerrors.ErrorResourceDoesNotExist)
+	if !ok {
+		log.WithError(err).WithField("BGPConfig", globalBGPConfigName).Errorf("Error getting global BGPConfig.")
+		return err
+	}
+
+	newBGPConf := api.NewBGPConfiguration()
+	newBGPConf.Name = globalBGPConfigName
+	_, err = c.BGPConfigurations().Create(ctx, newBGPConf, options.SetOptions{})
+	if err != nil {
+		if conflict, exists := err.(cerrors.ErrorResourceAlreadyExists); exists {
+			log.Infof("Ignoring conflict when setting value %s", conflict.Identifier)
+		} else {
+			log.WithError(err).WithField("BGPConfig", newBGPConf).Errorf("Error creating default BGPConfiguration.")
+			return err
+		}
+	}
 	return nil
 }
 

@@ -9,7 +9,6 @@ github.com/cenkalti/backoff/v5 v5.0.3
 github.com/cespare/xxhash/v2 v2.3.0
 github.com/coreos/go-oidc v2.4.0+incompatible
 github.com/coreos/go-semver v0.3.1
-github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.6.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/emicklei/go-restful v2.15.0+incompatible
@@ -120,13 +119,17 @@ local:libcalico-go/lib/backend/model
 local:libcalico-go/lib/errors
 local:libcalico-go/lib/json
 local:libcalico-go/lib/logutils
+local:libcalico-go/lib/metricsserver
 local:libcalico-go/lib/names
 local:libcalico-go/lib/namespace
 local:libcalico-go/lib/net
+local:libcalico-go/lib/winutils
 local:lma/pkg/auth
 local:lma/pkg/cache
 local:lma/pkg/k8s
 local:lma/pkg/logutils
+local:node/pkg/bgp
+local:node/pkg/metrics
 local:pkg/buildinfo
 local:pkg/nonclusterhost
 local:voltron/cmd/guardian

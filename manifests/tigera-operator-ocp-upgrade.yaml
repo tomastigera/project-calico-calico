@@ -454,6 +454,7 @@ rules:
       - projectcalico.org
     resources:
       - felixconfigurations
+      - bgpconfigurations
       - ippools
     verbs:
       - create
@@ -625,6 +626,19 @@ rules:
       - admissionregistration.k8s.io
     resources:
       - validatingwebhookconfigurations
+    verbs:
+      - create
+      - update
+      - delete
+      - get
+      - list
+      - watch
+  # The operator manages MutatingAdmissionPolicy resources for CRD defaulting (k8s 1.32+).
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingadmissionpolicies
+      - mutatingadmissionpolicybindings
     verbs:
       - create
       - update
@@ -1003,6 +1017,16 @@ rules:
       - update
     resourceNames:
       - istiod
+  # The operator checks DatastoreMigration CRs at startup and during reconciliation
+  # to determine whether a v1-to-v3 CRD migration is in progress or complete.
+  - apiGroups:
+      - migration.projectcalico.org
+    resources:
+      - datastoremigrations
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

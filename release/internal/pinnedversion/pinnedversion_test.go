@@ -112,7 +112,6 @@ func TestImageComponents(t *testing.T) {
 			"whisker":                   {Version: "v3.31.0", Image: "whisker"},
 			"whisker-backend":           {Version: "v3.31.0", Image: "whisker-backend"},
 			"tigera/operator":           {Version: "v1.40.0-v3.31.0", Image: "tigera/operator", Registry: "docker.io"},
-			"tigera/operator-init":      {Version: "v1.40.0-v3.31.0", Image: "tigera/operator-init", Registry: "docker.io"},
 		}
 		actualComponents := p.ImageComponents(true)
 		if diff := cmp.Diff(expectedComponents, actualComponents); diff != "" {

@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -19,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.yaml.in/yaml/v3"
 
+	"github.com/projectcalico/calico/release/internal/aptrepo"
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
@@ -65,13 +65,15 @@ var (
 	}
 
 	//go:embed templates/yum.conf.gotmpl
-	rpmRepoTemplate string
-	RHELVersions    = []string{"8", "9"}
-	rpmDirs         = []string{
+	rpmRepoTemplate    string
+	RHELVersions       = []string{"8", "9"}
+	nonClusterHostDirs = []string{
 		"node",
 		"fluent-bit",
 		"selinux",
 	}
+	NonClusterHostArchs         = []string{"amd64"}
+	NonClusterHostDebComponents = []string{"trixie", "bookworm", "noble", "jammy"}
 )
 
 func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
@@ -134,10 +136,14 @@ type EnterpriseManager struct {
 	publishWindowsArchive bool
 	publishToS3           bool
 
-	rpm bool
+	nchPackages bool
 
 	windowsArchiveBucket string
 	baseArtifactsURL     string
+
+	// Variables for publishing apt packages
+	gpgKeyID string
+	aptRepo  *aptrepo.Repo
 }
 
 func (m *EnterpriseManager) helmChartVersion() string {
@@ -266,7 +272,7 @@ func (m *EnterpriseManager) PreBuildValidation() error {
 }
 
 func (m *EnterpriseManager) PreReleaseValidate() error {
-	// Cheeck that we are on a release branch
+	// Check that we are on a release branch
 	if m.validateBranch {
 		branch, err := utils.GitBranch(m.repoRoot)
 		if err != nil {
@@ -288,14 +294,14 @@ func (m *EnterpriseManager) PreReleaseValidate() error {
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "generate get-operator-crds check-dirty"); err != nil {
 		return fmt.Errorf("code generation error (try 'make generate' and/or 'make get-operator-crds' ?): %s", err)
 	}
-	if m.rpm {
-		createrepo := "createrepo_c"
-		if path, err := exec.LookPath(createrepo); err != nil {
-			logrus.WithError(err).Errorf("Error trying to find %s in PATH", createrepo)
-			return fmt.Errorf("unable to find %s in PATH", createrepo)
-		} else if path == "" {
-			logrus.Errorf("%s not found in PATH", createrepo)
-			return fmt.Errorf("%s not found in PATH", createrepo)
+	if m.nchPackages {
+		cmdErrors := errors.Join(
+			utils.CheckBinary("createrepo_c", "generating the RPM repository for non-cluster hosts"),
+			utils.CheckBinary("reprepro", "generating apt repositories for non-cluster hosts"),
+			utils.CheckBinary("gpg", "signing files for apt repositories"),
+		)
+		if cmdErrors != nil {
+			return fmt.Errorf("failed to locate some necessary command-line tools: %w", cmdErrors)
 		}
 	}
 
@@ -326,6 +332,7 @@ func (m *EnterpriseManager) generateManifests() error {
 }
 
 func (m *EnterpriseManager) Build() error {
+	logrus.Info("Beginning build phase")
 	// Make sure output directory exists.
 	if err := os.MkdirAll(m.uploadDir(), utils.DirPerms); err != nil {
 		return fmt.Errorf("failed to create output dir: %s", err)
@@ -338,9 +345,16 @@ func (m *EnterpriseManager) Build() error {
 	}
 
 	if m.validate {
+		logrus.Info("Validating git version")
 		if err := m.validateGitVersion(); err != nil {
 			return err
 		}
+
+		if m.gpgKeyID == "" && m.nchPackages {
+			return fmt.Errorf("building non-cluster host packages requires a GPG key to be specified")
+		}
+
+		logrus.Info("Running pre-build validation")
 		if err := m.PreBuildValidation(); err != nil {
 			return fmt.Errorf("failed pre-build validation: %s", err)
 		}
@@ -351,6 +365,7 @@ func (m *EnterpriseManager) Build() error {
 	}
 
 	if m.isHashRelease {
+		logrus.Info("Generating manifests")
 		if err := m.generateManifests(); err != nil {
 			return err
 		}
@@ -358,25 +373,36 @@ func (m *EnterpriseManager) Build() error {
 	}
 
 	// Build OCP bundle from manifests
+	logrus.Info("Building OCP bundle")
 	if err := m.buildOCPBundle(); err != nil {
 		return err
 	}
 
 	// Build binaries
+	logrus.Info("Building binaries")
 	if err := m.buildBinaries(); err != nil {
 		return err
 	}
 
+	// Build the RPM and Debian packages for non-cluster hosts.
+	logrus.Info("Building non-cluster host packages")
+	if err := m.buildNonClusterHostPackages(); err != nil {
+		return err
+	}
+
 	// Build release archives
+	logrus.Info("Building release archives")
 	if err := m.buildArchives(); err != nil {
 		return err
 	}
 
-	// Build the RPMs for non-cluster hosts.
-	if err := m.assembleRPMs(); err != nil {
+	// Assemble the RPM and Debian repositories
+	logrus.Info("Assembling non-cluster host repositories")
+	if err := m.assembleNonClusterHostRepositories(); err != nil {
 		return err
 	}
 
+	logrus.Info("Collecting artifacts for publishing")
 	if err := m.collectArtifacts(); err != nil {
 		return err
 	}
@@ -509,12 +535,13 @@ func (m *EnterpriseManager) buildArchives() error {
 func (m *EnterpriseManager) buildBinaries() error {
 	env := append(os.Environ(), fmt.Sprintf("VERSION=%s", m.calicoVersion))
 	for _, dir := range enterpriseBinaryReleaseDirs {
+		logrus.WithField("dir", dir).Info("Building binary")
 		out, err := m.makeInDirectoryWithOutput(filepath.Join(m.repoRoot, dir), "release-build-binaries", env...)
 		if err != nil {
 			logrus.Error(out)
 			return fmt.Errorf("failed to build %s: %s", dir, err)
 		}
-		logrus.Info(out)
+		logrus.Debug(out)
 	}
 	return nil
 }
@@ -553,19 +580,216 @@ func createRPMPackageList(dir, out string) error {
 	return nil
 }
 
-func (m *EnterpriseManager) assembleRPMs() error {
-	if !m.rpm {
-		logrus.Info("Skipping building RPMs")
+func (m *EnterpriseManager) buildNonClusterHostPackages() error {
+	if !m.nchPackages {
+		logrus.Info("Skipping building non-cluster host packages")
 		return nil
 	}
 
-	logrus.Info("Building RPMs")
-	outDir := filepath.Join(m.uploadDir(), "non-cluster-host-rpms")
+	logrus.Info("Building non-cluster host packages")
+
+	for _, dir := range nonClusterHostDirs {
+		logrus.WithField("package", dir).Info("Building non-cluster host packages")
+		if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, dir), "package"); err != nil {
+			logrus.WithError(err).Errorf("Failed to build non-cluster host packages for %s", dir)
+			return fmt.Errorf("building non-cluster host packages for %s failed: %w", dir, err)
+		}
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) assembleNonClusterHostRepositories() error {
+	if err := m.assembleRPMs(); err != nil {
+		logrus.WithError(err).Errorf("Failed to build RPM repository")
+		return fmt.Errorf("could not assemble RPM repository: %w", err)
+	}
+	if err := m.initAptConfig(); err != nil {
+		return fmt.Errorf("could not initialize apt configuration: %w", err)
+	}
+	if err := m.assembleAPTRelease(); err != nil {
+		logrus.WithError(err).Errorf("Failed to build apt repository")
+		return fmt.Errorf("could not assemble apt repository: %w", err)
+	}
+	return nil
+}
+
+// fetchAptRepoDB downloads the apt repository DB from the remote
+// and published
+func (m *EnterpriseManager) fetchAptRepoDB() error {
+	if m.isHashRelease {
+		return nil
+	}
+	// Get the metadata from the remote repo.
+	// This is needed as we publish based on vX.Y to ease upgrading.
+	ver := version.Version(m.calicoVersion)
+	repoDBURI := fmt.Sprintf("s3://%s/debs/%s/repodb/", m.s3Bucket, ver.PrimaryStream())
+	logrus.Infof("Downloading Apt repo metadata from %s", repoDBURI)
+	if err := m.s3Sync(repoDBURI, m.aptRepo.BaseDirectory+"/"); err != nil {
+		// Only log the error and continue as it likely means the metadata is not available.
+		logrus.WithError(err).Errorf("failed to download apt metadata for %s", ver.PrimaryStream())
+	}
+	return nil
+}
+
+// storeAptRepoDB syncs (uploads) our local apt database to S3 for later
+// access; note that we don't set the public read ACL! These files don't
+// need to be public (but it would be okay if they were).
+func (m *EnterpriseManager) storeAptRepoDB() error {
+	if m.isHashRelease {
+		return nil
+	}
+	ver := version.Version(m.calicoVersion)
+	repoDBURI := fmt.Sprintf("s3://%s/debs/%s/repodb/", m.s3Bucket, ver.PrimaryStream())
+	logrus.Infof("Uploading Apt repo metadata to %s", repoDBURI)
+	if err := m.s3Sync(m.aptRepo.BaseDirectory+"/", repoDBURI); err != nil {
+		return fmt.Errorf("failed to publish apt repo database: %w", err)
+	}
+	return nil
+}
+
+// initAptConfig creates the standard aptRepo configuration; we move it outside
+// of building so that we can access these values while publishing also.
+func (m *EnterpriseManager) initAptConfig() error {
+	// Don't do anything if we're already configured
+	if m.aptRepo != nil {
+		return nil
+	}
+	outDir := filepath.Join(m.uploadDir(), "debs")
+
+	ver := version.Version(m.calicoVersion)
+	var aptURLBase string
+	repoDescription := fmt.Sprintf("%s %s", utils.EnterpriseProductName, ver.PrimaryStream())
+	if m.isHashRelease {
+		repoDescription = fmt.Sprintf("%s hashrelease", repoDescription)
+	}
+
+	if m.isHashRelease {
+		aptURLBase = fmt.Sprintf("%s/debs", m.hashrelease.URL())
+	} else {
+		aptURLBase = fmt.Sprintf("%s/debs/%s", m.baseArtifactsURL, ver.PrimaryStream())
+	}
+
+	// Define the configuration of our future apt repository
+	repoConfig := aptrepo.RepoConfig{
+		ProductName:   repoDescription,
+		Origin:        utils.TigeraCompany,
+		Label:         utils.EnterpriseProductName,
+		Architectures: NonClusterHostArchs,
+		Components:    NonClusterHostDebComponents,
+		GPGKeyID:      m.gpgKeyID,
+	}
+
+	// And set up the representation of the on-disk repo building
+	aptRepo, err := aptrepo.NewRepo(
+		m.tmpDir,
+		outDir,
+		repoConfig,
+		aptURLBase)
+
+	if err != nil {
+		return fmt.Errorf("unable to initialize apt repo: %w", err)
+	}
+	m.aptRepo = aptRepo
+	return nil
+}
+
+func (m *EnterpriseManager) assembleAPTRelease() error {
+	if !m.nchPackages {
+		logrus.Info("Skipping building apt repository")
+		return nil
+	}
+	if m.aptRepo == nil {
+		logrus.Info("Initializing aptRepo config with default values")
+		if err := m.initAptConfig(); err != nil {
+			return fmt.Errorf("could not initialize apt configuration: %w", err)
+		}
+	}
+
+	var packageDirs []string
+
+	for _, dir := range nonClusterHostDirs {
+		logrus.WithField("package", dir).Info("Building non-cluster host apt repository")
+		srcDir := filepath.Join(m.repoRoot, dir, "package") + "/"
+		packageDirs = append(packageDirs, srcDir)
+	}
+
+	// Ask our aptRepo to ensure we're starting with a clean slate and are ready to start
+	// building the repository.
+	if err := m.aptRepo.PrepareForBuild(); err != nil {
+		return fmt.Errorf("could not prepare local apt repo for build: %w", err)
+	}
+
+	// If we're publishing a release, we want to download the existing repo
+	// metadata database; we can then add our new packages to it, produce the
+	// files, and re-publish it later.
+	if !m.isHashRelease {
+		if err := m.fetchAptRepoDB(); err != nil {
+			return fmt.Errorf("could not fetch apt repo DB: %w", err)
+		}
+	}
+
+	exists, err := m.aptRepo.RepositoryDBExists()
+	if err != nil {
+		return fmt.Errorf("unable to validate if repository database exists or not")
+	}
+	// Check and see if our DB exists (and if we expect it to)
+	if m.isHashRelease {
+		if exists {
+			logrus.Warn("Repository database already exists; are you rebuilding an existing hashrelease? Apt metadata for previously-indexed packages will not be regenerated.")
+		}
+	} else {
+		if exists {
+			logrus.Info("Repository database already exists, will be attempting to update it with new packages")
+		} else {
+			logrus.Warn("Repository database does not exist; is this the first release for this release stream? If not, existing package information will be lost!")
+		}
+	}
+	// Write our apt repo configuration, overwriting an existing config if it exists; note
+	// that if we remove a supported release (e.g. noble) mid-stream it won't be in this
+	// new config file, but the repo should continue to exist as-is.
+	//
+	// We need to do this here because we need to `Clean()` beforehand when we're
+	// assembling the repositories, but when publishing we need to *not* `Clean()`
+	if err := m.aptRepo.WriteRepoConfig(); err != nil {
+		return fmt.Errorf("unable to write apt repo config: %w", err)
+	}
+
+	// Go over each directory in packageDirs, find all matching .deb or .ddeb files,
+	// and add them to the repository we created. If a package's release (e.g. noble)
+	// is not in our repo's existing configuration we will throw an error here.
+	if err := m.aptRepo.RecursiveAddDebsFromDirectories(packageDirs); err != nil {
+		return fmt.Errorf("could not add packages to repo: %w", err)
+	}
+
+	if err := m.aptRepo.WriteAllSourcesFiles(); err != nil {
+		return fmt.Errorf("could not write apt sources files: %w", err)
+	}
+
+	return nil
+}
+
+func (m *EnterpriseManager) assembleRPMs() error {
+	if !m.nchPackages {
+		logrus.Info("Skipping building RPM repository")
+		return nil
+	}
+
+	logrus.Info("Building RPM repository")
+	outDir := filepath.Join(m.uploadDir(), "rpms")
 	if err := os.MkdirAll(outDir, utils.DirPerms); err != nil {
 		return err
 	}
 
-	rsyncOpts := []string{"--recursive", "--prune-empty-dirs", "--exclude=BUILD", "--exclude=SRPMS", "--exclude=*debuginfo*", "--exclude=*debugsource*"}
+	rsyncOpts := []string{
+		"--recursive",
+		"--prune-empty-dirs",      // If a directory's contents are excluded, exclude it too
+		"--exclude=BUILD",         // BUILD contains all of the files put into the RPMs
+		"--exclude=SRPMS",         // We don't publish SRPMs, since they're just unpacked binary packages
+		"--exclude=*debuginfo*",   // Exclude debuginfo RPMs if there are any
+		"--exclude=*debugsource*", // Exclude debugsource as well
+		"--exclude=debian*",       // Don't copy the debian build directory
+		"--exclude=ubuntu*",       // ...nor the Ubuntu.
+	}
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		rsyncOpts = append(rsyncOpts, "--verbose", "--progress")
 	}
@@ -581,12 +805,8 @@ func (m *EnterpriseManager) assembleRPMs() error {
 		}
 	}
 
-	for _, dir := range rpmDirs {
-		logrus.WithField("package", dir).Info("Building RPM package")
-		if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, dir), "package"); err != nil {
-			logrus.WithError(err).Errorf("Failed to build RPM package for %s", dir)
-			return err
-		}
+	for _, dir := range nonClusterHostDirs {
+		logrus.WithField("package", dir).Info("Building non-cluster host RPM repository")
 		srcDir := filepath.Join(m.repoRoot, dir, "package") + "/"
 		destDir := outDir + "/"
 		logrus.WithFields(logrus.Fields{
@@ -607,7 +827,7 @@ func (m *EnterpriseManager) assembleRPMs() error {
 	createrepo := "createrepo_c"
 	var rpmURLBase string
 	if m.isHashRelease {
-		rpmURLBase = fmt.Sprintf("%s/non-cluster-host-rpms", m.hashrelease.URL())
+		rpmURLBase = fmt.Sprintf("%s/rpms", m.hashrelease.URL())
 	} else {
 		rpmURLBase = fmt.Sprintf("%s/rpms/%s", m.baseArtifactsURL, ver.PrimaryStream())
 	}
@@ -826,6 +1046,8 @@ func (m *EnterpriseManager) validateGitVersion() error {
 	return nil
 }
 
+// PublishRelease takes all the artifacts that we've assembled and publishes
+// them where they need to go.
 func (m *EnterpriseManager) PublishRelease() error {
 	// Check that the environment has the necessary prereqs.
 	if err := m.publishPrereqs(); err != nil {
@@ -1041,9 +1263,22 @@ func (m *EnterpriseManager) publishArtifactsToS3() error {
 	}
 	logrus.WithField("artifact", "rpms").Info("Publishing artifacts to S3")
 	ver := version.Version(m.calicoVersion)
-	if err := m.s3Sync(filepath.Join(m.uploadDir(), "non-cluster-host-rpms")+"/", fmt.Sprintf("s3://%s/rpms/%s/", m.s3Bucket, ver.PrimaryStream()), s3ACLPublicRead...); err != nil {
+	if err := m.s3Sync(filepath.Join(m.uploadDir(), "rpms")+"/", fmt.Sprintf("s3://%s/rpms/%s/", m.s3Bucket, ver.PrimaryStream()), s3ACLPublicRead...); err != nil {
 		return fmt.Errorf("failed to publish %s RHEL repo: %s", ver.PrimaryStream(), err)
 	}
+	logrus.WithField("artifact", "debs").Info("Publishing artifacts to S3")
+	if err := m.initAptConfig(); err != nil {
+		return fmt.Errorf("failed to initialize apt configuration: %w", err)
+	}
+	logrus.WithField("metadata", "repo db").Info("Publishing updated repo database")
+	if err := m.storeAptRepoDB(); err != nil {
+		return fmt.Errorf("failed to re-publish apt repo database: %w", err)
+	}
+
+	if err := m.s3Sync(filepath.Join(m.uploadDir(), "debs")+"/", fmt.Sprintf("s3://%s/debs/%s/", m.s3Bucket, ver.PrimaryStream()), s3ACLPublicRead...); err != nil {
+		return fmt.Errorf("failed to publish %s Apt repo: %w", ver.PrimaryStream(), err)
+	}
+
 	logrus.Info("Finished publishing release artifacts to S3")
 	return nil
 }

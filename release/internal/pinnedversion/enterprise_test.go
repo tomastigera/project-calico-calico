@@ -54,7 +54,7 @@ func TestEnterprisePinnedVersion(t *testing.T) {
 		})
 		t.Run("with operator", func(t *testing.T) {
 			got := v.GetComponentImageNames(true)
-			want := []string{"alertmanager", "compliance-server", managerComponentName, "tigera/operator", "tigera/operator-init"}
+			want := []string{"alertmanager", "compliance-server", managerComponentName, "tigera/operator"}
 			if diff := cmp.Diff(got, want, cmpopts.SortSlices(func(a, b string) bool {
 				return a < b
 			})); diff != "" {
@@ -217,11 +217,11 @@ func TestGenerateEnterpriseOperatorComponents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to generate pinned version file: %v", err)
 	}
-	err = GenerateEnterpriseOperatorComponents(dir, "")
+	filePath, err := GenerateEnterpriseOperatorComponents(dir, "")
 	if err != nil {
 		t.Fatalf("failed to generate operator components: %v", err)
 	}
-	f, err := os.ReadFile(filepath.Join(dir, operatorComponentsFileName))
+	f, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("failed to read generated file: %v", err)
 	}

@@ -42,6 +42,7 @@ const (
 
 	// upstream components
 	upstreamFluentdComponentName = "upstream-fluentd"
+	upstreamIstioComponentName   = "upstream-istio"
 
 	operatorComponentsFileName = "pinned_components.yml"
 )
@@ -58,6 +59,7 @@ var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
 	eckKibanaComponentName:                {Version: "8.19.12"},
 	upstreamFluentdComponentName:          {Version: "1.19.2"},
+	upstreamIstioComponentName:            {Version: "1.28.1"},
 }
 
 var (
@@ -83,6 +85,7 @@ var (
 		eckElasticsearchOperatorComponentName,
 		eckKibanaComponentName,
 		upstreamFluentdComponentName,
+		upstreamIstioComponentName,
 	}
 )
 
@@ -137,7 +140,7 @@ func (p *EnterprisePinnedVersion) GetComponentImageNames(includeOperator bool) [
 }
 
 // ImageComponents returns a map of all components that produce images
-// including Tigera operator and its init image if includeOperator is true.
+// including Tigera operator if includeOperator is true.
 func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[string]registry.Component {
 	components := make(map[string]registry.Component)
 	for name, component := range p.Components {
@@ -153,7 +156,7 @@ func (p *EnterprisePinnedVersion) ImageComponents(includeOperator bool) map[stri
 		components[name] = component
 	}
 	if includeOperator {
-		maps.Copy(components, p.operatorComponents())
+		components[p.TigeraOperator.Image] = p.TigeraOperator
 	}
 	return components
 }
@@ -172,11 +175,13 @@ type EnteprisePinnedVersions struct {
 func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, error) {
 	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
+	logrus.Info("Getting product branch")
 	productBranch, err := utils.GitBranch(p.RootDir)
 	if err != nil {
 		return nil, err
 	}
 	p.productBranch = productBranch
+	logrus.Info("Getting product version")
 	productVer, err := command.GitVersion(p.RootDir, true)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to determine product git version")
@@ -184,14 +189,17 @@ func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, e
 	}
 	releaseName := fmt.Sprintf("%s-%s-%s", time.Now().Format("2006-01-02"), version.DeterminePublishStream(productBranch, productVer), RandomWord())
 	p.releaseName = strings.ReplaceAll(releaseName, ".", "-")
+	logrus.Info("Getting Operator version")
 	operatorVer, err := p.OperatorCfg.GitVersion()
 	if err != nil {
 		return nil, err
 	}
+	logrus.Info("Getting manager version")
 	managerVer, err := p.ManagerCfg.GitVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine manager git version: %w", err)
 	}
+	logrus.Info("Getting Calico branch")
 	calicoVer, err := utils.DetermineCalicoVersion(p.RootDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine calico version: %w", err)
@@ -199,6 +207,7 @@ func (p *EnteprisePinnedVersions) GenerateFile() (*version.EnterpriseVersions, e
 	parts := strings.Split(calicoVer, ".")
 	p.calicoStream = fmt.Sprintf("%s.%s", parts[0], parts[1])
 
+	logrus.Info("Generating pinned versions file")
 	p.versionData = version.NewEnterpriseHashreleaseVersions(version.New(productVer), p.ChartVersion, operatorVer, managerVer)
 	if err := generateEnterprisePinnedVersionFile(p); err != nil {
 		return nil, err
@@ -312,10 +321,10 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Versions, error) {
 
 // GenerateEnterpriseOperatorComponents generates the pinned_components.yaml for operator.
 // It also copies the generated file to the output directory if provided.
-func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
+func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) (string, error) {
 	pinnedVersion, err := retrieveEnterprisePinnedVersion(srcDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	components := pinnedVersion.ImageComponents(false)
@@ -329,7 +338,7 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
 	operatorComponentsFilePath := filepath.Join(srcDir, operatorComponentsFileName)
 	operatorComponentsFile, err := os.Create(operatorComponentsFilePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = operatorComponentsFile.Close() }()
 
@@ -338,14 +347,16 @@ func GenerateEnterpriseOperatorComponents(srcDir, outputDir string) error {
 	defer func() { _ = enc.Close() }()
 
 	if err = enc.Encode(pinnedVersion); err != nil {
-		return fmt.Errorf("encode operator components file: %w", err)
+		return "", fmt.Errorf("encode operator components file: %w", err)
 	}
-	if outputDir != "" {
-		if err := utils.CopyFile(operatorComponentsFilePath, filepath.Join(outputDir, operatorComponentsFileName)); err != nil {
-			return fmt.Errorf("copy operator components file: %w", err)
-		}
+	if outputDir == "" {
+		return operatorComponentsFilePath, nil
 	}
-	return nil
+	outFilePath := filepath.Join(outputDir, operatorComponentsFileName)
+	if err := utils.CopyFile(operatorComponentsFilePath, outFilePath); err != nil {
+		return "", fmt.Errorf("copy operator components file: %w", err)
+	}
+	return outFilePath, nil
 }
 
 // LoadEnterpriseHashrelease loads the hashrelease from the pinned version file.

@@ -1,4 +1,16 @@
 // Copyright (c) 2026 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package istio
 
@@ -39,14 +51,14 @@ const (
 
 // --- Istio Ambient Mode: Traffic Encryption and Calico NetworkPolicy Enforcement ---
 //
-// These tests validate Istio Ambient Mode functionality with Calico Enterprise:
+// These tests validate Istio Ambient Mode functionality with Calico:
 // - Enabling/disabling Istio via the operator Istio CR
 // - Traffic encryption via ztunnel when ambient label is applied
 // - Calico NetworkPolicy enforcement with Istio ambient mode active
 // - UDP traffic bypass of ztunnel with Calico policy enforcement
-var _ = describe.EnterpriseDescribe(
+var _ = describe.CalicoDescribe(
 	describe.WithSerial(),
-	describe.WithTeam(describe.EV),
+	describe.WithTeam(describe.Core),
 	describe.WithFeature("Istio"),
 	describe.WithCategory(describe.Networking),
 	"Istio Ambient Mode",
@@ -59,15 +71,6 @@ var _ = describe.EnterpriseDescribe(
 			var err error
 			cli, err = client.New(f.ClientConfig())
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create controller-runtime client")
-
-			// Verify this is an enterprise cluster.
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			isEnt, err := utils.IsEnterprise(ctx, cli)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to check if cluster is enterprise")
-			if !isEnt {
-				framework.Failf("Istio ambient mode tests require Calico Enterprise")
-			}
 		})
 
 		// Test: Full Istio Ambient Mode lifecycle with traffic encryption and Calico policy enforcement.

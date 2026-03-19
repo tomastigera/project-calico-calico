@@ -31,6 +31,7 @@ SKIP_SUBDIRS = [
     "pkg",
     "release",
     "selinux",
+    "test",
     "whisker",
     "whisker-backend",
 ]

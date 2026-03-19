@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera Inc. All rights reserved.
 package main
 
 import (
@@ -43,7 +43,7 @@ func LoadConfig() (*Config, error) {
 
 	// Validate credentials
 	if config.AWSRegion == "" || config.AWSAccessKeyId == "" || config.AWSSecretAccessKey == "" {
-		return nil, fmt.Errorf("missing AWS credentials. make sure AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY are available.")
+		return nil, fmt.Errorf("missing AWS credentials. make sure AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY are available")
 	}
 
 	if config.EKSCloudwatchLogGroup == "" {

@@ -61,6 +61,8 @@ func init() {
 	adminTierOrder := api.KubeAdminTierOrder
 	baselineTierOrder := api.KubeBaselineTierOrder
 	defaultTierBadOrder := float64(10.0)
+	defaultActionDeny := api.Deny
+	defaultActionPass := api.Pass
 
 	// We need pointers to bools, so define the values here.
 	Vtrue := true
@@ -2512,6 +2514,48 @@ func init() {
 			},
 		}, false),
 
+		// (API) BGPFilterOperation
+		Entry("should accept BGPFilterOperation with AddCommunity set", api.BGPFilterOperation{
+			AddCommunity: &api.BGPFilterAddCommunity{Value: communityValHelper("65000:100")},
+		}, true),
+		Entry("should accept BGPFilterOperation with PrependASPath set", api.BGPFilterOperation{
+			PrependASPath: &api.BGPFilterPrependASPath{Prefix: []numorstring.ASNumber{65000}},
+		}, true),
+		Entry("should accept BGPFilterOperation with SetPriority set", api.BGPFilterOperation{
+			SetPriority: &api.BGPFilterSetPriority{Value: intHelper(256)},
+		}, true),
+		Entry("should reject BGPFilterOperation with no fields set", api.BGPFilterOperation{}, false),
+		Entry("should reject BGPFilterOperation with two fields set", api.BGPFilterOperation{
+			AddCommunity: &api.BGPFilterAddCommunity{Value: communityValHelper("65000:100")},
+			SetPriority:  &api.BGPFilterSetPriority{Value: intHelper(256)},
+		}, false),
+		Entry("should reject BGPFilterOperation with all fields set", api.BGPFilterOperation{
+			AddCommunity:  &api.BGPFilterAddCommunity{Value: communityValHelper("65000:100")},
+			PrependASPath: &api.BGPFilterPrependASPath{Prefix: []numorstring.ASNumber{65000}},
+			SetPriority:   &api.BGPFilterSetPriority{Value: intHelper(256)},
+		}, false),
+
+		// (API) BGPFilterRuleV4 with Operations
+		Entry("should accept BGPFilterRuleV4 with single operation", api.BGPFilterRuleV4{
+			Action: "Accept",
+			Operations: []api.BGPFilterOperation{
+				{SetPriority: &api.BGPFilterSetPriority{Value: intHelper(256)}},
+			},
+		}, true),
+		Entry("should accept BGPFilterRuleV4 with multiple operations", api.BGPFilterRuleV4{
+			Action: "Accept",
+			Operations: []api.BGPFilterOperation{
+				{AddCommunity: &api.BGPFilterAddCommunity{Value: communityValHelper("65000:100")}},
+				{PrependASPath: &api.BGPFilterPrependASPath{Prefix: []numorstring.ASNumber{65000}}},
+			},
+		}, true),
+		Entry("should reject BGPFilterRuleV4 with empty operation", api.BGPFilterRuleV4{
+			Action: "Accept",
+			Operations: []api.BGPFilterOperation{
+				{},
+			},
+		}, false),
+
 		// (API) BGPPeerSpec
 		Entry("should accept valid BGPPeerSpec", api.BGPPeerSpec{PeerIP: ipv4_1}, true),
 		Entry("should reject invalid BGPPeerSpec (IPv4)", api.BGPPeerSpec{PeerIP: bad_ipv4_1}, false),
@@ -3209,13 +3253,22 @@ func init() {
 		Entry("Tier: disallow default tier with an invalid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.DefaultTierName},
 			Spec: api.TierSpec{
-				Order: &defaultTierBadOrder,
+				Order:         &defaultTierBadOrder,
+				DefaultAction: &defaultActionDeny,
 			},
 		}, false),
-		Entry("Tier: allow default tier with the predefined order", &api.Tier{
+		Entry("Tier: disallow default tier with an invalid default action", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.DefaultTierName},
 			Spec: api.TierSpec{
-				Order: &defaultTierOrder,
+				Order:         &defaultTierOrder,
+				DefaultAction: &defaultActionPass,
+			},
+		}, false),
+		Entry("Tier: allow default tier with the predefined order and default action", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.DefaultTierName},
+			Spec: api.TierSpec{
+				Order:         &defaultTierOrder,
+				DefaultAction: &defaultActionDeny,
 			},
 		}, true),
 		Entry("Tier: disallow adminnetworkpolicy tier with an invalid order", &api.Tier{
@@ -3243,23 +3296,45 @@ func init() {
 		Entry("Tier: disallow kube-admin tier with an invalid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.KubeAdminTierName},
 			Spec: api.TierSpec{
-				Order: &defaultTierBadOrder,
-			}}, false),
-		Entry("Tier: allow kube-admin tier with the predefined order", &api.Tier{
+				Order:         &defaultTierBadOrder,
+				DefaultAction: &defaultActionPass,
+			},
+		}, false),
+		Entry("Tier: disallow kube-admin tier with an invalid default action", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.KubeAdminTierName},
 			Spec: api.TierSpec{
-				Order: &adminTierOrder,
-			}}, true),
+				Order:         &adminTierOrder,
+				DefaultAction: &defaultActionDeny,
+			},
+		}, false),
+		Entry("Tier: allow kube-admin tier with the predefined order and default action", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeAdminTierName},
+			Spec: api.TierSpec{
+				Order:         &adminTierOrder,
+				DefaultAction: &defaultActionPass,
+			},
+		}, true),
 		Entry("Tier: disallow kube-baseline tier with an invalid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.KubeBaselineTierName},
 			Spec: api.TierSpec{
-				Order: &defaultTierBadOrder,
-			}}, false),
-		Entry("Tier: allow kube-baseline tier with the predefined order", &api.Tier{
+				Order:         &defaultTierBadOrder,
+				DefaultAction: &defaultActionPass,
+			},
+		}, false),
+		Entry("Tier: disallow kube-baseline tier with an invalid default action", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: names.KubeBaselineTierName},
 			Spec: api.TierSpec{
-				Order: &baselineTierOrder,
-			}}, true),
+				Order:         &baselineTierOrder,
+				DefaultAction: &defaultActionDeny,
+			},
+		}, false),
+		Entry("Tier: allow kube-baseline tier with the predefined order and default action", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.KubeBaselineTierName},
+			Spec: api.TierSpec{
+				Order:         &baselineTierOrder,
+				DefaultAction: &defaultActionPass,
+			},
+		}, true),
 		Entry("Tier: allow a tier with a valid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "platform"},
 			Spec: api.TierSpec{
@@ -5650,4 +5725,13 @@ func mustParsePortRange(min, max uint16) numorstring.Port {
 
 func int32Helper(i int32) *int32 {
 	return &i
+}
+
+func intHelper(i int) *int {
+	return &i
+}
+
+func communityValHelper(s string) *api.BGPCommunityValue {
+	v := api.BGPCommunityValue(s)
+	return &v
 }

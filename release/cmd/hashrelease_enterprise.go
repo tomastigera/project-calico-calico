@@ -37,7 +37,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 	flags = append(flags,
 		archFlag,
 		registryFlag,
-		skipRPMsFlag,
+		skipNonClusterPackagesFlag,
+		gpgKeyIDFlag,
 		skipOperatorFlag,
 		skipBranchCheckFlag,
 		skipValidationFlag,
@@ -49,6 +50,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 		Action: func(_ context.Context, c *cli.Command) error {
 			configureLogging("hashrelease-build.log")
 
+			logrus.Info("Validating hashrelease build flags")
 			if err := validateHashreleaseBuildFlags(c); err != nil {
 				return err
 			}
@@ -56,12 +58,14 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			// Define the base hashrelease directory.
 			baseHashreleaseDir := baseHashreleaseOutputDir(cfg.RepoRootDir)
 
+			logrus.Info("Cloning operator repository")
 			// Clone the operator repository.
 			operatorDir := filepath.Join(cfg.TmpDir, operator.DefaultRepoName)
 			if err := operator.Clone(c.String(operatorOrgFlag.Name), c.String(operatorRepoFlag.Name), c.String(operatorBranchFlag.Name), operatorDir); err != nil {
 				return fmt.Errorf("failed to clone operator repository: %v", err)
 			}
 
+			logrus.Info("Cloning manager repository")
 			// Clone the manager repository.
 			managerDir := filepath.Join(cfg.TmpDir, manager.DefaultRepoName)
 			if err := manager.Clone(c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name), c.String(managerBranchFlag.Name), managerDir); err != nil {
@@ -87,11 +91,13 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				},
 			}
 
+			logrus.Info("Generating pinned versions file")
 			data, err := pinned.GenerateFile()
 			if err != nil {
 				return fmt.Errorf("failed to generate pinned version file: %v", err)
 			}
 
+			logrus.Info("Checking if hashrelease has already been published")
 			// Check if the hashrelease has already been published.
 			if published, err := tasks.HashreleasePublished(hashreleaseServerConfig(c), data.Hash(), c.Bool(ciFlag.Name)); err != nil {
 				return fmt.Errorf("failed to check if hashrelease has been published: %v", err)
@@ -115,7 +121,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			productRegistries := c.StringSlice(registryFlag.Name)
 
 			// Build the operator
-			if err := pinnedversion.GenerateEnterpriseOperatorComponents(cfg.TmpDir, hashrel.Source); err != nil {
+			pinnedComponentsFile, err := pinnedversion.GenerateEnterpriseOperatorComponents(cfg.TmpDir, hashrel.Source)
+			if err != nil {
 				return fmt.Errorf("failed to generate enterprise operator components: %v", err)
 			}
 			operatorOpts := []operator.Option{
@@ -129,7 +136,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				operator.WithReleaseBranchValidation(!c.Bool(skipBranchCheckFlag.Name)),
 				operator.WithVersion(data.OperatorVersion()),
 				operator.WithCalicoDirectory(cfg.RepoRootDir),
-				operator.WithCalicoVersion(data.ProductVersion()),
+				// Use the pinned components file instead of version as manager has a different version for hashrelease builds.
+				operator.WithPinnedComponents(pinnedComponentsFile),
 			}
 			if len(productRegistries) > 0 {
 				operatorOpts = append(operatorOpts, operator.WithProductRegistry(productRegistries[0]))
@@ -164,7 +172,8 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithDevTagIdentifier(c.String(devTagSuffixFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, *hashreleaseServerConfig(c)),
-				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
+				calico.WithNonClusterHostPackages(!c.Bool(skipNonClusterPackagesFlag.Name)),
+				calico.WithGPGKeyID(c.String(gpgKeyIDFlag.Name)),
 			}
 
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)

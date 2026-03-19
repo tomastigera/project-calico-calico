@@ -34,14 +34,17 @@ import (
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage/etcd3"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+	apiregclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
@@ -55,6 +58,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
+	dsmigration "github.com/projectcalico/calico/kube-controllers/pkg/controllers/migration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/networkpolicy"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/node"
@@ -190,14 +194,6 @@ func main() {
 	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
 	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
 
-	// KubeVirt informers are optional — only created if KubeVirt is installed.
-	// NOTE: KubeVirt detection only runs at startup. If KubeVirt CRDs are added
-	// to a running cluster, this pod must be restarted to pick them up.
-	vmInformer, vmiInformer, err := kubevirt.TryCreateInformers(k8sconfig, 5*time.Minute)
-	if err != nil {
-		log.WithError(err).Warn("Failed to create KubeVirt informers, proceeding without KubeVirt IPAM GC support")
-	}
-
 	stop := make(chan struct{})
 
 	// Create the context.
@@ -286,11 +282,10 @@ func main() {
 			k8sClientset,
 			libcalicoClient,
 			calicoClient,
+			k8sconfig,
 			dataFeed,
 			esClientBuilder,
 			cfg.KubeControllersConfigName == "default",
-			vmInformer,
-			vmiInformer,
 		)
 	}
 
@@ -633,10 +628,10 @@ func (cc *controllerControl) InitControllers(
 	k8sClientset *kubernetes.Clientset,
 	libcalicoClient client.Interface,
 	v3c clientset.Interface,
+	k8sconfig *restclient.Config,
 	dataFeed *utils.DataFeed,
 	esClientBuilder elasticsearch.ClientBuilder,
 	isDefaultInstance bool,
-	vmInformer, vmiInformer cache.SharedIndexInformer,
 ) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
@@ -698,12 +693,10 @@ func (cc *controllerControl) InitControllers(
 		cc.controllerStates["NetworkPolicy"] = &controllerState{controller: policyController}
 	}
 	if cfg.Controllers.Node != nil {
-		nodeController := node.NewNodeController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.Node, nodeInformer, podInformer, dataFeed, vmInformer, vmiInformer)
+		deferredInformers := kubevirt.NewDeferredInformers(kubevirt.NewIndexerFunc(k8sconfig, 5*time.Minute), 30*time.Second, cc.stop)
+		nodeController := node.NewNodeController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.Node, nodeInformer, podInformer, dataFeed, deferredInformers)
 		cc.controllerStates["Node"] = &controllerState{controller: nodeController}
 		cc.registerInformers(podInformer, nodeInformer)
-		if vmInformer != nil {
-			cc.registerInformers(vmInformer, vmiInformer)
-		}
 	}
 	if cfg.Controllers.ServiceAccount != nil {
 		serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, libcalicoClient, *cfg.Controllers.ServiceAccount)
@@ -721,6 +714,49 @@ func (cc *controllerControl) InitControllers(
 		// Never run this controller as part of es-kube-controllers, though.
 		policyMigrator := networkpolicy.NewMigratorController(ctx, k8sClientset, libcalicoClient, dataFeed)
 		cc.controllerStates["NetworkPolicyMigrator"] = &controllerState{controller: policyMigrator}
+	}
+
+	// Register the datastore migration controller. This controller watches for
+	// DatastoreMigration CRs and drives the v1-to-v3 CRD migration.
+	if v3c != nil {
+		bc := libcalicoClient.(bapi.BackendAccessor).Backend()
+
+		dynClient, err := dynamic.NewForConfig(k8sconfig)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create dynamic client for migration controller")
+		}
+		apiregCS, err := apiregclient.NewForConfig(k8sconfig)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create apiregistration client for migration controller")
+		}
+
+		migrationScheme := runtime.NewScheme()
+		if err := v3.AddToScheme(migrationScheme); err != nil {
+			log.WithError(err).Fatal("Failed to add Calico v3 types to scheme for migration controller")
+		}
+		if err := dsmigration.AddToScheme(migrationScheme); err != nil {
+			log.WithError(err).Fatal("Failed to add migration types to scheme for migration controller")
+		}
+		rtClient, err := crtlclient.NewWithWatch(k8sconfig, crtlclient.Options{Scheme: migrationScheme})
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create controller-runtime client for migration controller")
+		}
+		crdClient, err := apiextclient.NewForConfig(k8sconfig)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create apiextensions client for migration controller")
+		}
+
+		migrationController := dsmigration.NewController(dsmigration.ControllerConfig{
+			Ctx:           ctx,
+			K8sClient:     k8sClientset,
+			BackendClient: bc,
+			RTClient:      rtClient,
+			DynamicClient: dynClient,
+			APIRegClient:  apiregCS.ApiregistrationV1(),
+			CRDClient:     crdClient,
+			Migrators:     dsmigration.NewMigrators(bc, rtClient),
+		})
+		cc.controllerStates["DatastoreMigration"] = &controllerState{controller: migrationController}
 	}
 
 	// We don't need the full Pod object. In order to reduce memory usage, add a transform that only

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	uuid2 "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ const (
 
 func findNodeMatchingFilter(f *framework.Framework, filterFn func(node *v1.Node) bool) *v1.Node {
 	nodes, err := e2enode.GetReadySchedulableNodes(context.Background(), f.ClientSet)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to get schedulable nodes")
 	Expect(len(nodes.Items)).To(BeNumerically(">=", 2),
 		"Test requires at least 2 ready nodes")
 	for _, n := range nodes.Items {
@@ -57,9 +57,9 @@ func deleteAllPodsInNS(f *framework.Framework) {
 	logrus.Infof("Deleting all pods in NS: %s", f.Namespace.Name)
 	podClient := e2epod.NewPodClient(f)
 	pods, err := podClient.List(context.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to list pods in namespace")
 	err = podClient.DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to delete pod collection")
 	for _, p := range pods.Items {
 		Expect(e2epod.WaitForPodNotFoundInNamespace(context.Background(), f.ClientSet, p.Name, p.Namespace, 60*time.Second)).To(Succeed(), "wait for pod %q to disappear", p.Name)
 	}
@@ -91,7 +91,7 @@ func connectToNGINXAndGetSourceIP(
 	filePath string,
 	timeout string,
 ) string {
-	uuid := uuid2.NewV4().String()
+	uuid := uuid.NewString()
 	target := conncheck.NewDomainTarget(fmt.Sprintf("http://%s/%s?%s", extIP, filePath, uuid))
 	EventuallyWithOffset(2, func() error {
 		_, err := checker.Connect(cc, target)
@@ -217,7 +217,7 @@ func randomGatewayPod(gatewayPods map[string]v1.Pod) *v1.Pod {
 
 func findPodAZ(f *framework.Framework, pod *v1.Pod) string {
 	podsNode, err := f.ClientSet.CoreV1().Nodes().Get(context.Background(), pod.Spec.NodeName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to get node %s", pod.Spec.NodeName)
 	podsAZ := podsNode.Labels["topology.kubernetes.io/zone"]
 	Expect(podsAZ).NotTo(BeEmpty(), "Node missing expected topology.kubernetes.io/zone label")
 	return podsAZ
@@ -247,7 +247,7 @@ var _ = describe.CalicoDescribe(
 			// Banzai sets up a pair of egress gateways for us. Find them.
 			gatewayPods = map[string]v1.Pod{}
 			pods, err := f.ClientSet.CoreV1().Pods(egressGatewayNS).List(context.Background(), metav1.ListOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "Failed to list gateway pods in namespace %s", egressGatewayNS)
 			for _, p := range pods.Items {
 				if p.GetLabels()["egress-code"] != "" {
 					logrus.Infof("Found egress gateway pod %s on node %s with IP %s",
@@ -395,7 +395,7 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred(), "Failed to create egw policy")
 			defer func() {
 				err := cli.Delete(context.Background(), egwPolicy)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred(), "Failed to delete EgressGatewayPolicy")
 			}()
 
 			// Find a node in the same region
@@ -510,7 +510,7 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred(), "Failed to create egw policy")
 			defer func() {
 				err := cli.Delete(context.Background(), egwPolicy)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred(), "Failed to delete EgressGatewayPolicy")
 			}()
 
 			// Create client pod in same node as EGW red.

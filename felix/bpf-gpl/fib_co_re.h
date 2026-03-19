@@ -83,6 +83,14 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 			 */
 			goto skip_fib;
 		}
+		if (CALI_F_TO_HOST &&
+		    (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
+		    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
+		     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
+			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
+			rc = TC_ACT_UNSPEC;
+			goto skip_fib;
+		}
 	} else {
 		fib_flags = BPF_FIB_LOOKUP_MARK;
 	}
@@ -106,20 +114,6 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 	if (CALI_F_FROM_WEP && (GLOBAL_FLAGS & CALI_GLOBALS_SKIP_EGRESS_REDIRECT)) {
 		goto skip_fib;
 	}
-
-	// If this is an egress gateway flow on the client node, and we're in the outbound
-	// direction, arrange to drop to the IP stack so that `ip rule` can take effect to
-	// route the packet.
-#if !defined(UNITTEST)
-	if (CALI_F_TO_HOST &&
-	    (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
-	    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
-	     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
-		CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
-		rc = TC_ACT_UNSPEC;
-		goto skip_fib;
-	}
-#endif
 
 	if (rc == CALI_RES_REDIR_BACK) {
 		int redir_flags = 0;
@@ -220,7 +214,12 @@ skip_redir_ifindex:
 			};
 
 			if (bpf_core_field_exists(((struct bpf_fib_lookup *)0)->mark)) {
-				fib_params(ctx)->mark = EXT_TO_SVC_MARK;
+				/* EXT_LOCAL and EGW are mutually exclusive marks for FIB. */
+				if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+					fib_params(ctx)->mark = CALI_SKB_MARK_EGRESS;
+				} else {
+					fib_params(ctx)->mark = EXT_TO_SVC_MARK;
+				}
 			}
 
 #ifdef IPVER6
@@ -382,8 +381,13 @@ try_fib_external:
 		};
 
 		if (bpf_core_field_exists(((struct bpf_fib_lookup *)0)->mark)) {
-			fib_params(ctx)->mark = EXT_TO_SVC_MARK;
-			CALI_DEBUG("FIB mark=0x%d", fib_params(ctx)->mark);
+			/* EXT_LOCAL and EGW are mutually exclusive marks for FIB. */
+			if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+				fib_params(ctx)->mark = CALI_SKB_MARK_EGRESS;
+			} else {
+				fib_params(ctx)->mark = EXT_TO_SVC_MARK;
+			}
+			CALI_DEBUG("FIB mark=0x%x", fib_params(ctx)->mark);
 		}
 
 		if (state->ip_proto != IPPROTO_ICMP_46) {

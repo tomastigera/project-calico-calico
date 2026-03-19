@@ -21,6 +21,8 @@ blocks:
         - name: marvin-aws-config
         - name: marvin-aws-credentials
         - name: marvin-release-cutting-credentials
+        # The GPG signing key for apt repositories
+        - name: marvin-release-signing-gpg
       prologue:
         commands:
           # Correct permissions since they are too open by default
@@ -34,7 +36,11 @@ blocks:
           - docker login --username marvin@tigera.io -u _json_key -p "$(cat ~/secrets/marvin-gcr-credentials.json)" https://gcr.io
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
           # Install the tools our release depends on
-          - install-package createrepo-c
+          - install-package createrepo-c reprepro gpg
+          # Import our release signing GPG key
+          - gpg --import /home/semaphore/secrets/marvin-release-key.gpg
+          - export GPG_KEY_ID=${MARVIN_GPG_KEY_ID}
+
       jobs:
         - name: "Release on Semaphore VM"
           commands:
