@@ -56,12 +56,15 @@ var _ = Describe("File Parser", func() {
 
 	BeforeEach(func() {
 		mockDPIUpdater = &dpiupdater.MockDPIStatusUpdater{}
-		mockDPIUpdater.AssertExpectations(GinkgoT())
 		mockLinseedClient = client.NewMockClient("")
 		ctx = context.Background()
 		mockForwarder = &alert.MockForwarder{}
-		mockForwarder.AssertExpectations(GinkgoT())
 		cfg = &config.Config{SnortAlertFileBasePath: "test"}
+
+		// The tail goroutine may call UpdateStatusWithError on any error path
+		// (e.g. file not yet created, inotify watcher closed). Allow these
+		// calls in all tests to avoid unexpected-call panics.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
 
 		// Cleanup
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
@@ -298,9 +301,6 @@ var _ = Describe("File Parser", func() {
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event2))
 				}
 			}).Return(nil, false, nil).Times(2)
-
-		// Allow UpdateStatusWithError calls from tail goroutine error paths.
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)

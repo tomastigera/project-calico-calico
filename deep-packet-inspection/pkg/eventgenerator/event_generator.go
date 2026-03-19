@@ -250,12 +250,11 @@ func (r *eventGenerator) tailFile(ctx context.Context, wepKey model.WorkloadEndp
 		}
 
 		_ = t.Stop()
+		err = t.Wait()
 
 		if ctx.Err() != nil {
 			return
 		}
-
-		err = t.Wait()
 		if err != nil {
 			log.WithError(err).Errorf("Failed to tail file, retrying")
 			r.dpiUpdater.UpdateStatusWithError(context.Background(), r.dpiKey, true,

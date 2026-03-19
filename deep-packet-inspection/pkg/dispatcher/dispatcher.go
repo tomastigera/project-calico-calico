@@ -286,6 +286,9 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 				// Always remove the WEP-to-DPI association for the stopped match.
 				if dpiKeys, ok := h.wepKeyToDPIs[i.wepKey]; ok {
 					dpiKeys.Discard(i.dpiKey)
+					if dpiKeys.Len() == 0 {
+						delete(h.wepKeyToDPIs, i.wepKey)
+					}
 				}
 
 				// If no more WEPs use this DPI, shut it down entirely.
@@ -318,7 +321,7 @@ func (h *dispatcher) startDPIOnWEP(ctx context.Context, dpiProcess DPI, dpiKey m
 	h.alertFileMaintainer.Maintain(fileutils.AlertFileAbsolutePath(dpiKey, wepKey, h.cfg.SnortAlertFileBasePath))
 }
 
-func (h *dispatcher) stopDPIOnWEP(ctx context.Context, dpiProcess DPI, dpiKey model.ResourceKey, wepKey model.WorkloadEndpointKey) {
+func (h *dispatcher) stopDPIOnWEP(_ context.Context, dpiProcess DPI, dpiKey model.ResourceKey, wepKey model.WorkloadEndpointKey) {
 	log.Debugf("Stopping deep packet inspection %s on %s", dpiKey, wepKey)
 	dpiProcess.snortProcessor.Remove(wepKey)
 	dpiProcess.eventGenerator.StopGeneratingEventsForWEP(wepKey)
