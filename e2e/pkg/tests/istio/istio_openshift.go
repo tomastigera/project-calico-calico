@@ -1,4 +1,16 @@
 // Copyright (c) 2026 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package istio
 
@@ -13,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/kubernetes/test/e2e/framework"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/e2e/pkg/describe"
@@ -33,9 +44,9 @@ import (
 //   - SELinux: spc_t context on ztunnel
 //   - Platform-aware istiod configuration
 //   - Operator RBAC for NetworkAttachmentDefinition (Multus)
-var _ = describe.EnterpriseDescribe(
+var _ = describe.CalicoDescribe(
 	describe.WithSerial(),
-	describe.WithTeam(describe.EV),
+	describe.WithTeam(describe.Core),
 	describe.WithFeature("Istio"),
 	describe.WithCategory(describe.Networking),
 	"Istio OpenShift Platform Configuration",
@@ -48,15 +59,6 @@ var _ = describe.EnterpriseDescribe(
 			var err error
 			cli, err = client.New(f.ClientConfig())
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create controller-runtime client")
-
-			// Verify this is an enterprise cluster.
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			isEnt, err := utils.IsEnterprise(ctx, cli)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to check if cluster is enterprise")
-			if !isEnt {
-				framework.Failf("Istio OpenShift tests require Calico Enterprise")
-			}
 
 			// Skip if not running on OpenShift.
 			if !utils.IsOpenShift(f) {
@@ -218,7 +220,7 @@ func expectZtunnelSELinuxContext(ctx context.Context, cli ctrlclient.Client) {
 }
 
 // expectIstiodOpenShiftEnvVars verifies the istiod deployment has PLATFORM=openshift
-// and CA_TRUSTED_NODE_ACCOUNTS=kube-system/ztunnel environment variables.
+// and CA_TRUSTED_NODE_ACCOUNTS environment variables.
 func expectIstiodOpenShiftEnvVars(ctx context.Context, cli ctrlclient.Client) {
 	getCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
