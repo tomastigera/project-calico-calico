@@ -335,23 +335,27 @@ def calico_node_pod_name(nodename):
 def update_ds_env(ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns)
-        for container in node_ds.spec.template.spec.containers:
-            if container.name == ds:
-                for k, v in env_vars.items():
-                    _log.info("Set %s=%s", k, v)
-                    env_present = False
-                    for env in container.env:
-                        if env.name == k:
-                            if env.value == v:
-                                env_present = True
-                            else:
-                                container.env.remove(env)
 
-                    if not env_present:
-                        v1_ev = client.V1EnvVar(name=k, value=v, value_from=None)
-                        container.env.append(v1_ev)
-        api.replace_namespaced_daemon_set(ds, ns, node_ds)
+        def _do_update():
+            node_ds = api.read_namespaced_daemon_set(ds, ns)
+            for container in node_ds.spec.template.spec.containers:
+                if container.name == ds:
+                    for k, v in env_vars.items():
+                        _log.info("Set %s=%s", k, v)
+                        env_present = False
+                        for env in container.env:
+                            if env.name == k:
+                                if env.value == v:
+                                    env_present = True
+                                else:
+                                    container.env.remove(env)
+
+                        if not env_present:
+                            v1_ev = client.V1EnvVar(name=k, value=v, value_from=None)
+                            container.env.append(v1_ev)
+            api.replace_namespaced_daemon_set(ds, ns, node_ds)
+
+        retry_until_success(_do_update, retries=4, wait_time=1)
 
         # Delete the calico-node pods so that they will be restarted more
         # quickly with the new configuration.  This won't do a rolling restart,
