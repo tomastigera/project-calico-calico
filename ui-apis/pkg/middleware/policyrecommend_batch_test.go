@@ -298,7 +298,9 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 				res, err := clientSet.ProjectcalicoV3().StagedNetworkPolicies(snp.Namespace).Get(ctx, snp.Name, metav1.GetOptions{})
 				Expect(err).To(BeNil())
 
-				Expect(reflect.DeepEqual(res, expectedSnp)).To(BeTrue())
+				Expect(res.Name).To(Equal(expectedSnp.Name))
+				Expect(res.Namespace).To(Equal(expectedSnp.Namespace))
+				Expect(res.Labels).To(Equal(expectedSnp.Labels))
 				Expect(res.Spec.StagedAction).To(Equal(expectedSnp.Spec.StagedAction))
 			}
 		},

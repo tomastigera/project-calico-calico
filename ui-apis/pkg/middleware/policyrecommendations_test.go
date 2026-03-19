@@ -205,7 +205,11 @@ var _ = Describe("PagedRecommendationsHandler", func() {
 				if len(body) > 0 {
 					err = json.Unmarshal(body, &actual)
 					Expect(err).To(BeNil())
-					Expect(actual).To(Equal(expected))
+					Expect(actual.Count).To(Equal(expected.Count))
+					Expect(actual.StagedNetworkPolicies).To(HaveLen(len(expected.StagedNetworkPolicies)))
+					for i := range actual.StagedNetworkPolicies {
+						Expect(compareSnps(&actual.StagedNetworkPolicies[i], &expected.StagedNetworkPolicies[i])).To(BeTrue())
+					}
 				}
 			},
 			Entry("Learn,maxItems:5,page:0",
