@@ -72,14 +72,15 @@ var _ = Describe("File Parser", func() {
 	})
 
 	AfterEach(func() {
+		mockForwarder.AssertExpectations(GinkgoT())
+		mockDPIUpdater.AssertExpectations(GinkgoT())
+
 		// Cleanup
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		_ = os.RemoveAll(path)
-		_ = os.MkdirAll(path, os.ModePerm)
 
 		path = fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName2)
 		_ = os.RemoveAll(path)
-		_ = os.MkdirAll(path, os.ModePerm)
 	})
 
 	It("should start tailing alert file, parse and send it to Linseed", func() {
@@ -157,7 +158,9 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
+		// The tail goroutine may call UpdateStatusWithError multiple times depending
+		// on timing (file not yet created, watcher closed, etc.) before Stop cancels it.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Maybe()
 
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
@@ -418,7 +421,8 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
+		// The tail goroutine may call UpdateStatusWithError on any error path.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Maybe()
 
 		// Copy and create an alert file
 		path1 := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)

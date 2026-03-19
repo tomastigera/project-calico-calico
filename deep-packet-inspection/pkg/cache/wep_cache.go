@@ -4,7 +4,6 @@ package cache
 
 import (
 	"net"
-	"reflect"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -78,13 +77,16 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			newIPs := extractIPsFromWorkloadEndpoint(wepKVPair.Value.(*model.WorkloadEndpoint))
 			data, ok := r.wepKeyToWEPData.Load(wepKey)
 			if ok {
-				// Remove the old IPs that are no longer in the WEP
+				// Remove old IPs that are no longer in the WEP.
+				// Build a set of new IPs first, then delete any old IP absent from it.
+				newIPSet := set.New[string]()
+				for i := range newIPs {
+					newIPSet.Add(net.IP(newIPs[i][:16]).String())
+				}
 				oldIPList := data.(wepData).ipList
 				for item := range oldIPList.All() {
-					for i := range newIPs {
-						if !reflect.DeepEqual(newIPs[i], item) {
-							r.ipToWEPKey.Delete(item)
-						}
+					if !newIPSet.Contains(item) {
+						r.ipToWEPKey.Delete(item)
 					}
 				}
 			} else {
