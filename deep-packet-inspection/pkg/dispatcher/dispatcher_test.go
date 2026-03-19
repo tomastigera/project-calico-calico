@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
+const nodeName = "127.0.0.1"
+
 var _ = Describe("Resource Dispatcher", func() {
 	dpiName1 := "dpiKey-test-1"
 	dpiName2 := "dpiKey-test-2"
@@ -42,16 +45,16 @@ var _ = Describe("Resource Dispatcher", func() {
 		Kind:      "DeepPacketInspection",
 	}
 	wepKey1 := model.WorkloadEndpointKey{
-		Hostname:       "127.0.0.1",
+		Hostname:       nodeName,
 		OrchestratorID: "k8s",
 		WorkloadID:     "test-dpiKey/pod1",
 		EndpointID:     "eth0",
 	}
-	wepKey2 := model.WorkloadEndpointKey{
-		Hostname:       "127.0.0.1",
-		OrchestratorID: "k8s",
-		WorkloadID:     "test-dpiKey/pod2",
-		EndpointID:     "eth0",
+	// matchingLabels satisfies both the namespace selector appended by the dispatcher
+	// and the k8s-app=='dpiKey' selector used in several tests.
+	matchingLabels := map[string]string{
+		"projectcalico.org/namespace": dpiNs,
+		"k8s-app":                     "dpiKey",
 	}
 
 	It("Adds, updates and deletes DPI and WEP resource", func() {
@@ -76,42 +79,54 @@ var _ = Describe("Resource Dispatcher", func() {
 		}
 
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
+
+		// Allow alertFileMaintainer calls throughout — exact paths are implementation details.
+		mockFileMaintainer.On("Maintain", mock.Anything).Return().Maybe()
+		mockFileMaintainer.On("Stop", mock.Anything).Return().Maybe()
 
 		By("adding a new WorkLoadEndpoint doesn't call snortProcessor")
-		// during Dispatch, no calls are made to porocessor as there is no matching selector
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, map[string]string{"projectcalico.org/namespace": dpiNs})
+		// No DPI selectors registered yet, so no match callbacks fire.
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, matchingLabels)
 
 		By("adding a new DeepPacketInspection resource with WEP that has matching label")
-		mockProcessor1.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
-		mockGenerator.On("GenerateEventsForWEP", dpiKey1, wepKey1).Return(nil)
+		// DPI1 selector matches wepKey1 → startDPIOnWEP
+		mockProcessor1.On("Add", ctx, wepKey1, ifaceName1).Return().Times(1)
+		mockGenerator.On("GenerateEventsForWEP", wepKey1).Return().Maybe()
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='dpiKey'")
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Add", ctx, wepKey1, ifaceName1)).To(BeTrue())
 
 		By("adding a second DeepPacketInspection resource that selects all WEPs")
-		mockProcessor2.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
-		mockGenerator.On("GenerateEventsForWEP", dpiKey2, wepKey1).Return(nil)
-		updateDPIResource(ctx, hndler, dpiKey2, dpiName1, dpiNs, "all()")
+		// DPI2 selector all() also matches wepKey1 → startDPIOnWEP
+		mockProcessor2.On("Add", ctx, wepKey1, ifaceName1).Return().Times(1)
+		updateDPIResource(ctx, hndler, dpiKey2, dpiName2, dpiNs, "all()")
+		Expect(mockProcessor2.AssertCalled(GinkgoT(), "Add", ctx, wepKey1, ifaceName1)).To(BeTrue())
 
-		By("update existing DeepPacketInspection resource no not select any WEPs")
-		// Stops snort and removes interfaces that are no longer valid
-		mockProcessor1.On("Remove", wepKey1).Return(nil).Times(1)
-		mockGenerator.On("StopGeneratingEventsForWEP", dpiKey1, wepKey1).Return(nil)
-		mockProcessor1.On("WEPInterfaceCount").Return(0)
-		mockProcessor1.On("Close").Return(nil)
+		By("update existing DeepPacketInspection resource to not select any WEPs")
+		// DPI1 selector changes to k8s-app=='none' → match stops → stopDPIOnWEP
+		mockProcessor1.On("Remove", wepKey1).Return().Times(1)
+		mockGenerator.On("StopGeneratingEventsForWEP", wepKey1).Return().Maybe()
+		mockProcessor1.On("WEPInterfaceCount").Return(0).Maybe()
+		mockProcessor1.On("Close").Return().Times(1)
+		mockGenerator.On("Close").Return().Maybe()
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='none'")
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Remove", wepKey1)).To(BeTrue())
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Close")).To(BeTrue())
 
 		By("update existing WorkLoadEndpoint resource's interface name")
-		// if WEP interface changes, the old interface is removed and newer one are be added.
-		mockProcessor2.On("Maintain", ctx, wepKey1, ifaceName2, mock.Anything).Return(nil).Times(1)
-		mockProcessor2.On("Remove", wepKey1).Return(nil).Times(2)
-		mockGenerator.On("StopGeneratingEventsForWEP", dpiKey1, wepKey1).Return(nil)
-		mockProcessor2.On("WEPInterfaceCount").Return(0)
-		mockProcessor2.On("Close").Return(nil)
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName2, map[string]string{"projectcalico.org/namespace": dpiNs})
+		// Interface changes → ifaceUpdated → stop DPI2 on old iface, restart on new iface
+		mockProcessor2.On("Remove", wepKey1).Return().Maybe()
+		mockProcessor2.On("Add", ctx, wepKey1, ifaceName2).Return().Times(1)
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName2, matchingLabels)
+		Expect(mockProcessor2.AssertCalled(GinkgoT(), "Add", ctx, wepKey1, ifaceName2)).To(BeTrue())
 
 		By("delete WorkLoadEndpoint resource")
+		// WEP deleted → match stops for DPI2 → stopDPIOnWEP → stopDPI
+		mockProcessor2.On("WEPInterfaceCount").Return(0).Maybe()
+		mockProcessor2.On("Close").Return().Times(1)
 		deleteResource(ctx, hndler, wepKey1)
+		Expect(mockProcessor2.AssertCalled(GinkgoT(), "Close")).To(BeTrue())
 	})
 
 	It("Adds DPI resource before WEP resource", func() {
@@ -130,16 +145,20 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockProcessor1
 		}
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
 
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		mockFileMaintainer.On("Maintain", mock.Anything).Return().Maybe()
+		mockFileMaintainer.On("Stop", mock.Anything).Return().Maybe()
 
 		By("adding a new DeepPacketInspection doesn't call snortProcessor")
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='dpiKey'")
 
 		By("adding a new WorkLoadEndpoint that matches the DPI selector")
-		mockProcessor1.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, map[string]string{"projectcalico.org/namespace": dpiNs})
+		mockProcessor1.On("Add", ctx, wepKey1, ifaceName1).Return().Times(1)
+		mockGenerator.On("GenerateEventsForWEP", wepKey1).Return().Maybe()
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, matchingLabels)
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Add", ctx, wepKey1, ifaceName1)).To(BeTrue())
 	})
 
 	It("Deletes DPI resource before WEP resource", func() {
@@ -159,27 +178,33 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockProcessor1
 		}
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
 
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		mockFileMaintainer.On("Maintain", mock.Anything).Return().Maybe()
+		mockFileMaintainer.On("Stop", mock.Anything).Return().Maybe()
 
 		By("adding a new DeepPacketInspection doesn't call snortProcessor")
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='dpiKey'")
 
 		By("adding a new WorkLoadEndpoint that matches the DPI selector")
-		mockProcessor1.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, map[string]string{"projectcalico.org/namespace": dpiNs})
+		mockProcessor1.On("Add", ctx, wepKey1, ifaceName1).Return().Times(1)
+		mockGenerator.On("GenerateEventsForWEP", wepKey1).Return().Maybe()
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, matchingLabels)
 
 		By("deleting a DPI resource that has snort running")
-		mockProcessor1.On("Remove", wepKey1).Return(nil).Times(1)
+		mockProcessor1.On("Remove", wepKey1).Return().Times(1)
+		mockGenerator.On("StopGeneratingEventsForWEP", wepKey1).Return().Maybe()
 		mockProcessor1.On("WEPInterfaceCount").Return(0).Times(1)
-		mockProcessor1.On("Close").Return(nil).Times(1)
+		mockProcessor1.On("Close").Return().Times(1)
+		mockGenerator.On("Close").Return().Maybe()
 		deleteResource(ctx, hndler, dpiKey1)
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Remove", wepKey1)).To(BeTrue())
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Close")).To(BeTrue())
 	})
 
 	It("Deletes non-existing/non-cached DPI and WEP resource", func() {
 		// This scenario might happen if the dpi pods starts after delete DPI/WEP resource is initiated.
-		mockProcessor1 := &processor.MockProcessor{}
 		mockDPIUpdater := &dpiupdater.MockDPIStatusUpdater{}
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
@@ -192,16 +217,15 @@ var _ = Describe("Resource Dispatcher", func() {
 		}
 
 		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
-			return mockProcessor1
+			return &processor.MockProcessor{}
 		}
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
-
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
 
 		By("deleting a DPI resource that doesn't have a snortProcessor")
 		deleteResource(ctx, hndler, dpiKey1)
-		//	No calls are made to the mockProcessor
+		// No calls are made to the mockProcessor
 	})
 
 	It("Deletes and adds the same DPI and WEP resource", func() {
@@ -221,37 +245,37 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockProcessor1
 		}
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
 
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		mockFileMaintainer.On("Maintain", mock.Anything).Return().Maybe()
+		mockFileMaintainer.On("Stop", mock.Anything).Return().Maybe()
 
 		By("adding a new DeepPacketInspection doesn't call snortProcessor")
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='dpiKey'")
 
 		By("adding a new WorkLoadEndpoint that matches the DPI selector")
-		mockProcessor1.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, map[string]string{"projectcalico.org/namespace": dpiNs})
+		mockProcessor1.On("Add", ctx, wepKey1, ifaceName1).Return().Times(1)
+		mockGenerator.On("GenerateEventsForWEP", wepKey1).Return().Maybe()
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, matchingLabels)
 
-		By("adding another WorkLoadEndpoint that matches the DPI selector")
-		mockProcessor1.On("Maintain", ctx, wepKey2, ifaceName2).Return(nil).Times(1)
-		updateWEPResource(ctx, hndler, wepKey1, ifaceName2, map[string]string{"projectcalico.org/namespace": dpiNs})
+		By("updating the same WorkLoadEndpoint with a new interface")
+		// wepKey1 interface changes from ifaceName1 → ifaceName2 → stop + restart
+		mockProcessor1.On("Remove", wepKey1).Return().Maybe()
+		mockGenerator.On("StopGeneratingEventsForWEP", wepKey1).Return().Maybe()
+		mockProcessor1.On("Add", ctx, wepKey1, ifaceName2).Return().Times(1)
+		updateWEPResource(ctx, hndler, wepKey1, ifaceName2, matchingLabels)
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Add", ctx, wepKey1, ifaceName2)).To(BeTrue())
 
-		By("deleting a DPI resource that has snort running")
-		mockProcessor1.On("Remove", wepKey1).Return(nil).Times(2)
-		totalCall := 2
-		mockProcessor1.On("WEPInterfaceCount").Run(func(args mock.Arguments) {
-			for _, c := range mockProcessor1.ExpectedCalls {
-				// After the first call to "Remove" there must be one interface left and zero after second call
-				totalCall--
-				c.ReturnArguments = mock.Arguments{totalCall}
-			}
-		}).Times(2)
-		mockProcessor1.On("Close").Return(nil).Times(1)
+		By("deleting the WorkLoadEndpoint resource")
+		mockProcessor1.On("WEPInterfaceCount").Return(0).Maybe()
+		mockProcessor1.On("Close").Return().Times(1)
+		mockGenerator.On("Close").Return().Maybe()
 		deleteResource(ctx, hndler, wepKey1)
+		Expect(mockProcessor1.AssertCalled(GinkgoT(), "Close")).To(BeTrue())
 	})
 
 	It("Doesn't start snort on WEP in a different namespace", func() {
-		mockProcessor1 := &processor.MockProcessor{}
 		mockDPIUpdater := &dpiupdater.MockDPIStatusUpdater{}
 		mockFileMaintainer := &file.MockFileMaintainer{}
 		mockGenerator := &eventgenerator.MockEventGenerator{}
@@ -264,20 +288,19 @@ var _ = Describe("Resource Dispatcher", func() {
 		}
 
 		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
-			return mockProcessor1
+			return &processor.MockProcessor{}
 		}
 		ctx := context.Background()
-		hndler := dispatcher.NewDispatcher(&config.Config{}, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
-
-		mockGenerator.On("UpdateCache", mock.Anything, mock.Anything).Return(nil)
+		cfg := &config.Config{NodeName: nodeName}
+		hndler := dispatcher.NewDispatcher(cfg, mockSnortProcessor, mockEventGenerator, nil, mockDPIUpdater, mockFileMaintainer)
 
 		By("adding a new DeepPacketInspection doesn't call snortProcessor")
 		updateDPIResource(ctx, hndler, dpiKey1, dpiName1, dpiNs, "k8s-app=='dpiKey'")
 
 		By("adding a new WorkLoadEndpoint that belongs to different namespace")
-		mockProcessor1.On("Maintain", ctx, wepKey1, ifaceName1).Return(nil).Times(1)
+		// WEP has the wrong namespace, so the combined DPI selector does not match.
 		updateWEPResource(ctx, hndler, wepKey1, ifaceName1, map[string]string{"projectcalico.org/namespace": "randomNs"})
-		// No calls are made to the snortProcessor
+		// No calls are made to the snortProcessor or event generator.
 	})
 
 })
