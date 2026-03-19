@@ -30,6 +30,8 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 	k8stesting "k8s.io/client-go/testing"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -158,6 +160,7 @@ func TestOptions(t *testing.T) {
 }
 
 func TestMainlineFunction(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	testCases := []struct {
 		tenantNamespace string
 		tenantID        string
@@ -1431,6 +1434,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 }
 
 func TestMultiTenant(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	t.Run("verify Impersonation headers are added", func(t *testing.T) {
 		defer setup(t)()
 
