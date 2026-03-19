@@ -1,0 +1,19 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/lma/pkg/auth:
+    interfaces:
+      JWTAuth:
+      RBACAuthorizer:
+  github.com/projectcalico/calico/lma/pkg/elastic:
+    interfaces:
+      Client:
+      ClusterContextClientFactory:
+      FlowFilter:
+  github.com/projectcalico/calico/lma/pkg/k8s:
+    interfaces:
+      ClientSet:
+      ClientSetFactory:
+  github.com/projectcalico/calico/lma/pkg/rbac:
+    interfaces:
+      FlowHelper:
