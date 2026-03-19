@@ -63,7 +63,7 @@ var _ = Describe("Watcher", func() {
 			var fakeCalicoClient *fakecalico.Clientset
 
 			BeforeEach(func() {
-				fakeCalicoClient = fakecalico.NewSimpleClientset()
+				fakeCalicoClient = fakecalico.NewClientset()
 				testWatcher = watcher.NewWatcher(
 					mockRec,
 					&k8scache.ListWatch{

@@ -180,9 +180,9 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 	// Define the kubernetes interface
 	mockLmaK8sClientSet := &lmak8s.MockClientSet{}
 	mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-		clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+		clientsetfake.NewClientset().ProjectcalicoV3(),
 	)
-	coreV1 := fake.NewSimpleClientset().CoreV1()
+	coreV1 := fake.NewClientset().CoreV1()
 	_, err := coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
 	Expect(err).To(BeNil())
 	_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
@@ -200,7 +200,7 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 	_, err = coreV1.Pods("test-ds-namespace").Create(req.Context(), dsPod, metav1.CreateOptions{})
 	Expect(err).To(BeNil())
 
-	appV1 := fake.NewSimpleClientset().AppsV1()
+	appV1 := fake.NewClientset().AppsV1()
 	_, err = appV1.Deployments("test-dep-namespace").Create(req.Context(), deployment, metav1.CreateOptions{})
 	Expect(err).To(BeNil())
 	_, err = appV1.DaemonSets("test-ds-namespace").Create(req.Context(), ds, metav1.CreateOptions{})
@@ -212,11 +212,11 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 	_, err = appV1.Deployments("test-wc-namespace").Create(req.Context(), wcDep, metav1.CreateOptions{})
 	Expect(err).To(BeNil())
 
-	batchV1 := fake.NewSimpleClientset().BatchV1()
+	batchV1 := fake.NewClientset().BatchV1()
 	_, err = batchV1.Jobs("test-job-namespace").Create(req.Context(), job, metav1.CreateOptions{})
 	Expect(err).To(BeNil())
 
-	batchV1beta1 := fake.NewSimpleClientset().BatchV1beta1()
+	batchV1beta1 := fake.NewClientset().BatchV1beta1()
 
 	// Define the return methods called by this test.
 	mockLmaK8sClientSet.On("CoreV1").Return(coreV1)

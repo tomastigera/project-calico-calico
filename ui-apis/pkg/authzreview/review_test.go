@@ -56,8 +56,8 @@ func testAttrs() []v3.AuthorizationReviewResourceAttributes {
 // (discovery returns the requested resource types).
 func newWorkingClientSet() *fakeClientSet {
 	return &fakeClientSet{
-		Clientset: k8sfake.NewSimpleClientset(),
-		calico:    calicofake.NewSimpleClientset().ProjectcalicoV3(),
+		Clientset: k8sfake.NewClientset(),
+		calico:    calicofake.NewClientset().ProjectcalicoV3(),
 	}
 }
 
@@ -65,8 +65,8 @@ func newWorkingClientSet() *fakeClientSet {
 // causing CalculatePermissions to fail with a Forbidden error.
 func newForbiddenClientSet() *fakeClientSet {
 	return &fakeClientSet{
-		Clientset:         k8sfake.NewSimpleClientset(),
-		calico:            calicofake.NewSimpleClientset().ProjectcalicoV3(),
+		Clientset:         k8sfake.NewClientset(),
+		calico:            calicofake.NewClientset().ProjectcalicoV3(),
 		discoveryOverride: &forbiddenDiscovery{},
 	}
 }
@@ -75,7 +75,7 @@ func newForbiddenClientSet() *fakeClientSet {
 // creation, simulating a managed cluster with the AuthorizationReview API. The
 // returned review echoes back the requested attributes as authorized verbs.
 func newCRDClientSet() *fakeClientSet {
-	calicoFake := calicofake.NewSimpleClientset()
+	calicoFake := calicofake.NewClientset()
 	calicoFake.PrependReactor("create", "authorizationreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		createAction := action.(k8stesting.CreateAction)
 		review := createAction.GetObject().(*v3.AuthorizationReview)
@@ -93,7 +93,7 @@ func newCRDClientSet() *fakeClientSet {
 		return true, review, nil
 	})
 	return &fakeClientSet{
-		Clientset: k8sfake.NewSimpleClientset(),
+		Clientset: k8sfake.NewClientset(),
 		calico:    calicoFake.ProjectcalicoV3(),
 	}
 }

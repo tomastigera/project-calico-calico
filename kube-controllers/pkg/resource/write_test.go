@@ -18,7 +18,7 @@ import (
 
 var _ = Describe("ConfigMap", func() {
 	It("Creates the config map when it doesn't exist", func() {
-		cli := fake.NewSimpleClientset()
+		cli := fake.NewClientset()
 		Expect(resource.WriteConfigMapToK8s(cli, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "TestName",
@@ -31,7 +31,7 @@ var _ = Describe("ConfigMap", func() {
 	})
 
 	It("Updates the config map when it exists", func() {
-		cli := fake.NewSimpleClientset()
+		cli := fake.NewClientset()
 		Expect(resource.WriteConfigMapToK8s(cli, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "TestName",
@@ -64,7 +64,7 @@ var _ = Describe("ConfigMap", func() {
 
 var _ = Describe("Secret", func() {
 	It("Creates the Secret when it doesn't exist", func() {
-		cli := fake.NewSimpleClientset()
+		cli := fake.NewClientset()
 		Expect(resource.WriteSecretToK8s(cli, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "TestName",
@@ -77,7 +77,7 @@ var _ = Describe("Secret", func() {
 	})
 
 	It("Updates the Secret when it exists", func() {
-		cli := fake.NewSimpleClientset()
+		cli := fake.NewClientset()
 		Expect(resource.WriteSecretToK8s(cli, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "TestName",
@@ -110,7 +110,7 @@ var _ = Describe("Secret", func() {
 
 var _ = Describe("LicenseKey", func() {
 	It("Creates the LicenseKey when it doesn't exist", func() {
-		cli := tigeraapifake.NewSimpleClientset()
+		cli := tigeraapifake.NewClientset()
 		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",
@@ -126,7 +126,7 @@ var _ = Describe("LicenseKey", func() {
 	})
 
 	It("Updates the LicenseKey when it exists", func() {
-		cli := tigeraapifake.NewSimpleClientset()
+		cli := tigeraapifake.NewClientset()
 		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",

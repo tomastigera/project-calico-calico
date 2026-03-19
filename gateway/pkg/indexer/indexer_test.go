@@ -14,8 +14,8 @@ import (
 
 func TestStatusIndexer_NewStatusIndexer(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset()
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -49,8 +49,8 @@ func TestStatusIndexer_NewStatusIndexer(t *testing.T) {
 
 func TestStatusIndexer_GatewayOperations(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset()
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -147,7 +147,7 @@ func TestStatusIndexer_GatewayOperations(t *testing.T) {
 
 func TestStatusIndexer_HTTPRouteOperations(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
 
 	httpRoute := &gwv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,7 +175,7 @@ func TestStatusIndexer_HTTPRouteOperations(t *testing.T) {
 		},
 	}
 
-	gatewayClient := gatewayfake.NewSimpleClientset(httpRoute)
+	gatewayClient := gatewayfake.NewClientset(httpRoute)
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -229,7 +229,7 @@ func TestStatusIndexer_HTTPRouteOperations(t *testing.T) {
 
 func TestStatusIndexer_GRPCRouteOperations(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
 
 	grpcRoute := &gwv1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -257,7 +257,7 @@ func TestStatusIndexer_GRPCRouteOperations(t *testing.T) {
 		},
 	}
 
-	gatewayClient := gatewayfake.NewSimpleClientset(grpcRoute)
+	gatewayClient := gatewayfake.NewClientset(grpcRoute)
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -307,7 +307,7 @@ func TestStatusIndexer_GRPCRouteOperations(t *testing.T) {
 
 func TestStatusIndexer_ReverseIndex(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
 
 	// Create multiple routes pointing to the same gateway
 	httpRoute1 := &gwv1.HTTPRoute{
@@ -370,7 +370,7 @@ func TestStatusIndexer_ReverseIndex(t *testing.T) {
 		},
 	}
 
-	gatewayClient := gatewayfake.NewSimpleClientset(httpRoute1, httpRoute2, grpcRoute)
+	gatewayClient := gatewayfake.NewClientset(httpRoute1, httpRoute2, grpcRoute)
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -418,7 +418,7 @@ func TestStatusIndexer_ReverseIndex(t *testing.T) {
 
 func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
 
 	gateway := &gwv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
@@ -430,7 +430,7 @@ func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 		},
 	}
 
-	gatewayClient := gatewayfake.NewSimpleClientset(gateway)
+	gatewayClient := gatewayfake.NewClientset(gateway)
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {
@@ -472,8 +472,8 @@ func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 
 func TestStatusIndexer_MultipleStarts(t *testing.T) {
 	logger := zap.NewNop()
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset()
 
 	indexer, err := NewStatusIndexer(logger, k8sClient, gatewayClient)
 	if err != nil {

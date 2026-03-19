@@ -18,8 +18,8 @@ import (
 var _ = Describe("License Controller tests", func() {
 
 	It("Copies license when the managed cluster is missing a license", func() {
-		managedCalicoCLI := tigeraapifake.NewSimpleClientset()
-		managementCalicoCLI := tigeraapifake.NewSimpleClientset()
+		managedCalicoCLI := tigeraapifake.NewClientset()
+		managementCalicoCLI := tigeraapifake.NewClientset()
 		reconciler := license.NewLicenseReconciler(managedCalicoCLI, managementCalicoCLI, "cluster")
 
 		_, err := managementCalicoCLI.ProjectcalicoV3().LicenseKeys().Create(context.Background(), &v3.LicenseKey{
@@ -44,8 +44,8 @@ var _ = Describe("License Controller tests", func() {
 	})
 
 	It("Fail to copy license when the management cluster is missing the license", func() {
-		managedCalicoCLI := tigeraapifake.NewSimpleClientset()
-		managementCalicoCLI := tigeraapifake.NewSimpleClientset()
+		managedCalicoCLI := tigeraapifake.NewClientset()
+		managementCalicoCLI := tigeraapifake.NewClientset()
 		reconciler := license.NewLicenseReconciler(managedCalicoCLI, managementCalicoCLI, "cluster")
 
 		err := reconciler.Reconcile(types.NamespacedName{})

@@ -49,7 +49,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 	Describe("Create", func() {
 		Context("WorkloadEndpoint has no IPs set", func() {
 			It("does not set the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations", func() {
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -100,7 +100,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 		})
 		Context("WorkloadEndpoint has IPs set", func() {
 			It("sets the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations to the WorkloadEndpoint IPs", func() {
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -156,7 +156,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 	})
 	Describe("CreateNonDefault", func() {
 		It("doesn't update the Pod for the WorkloadEndpoint", func() {
-			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+			k8sClient := fake.NewClientset(&k8sapi.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "simplePod",
 					Namespace: "testNamespace",
@@ -206,7 +206,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 	Describe("Update", func() {
 		Context("WorkloadEndpoint has no IPs set", func() {
 			It("does not set the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations", func() {
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -256,7 +256,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 		})
 		Context("WorkloadEndpoint has IPs set", func() {
 			It("sets the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations to the WorkloadEndpoint IPs", func() {
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -313,7 +313,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 
 	Describe("UpdateNonDefault", func() {
 		It("doesn't update the Pod for the WorkloadEndpoint", func() {
-			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+			k8sClient := fake.NewClientset(&k8sapi.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "simplePod",
 					Namespace: "testNamespace",
@@ -366,7 +366,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 		Context("WorkloadEndpoint has no IPs set", func() {
 			It("zeros out the annotations", func() {
 				podUID := types.UID(uuid.NewString())
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -430,7 +430,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 
 	Describe("Get", func() {
 		It("gets the WorkloadEndpoint using the given name", func() {
-			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+			k8sClient := fake.NewClientset(&k8sapi.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "simplePod",
 					Namespace: "testNamespace",
@@ -605,7 +605,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 			})
 			Context("name contains neither the endpoint suffix or the pod name midfix", func() {
 				It("returns an error", func() {
-					k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+					k8sClient := fake.NewClientset(&k8sapi.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "simplePod",
 							Namespace: "testNamespace",
@@ -873,7 +873,7 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 	Describe("Get", func() {
 		Context("no CNCF annotations on Pod", func() {
 			It("gets the default WorkloadEndpoint using the default interface name", func() {
-				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				k8sClient := fake.NewClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
 						Namespace: "testNamespace",
@@ -933,7 +933,7 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 		Context("CNCF annotations on Pod", func() {
 			When("the pods default calico interface is not eth0", func() {
 				It("gets the default WorkloadEndpoint using the non eth0 name", func() {
-					k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+					k8sClient := fake.NewClientset(&k8sapi.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "simplePod",
 							Namespace: "testNamespace",
@@ -1014,7 +1014,7 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 			})
 			When("when the pod has multiple interfaces and an additional one is selected", func() {
 				It("returns the correct Workload endpoint", func() {
-					k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+					k8sClient := fake.NewClientset(&k8sapi.Pod{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "simplePod",
 							Namespace: "testNamespace",
@@ -2047,7 +2047,7 @@ func testListWorkloadEndpoints(pods []runtime.Object, listOptions model.Resource
 }
 
 func testWatchWorkloadEndpoints(pods []*k8sapi.Pod, expectedWEPs []*internalapi.WorkloadEndpoint) {
-	k8sClient := fake.NewSimpleClientset()
+	k8sClient := fake.NewClientset()
 	ctx := context.Background()
 
 	wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)

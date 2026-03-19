@@ -28,11 +28,7 @@ func TestAuthService(t *testing.T) {
 	logger := logging.New("TestAuthService")
 
 	newSubject := func(t *testing.T, cfg *config.Config, dexOptions ...lmaauth.DexOption) (*AuthService, *rsa.PrivateKey, *k8sfake.Clientset) {
-		// k8sfake.NewSimpleClientset() is deprecated but its replacement (k8sfake.NewClientSet) does not include all
-		// required scheme for authentication.
-		// A test here fails with: schema error: no type found matching: io.k8s.api.authentication.v1.TokenReview
-		// TODO: Replace this with k8sfake.NewClientSet once https://github.com/kubernetes/kubernetes/issues/126850 gets fixed
-		fakeClient := k8sfake.NewSimpleClientset()
+		fakeClient := k8sfake.NewClientset()
 
 		jwtToken, err := jwt.NewBuilder().Issuer("fake-issuer").Build()
 		require.NoError(t, err)

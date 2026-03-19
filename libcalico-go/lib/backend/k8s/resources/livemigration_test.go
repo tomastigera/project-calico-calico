@@ -70,7 +70,7 @@ var _ = Describe("LiveMigrationClient", func() {
 	Describe("Get", func() {
 		It("converts a matching VMIM to a LiveMigration with spec populated", func() {
 			vmim := newVMIM("test-ns", "vmim-1", "100", kubevirtv1.MigrationRunning, "my-vmi", "source-pod-abc", "uid-123")
-			kvFake := kubevirtfake.NewSimpleClientset(vmim)
+			kvFake := kubevirtfake.NewClientset(vmim)
 
 			client := newLiveMigrationClient(kvFake)
 			kvp, err := client.Get(ctx, model.ResourceKey{
@@ -105,7 +105,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("returns an error when the VMIM does not exist", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 
 			client := newLiveMigrationClient(kvFake)
 			_, err := client.Get(ctx, model.ResourceKey{
@@ -119,7 +119,7 @@ var _ = Describe("LiveMigrationClient", func() {
 
 		It("returns not-found when VMIM is in a non-matching phase", func() {
 			vmim := newVMIM("test-ns", "vmim-done", "100", kubevirtv1.MigrationSucceeded, "my-vmi", "source-pod-abc", "uid-123")
-			kvFake := kubevirtfake.NewSimpleClientset(vmim)
+			kvFake := kubevirtfake.NewClientset(vmim)
 
 			client := newLiveMigrationClient(kvFake)
 			_, err := client.Get(ctx, model.ResourceKey{
@@ -134,7 +134,7 @@ var _ = Describe("LiveMigrationClient", func() {
 
 		It("returns not-found when VMIM is in matching phase but missing sourcePod", func() {
 			vmim := newVMIM("test-ns", "vmim-no-source", "100", kubevirtv1.MigrationRunning, "my-vmi", "", "uid-123")
-			kvFake := kubevirtfake.NewSimpleClientset(vmim)
+			kvFake := kubevirtfake.NewClientset(vmim)
 
 			client := newLiveMigrationClient(kvFake)
 			_, err := client.Get(ctx, model.ResourceKey{
@@ -152,7 +152,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		It("lists matching VMIMs and converts them to LiveMigrations with spec", func() {
 			vmim1 := newVMIM("test-ns", "vmim-1", "100", kubevirtv1.MigrationRunning, "vmi-a", "src-pod-1", "uid-1")
 			vmim2 := newVMIM("test-ns", "vmim-2", "101", kubevirtv1.MigrationTargetReady, "vmi-b", "src-pod-2", "uid-2")
-			kvFake := kubevirtfake.NewSimpleClientset(vmim1, vmim2)
+			kvFake := kubevirtfake.NewClientset(vmim1, vmim2)
 
 			client := newLiveMigrationClient(kvFake)
 			kvps, err := client.List(ctx, model.ResourceListOptions{
@@ -177,7 +177,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		It("lists VMIMs across all namespaces", func() {
 			vmim1 := newVMIM("ns-a", "vmim-1", "100", kubevirtv1.MigrationRunning, "vmi-a", "src-pod-1", "uid-1")
 			vmim2 := newVMIM("ns-b", "vmim-2", "101", kubevirtv1.MigrationFailed, "vmi-b", "src-pod-2", "uid-2")
-			kvFake := kubevirtfake.NewSimpleClientset(vmim1, vmim2)
+			kvFake := kubevirtfake.NewClientset(vmim1, vmim2)
 
 			client := newLiveMigrationClient(kvFake)
 			kvps, err := client.List(ctx, model.ResourceListOptions{
@@ -189,7 +189,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("returns empty list when no VMIMs exist", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 
 			client := newLiveMigrationClient(kvFake)
 			kvps, err := client.List(ctx, model.ResourceListOptions{
@@ -205,7 +205,7 @@ var _ = Describe("LiveMigrationClient", func() {
 			matching := newVMIM("test-ns", "vmim-running", "100", kubevirtv1.MigrationRunning, "vmi-a", "src-pod-1", "uid-1")
 			nonMatching := newVMIM("test-ns", "vmim-succeeded", "101", kubevirtv1.MigrationSucceeded, "vmi-b", "src-pod-2", "uid-2")
 			noSourcePod := newVMIM("test-ns", "vmim-no-src", "102", kubevirtv1.MigrationRunning, "vmi-c", "", "uid-3")
-			kvFake := kubevirtfake.NewSimpleClientset(matching, nonMatching, noSourcePod)
+			kvFake := kubevirtfake.NewClientset(matching, nonMatching, noSourcePod)
 
 			client := newLiveMigrationClient(kvFake)
 			kvps, err := client.List(ctx, model.ResourceListOptions{
@@ -222,7 +222,7 @@ var _ = Describe("LiveMigrationClient", func() {
 
 	Describe("Watch", func() {
 		It("receives watch events for matching VMIM resources as LiveMigrations", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 
 			client := newLiveMigrationClient(kvFake)
 			w, err := client.Watch(ctx, model.ResourceListOptions{
@@ -260,7 +260,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("emits Deleted event when VMIM transitions to non-matching phase", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 
 			client := newLiveMigrationClient(kvFake)
 			w, err := client.Watch(ctx, model.ResourceListOptions{
@@ -307,7 +307,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("does not emit events for non-matching VMIMs", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 
 			client := newLiveMigrationClient(kvFake)
 			w, err := client.Watch(ctx, model.ResourceListOptions{
@@ -347,7 +347,7 @@ var _ = Describe("LiveMigrationClient", func() {
 			)
 
 			BeforeEach(func() {
-				kvFake = kubevirtfake.NewSimpleClientset()
+				kvFake = kubevirtfake.NewClientset()
 
 				client := newLiveMigrationClient(kvFake)
 				w, err = client.Watch(ctx, model.ResourceListOptions{
@@ -466,7 +466,7 @@ var _ = Describe("LiveMigrationClient", func() {
 
 	Describe("Read-only stubs", func() {
 		It("Create returns ErrorOperationNotSupported", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 			client := newLiveMigrationClient(kvFake)
 
 			kvp := &model.KVPair{
@@ -485,7 +485,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("Update returns ErrorOperationNotSupported", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 			client := newLiveMigrationClient(kvFake)
 
 			kvp := &model.KVPair{
@@ -504,7 +504,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("Delete returns ErrorOperationNotSupported", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 			client := newLiveMigrationClient(kvFake)
 
 			_, err := client.Delete(ctx, model.ResourceKey{
@@ -518,7 +518,7 @@ var _ = Describe("LiveMigrationClient", func() {
 		})
 
 		It("DeleteKVP returns ErrorOperationNotSupported", func() {
-			kvFake := kubevirtfake.NewSimpleClientset()
+			kvFake := kubevirtfake.NewClientset()
 			client := newLiveMigrationClient(kvFake)
 
 			kvp := &model.KVPair{

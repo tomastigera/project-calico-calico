@@ -59,8 +59,8 @@ var _ = Describe("Policy Recommendation Batch", func() {
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
 		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
-		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1())
 	})
 
 	DescribeTable("Batch update staged network policy staged actions",
@@ -191,8 +191,8 @@ var _ = Describe("Policy Recommendation Batch Authen/Authz", func() {
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
 		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
-		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1())
 
 		errorMessage = eMessage{}
 	})
@@ -267,8 +267,8 @@ var _ = Describe("Policy Recommendation Batch Patch", func() {
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", clusterID).Return(&mockLmaK8sClientSet, nil)
 		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
-		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1())
 	})
 
 	DescribeTable("PatchSnp",

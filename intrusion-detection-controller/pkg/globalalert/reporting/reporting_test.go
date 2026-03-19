@@ -53,7 +53,7 @@ var _ = Describe("Reporting", func() {
 	}
 
 	BeforeEach(func() {
-		mockCalicoCLI = fake.NewSimpleClientset(&defaultSampleGlobalAlert)
+		mockCalicoCLI = fake.NewClientset(&defaultSampleGlobalAlert)
 
 		ctx, cancel = context.WithCancel(context.Background())
 	})

@@ -101,8 +101,8 @@ func mustMarshal(obj any) []byte {
 }
 
 func TestAdmit_IgnoresNonUISettings(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
-	calicoClient := calicofake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -134,9 +134,9 @@ func TestHandleCreate_Success(t *testing.T) {
 		},
 	}
 
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset(group)
+	calicoClient := calicofake.NewClientset(group)
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -173,9 +173,9 @@ func TestHandleCreate_UserGroup(t *testing.T) {
 		},
 	}
 
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset(group)
+	calicoClient := calicofake.NewClientset(group)
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -205,11 +205,11 @@ func TestHandleCreate_UserGroup(t *testing.T) {
 }
 
 func TestHandleCreate_MissingGroup(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
 
 	// No UISettingsGroup exists.
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -222,8 +222,8 @@ func TestHandleCreate_MissingGroup(t *testing.T) {
 }
 
 func TestHandleCreate_EmptyGroup(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
-	calicoClient := calicofake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -250,9 +250,9 @@ func TestHandleCreate_Unauthorized(t *testing.T) {
 		},
 	}
 
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	denyAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset(group)
+	calicoClient := calicofake.NewClientset(group)
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -266,9 +266,9 @@ func TestHandleCreate_Unauthorized(t *testing.T) {
 }
 
 func TestHandleCreate_UnauthorizedGetGroup(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	denyGetSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -282,9 +282,9 @@ func TestHandleCreate_UnauthorizedGetGroup(t *testing.T) {
 }
 
 func TestHandleUpdate_Success(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -306,9 +306,9 @@ func TestHandleUpdate_Success(t *testing.T) {
 }
 
 func TestHandleUpdate_ImmutableGroup(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -324,9 +324,9 @@ func TestHandleUpdate_ImmutableGroup(t *testing.T) {
 }
 
 func TestHandleUpdate_ImmutableUser(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -345,9 +345,9 @@ func TestHandleUpdate_ImmutableUser(t *testing.T) {
 }
 
 func TestHandleUpdate_ImmutableOwnerReferences(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -371,9 +371,9 @@ func TestHandleUpdate_ImmutableOwnerReferences(t *testing.T) {
 }
 
 func TestHandleUpdate_Unauthorized(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	denyAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -388,9 +388,9 @@ func TestHandleUpdate_Unauthorized(t *testing.T) {
 }
 
 func TestHandleDelete_Success(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	allowAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -402,9 +402,9 @@ func TestHandleDelete_Success(t *testing.T) {
 }
 
 func TestHandleDelete_Unauthorized(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 	denyAllSARReactor(k8sClient)
-	calicoClient := calicofake.NewSimpleClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -417,8 +417,8 @@ func TestHandleDelete_Unauthorized(t *testing.T) {
 }
 
 func TestHandleDelete_NoObject(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
-	calicoClient := calicofake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
+	calicoClient := calicofake.NewClientset()
 
 	h := &uiSettingsHook{k8sClient: k8sClient, calicoClient: calicoClient}
 
@@ -431,7 +431,7 @@ func TestHandleDelete_NoObject(t *testing.T) {
 }
 
 func TestCheckAccess_VerifiesSARFields(t *testing.T) {
-	k8sClient := k8sfake.NewSimpleClientset()
+	k8sClient := k8sfake.NewClientset()
 
 	// Capture the SAR to verify its fields.
 	var capturedSAR *authorizationv1.SubjectAccessReview

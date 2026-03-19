@@ -51,17 +51,17 @@ var _ = Describe("Policy Recommendation Engine", func() {
 			// Define the kubernetes interface
 			mockLmaK8sClientSet = &lmak8s.MockClientSet{}
 			mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-				clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+				clientsetfake.NewClientset().ProjectcalicoV3(),
 			)
-			coreV1 := fake.NewSimpleClientset().CoreV1()
+			coreV1 := fake.NewClientset().CoreV1()
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
-			appV1 := fake.NewSimpleClientset().AppsV1()
-			batchV1 := fake.NewSimpleClientset().BatchV1()
-			batchV1Beta1 := fake.NewSimpleClientset().BatchV1beta1()
+			appV1 := fake.NewClientset().AppsV1()
+			batchV1 := fake.NewClientset().BatchV1()
+			batchV1Beta1 := fake.NewClientset().BatchV1beta1()
 
 			// Define the return methods called by this test.
 			mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
@@ -292,10 +292,10 @@ var _ = Describe("Policy Recommendation Engine", func() {
 	It("should not produce any policies for flows that match endpoint name and namespace but not direction reported", func() {
 		// Define the kubernetes interface
 		mockLmaK8sClientSet = &lmak8s.MockClientSet{}
-		appV1 := fake.NewSimpleClientset().AppsV1()
-		coreV1 := fake.NewSimpleClientset().CoreV1()
-		batchV1 := fake.NewSimpleClientset().BatchV1()
-		batchV1Beta1 := fake.NewSimpleClientset().BatchV1beta1()
+		appV1 := fake.NewClientset().AppsV1()
+		coreV1 := fake.NewClientset().CoreV1()
+		batchV1 := fake.NewClientset().BatchV1()
+		batchV1Beta1 := fake.NewClientset().BatchV1beta1()
 		// Define the return methods called by this test.
 		mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
 		mockLmaK8sClientSet.On("AppsV1").Return(appV1)
@@ -318,19 +318,19 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		// Define the kubernetes interface
 		mockLmaK8sClientSet = &lmak8s.MockClientSet{}
 		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-			clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+			clientsetfake.NewClientset().ProjectcalicoV3(),
 		)
-		coreV1 := fake.NewSimpleClientset().CoreV1()
+		coreV1 := fake.NewClientset().CoreV1()
 		_, err = coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
 		_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
 
-		appV1 := fake.NewSimpleClientset().AppsV1()
+		appV1 := fake.NewClientset().AppsV1()
 
-		batchV1 := fake.NewSimpleClientset().BatchV1()
+		batchV1 := fake.NewClientset().BatchV1()
 
-		batchV1Beta1 := fake.NewSimpleClientset().BatchV1beta1()
+		batchV1Beta1 := fake.NewClientset().BatchV1beta1()
 
 		// Define the return methods called by this test.
 		mockLmaK8sClientSet.On("CoreV1").Return(coreV1)

@@ -39,7 +39,7 @@ var _ = Describe("LicenseStatusController tests", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		cli = tigeraapifake.NewSimpleClientset()
+		cli = tigeraapifake.NewClientset()
 		informer = &mockInformer{}
 		c := NewStatusController(ctx, cli, informer)
 		ctrl = c.(*LicenseStatusController)
@@ -83,7 +83,7 @@ var _ = Describe("LicenseStatusController tests", func() {
 		licenseKey.Name = "default"
 
 		// Mock the client to return the license key on UpdateStatus.
-		// tigeraapifake.NewSimpleClientset() already handles this.
+		// tigeraapifake.NewClientset() already handles this.
 
 		// Create the license key in the fake client.
 		_, err := cli.ProjectcalicoV3().LicenseKeys().Create(ctx, licenseKey, metav1.CreateOptions{})
