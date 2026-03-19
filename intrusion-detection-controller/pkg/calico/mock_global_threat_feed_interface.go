@@ -52,7 +52,7 @@ func (m *MockGlobalThreatFeedInterface) List(ctx context.Context, opts v1.ListOp
 func (m *MockGlobalThreatFeedInterface) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	if m.WatchError == nil {
 		if m.W == nil {
-			m.W = &MockWatch{make(chan watch.Event)}
+			m.W = &MockWatch{C: make(chan watch.Event)}
 		}
 		return m.W, nil
 	} else {

@@ -10,6 +10,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/watch"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
@@ -27,6 +29,7 @@ func TestNewController(t *testing.T) {
 }
 
 func TestController_Add_Success(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	client := &calico.MockGlobalNetworkSetInterface{W: &calico.MockWatch{C: make(chan watch.Event)}}
@@ -69,6 +72,7 @@ func TestController_Add_Success(t *testing.T) {
 }
 
 func TestController_Delete(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -100,6 +104,7 @@ func TestController_Delete(t *testing.T) {
 }
 
 func TestController_Update(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -148,6 +153,7 @@ func TestController_Update(t *testing.T) {
 
 // Add and then delete a GNS before there is a chance to process it.
 func TestController_AddDelete(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -175,6 +181,7 @@ func TestController_AddDelete(t *testing.T) {
 }
 
 func TestController_AddRetry(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -198,6 +205,7 @@ func TestController_AddRetry(t *testing.T) {
 }
 
 func TestController_AddFail(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -229,6 +237,7 @@ func TestController_AddFail(t *testing.T) {
 }
 
 func TestController_ResourceEventHandlerFuncs(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	client := &calico.MockGlobalNetworkSetInterface{W: &calico.MockWatch{C: make(chan watch.Event)}}
@@ -267,6 +276,7 @@ func TestController_ResourceEventHandlerFuncs(t *testing.T) {
 // Test the code that handles failing to sync. Very little to assert, but making
 // sure it doesn't panic or lock.
 func TestController_FailToSync(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	client := &calico.MockGlobalNetworkSetInterface{Error: errors.New("test")}
@@ -286,6 +296,7 @@ func TestController_FailToSync(t *testing.T) {
 // Test the code that handles failing to sync. Very little to assert, but making
 // sure it doesn't panic or lock.
 func TestController_ShutDown(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	client := &calico.MockGlobalNetworkSetInterface{}
@@ -306,6 +317,7 @@ func TestController_ShutDown(t *testing.T) {
 }
 
 func TestController_DeleteFailure(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
@@ -324,6 +336,7 @@ func TestController_DeleteFailure(t *testing.T) {
 }
 
 func TestController_UpdateFailure(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
