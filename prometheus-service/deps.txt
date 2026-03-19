@@ -87,11 +87,15 @@ local:libcalico-go/lib/backend/model
 local:libcalico-go/lib/errors
 local:libcalico-go/lib/json
 local:libcalico-go/lib/logutils
+local:libcalico-go/lib/metricsserver
 local:libcalico-go/lib/names
 local:libcalico-go/lib/namespace
 local:libcalico-go/lib/net
+local:libcalico-go/lib/winutils
 local:lma/pkg/auth
 local:lma/pkg/cache
+local:node/pkg/bgp
+local:node/pkg/metrics
 local:pkg/nonclusterhost
 local:prometheus-service/cmd/server
 local:prometheus-service/pkg/handler/health
