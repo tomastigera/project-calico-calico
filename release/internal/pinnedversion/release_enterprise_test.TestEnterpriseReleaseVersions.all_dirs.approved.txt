@@ -156,6 +156,8 @@
       version: v3.22.0-1.0
     upstream-fluentd:
       version: 1.19.2
+    upstream-istio:
+      version: 1.28.1
     voltron:
       version: v3.22.0-1.0
     waf-http-filter:
