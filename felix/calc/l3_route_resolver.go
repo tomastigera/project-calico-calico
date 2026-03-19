@@ -883,6 +883,9 @@ cidrLoop:
 				// We reset some fields in case we are enclosed by a block.
 				rt.Types = proto.RouteType_CIDR_INFO
 				rt.DstNodeName = ""
+				blockSeen = false
+				blockTypes = 0
+				blockMatchesRoute = false
 			}
 			borrowed := false
 			if len(ri.Blocks) > 0 {
