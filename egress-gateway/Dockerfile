@@ -13,6 +13,8 @@
 # limitations under the License.
 
 # Use this build stage to install iptables-legacy from EPEL.
+# FIXME(jiawei): iptables package is dropped in RHEL 10. We can move to RHEL 10
+# once we have confirmed that iptables is no longer required.
 FROM almalinux:9 AS almalinux
 
 # Install iptables-legacy from EPEL (provides xtables-legacy-multi binary).
