@@ -7,6 +7,8 @@ import (
 
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/client-go/kubernetes/fake"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayfake "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/fake"
@@ -146,6 +148,7 @@ func TestStatusIndexer_GatewayOperations(t *testing.T) {
 }
 
 func TestStatusIndexer_HTTPRouteOperations(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	logger := zap.NewNop()
 	k8sClient := fake.NewClientset()
 
@@ -228,6 +231,7 @@ func TestStatusIndexer_HTTPRouteOperations(t *testing.T) {
 }
 
 func TestStatusIndexer_GRPCRouteOperations(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	logger := zap.NewNop()
 	k8sClient := fake.NewClientset()
 
@@ -306,6 +310,7 @@ func TestStatusIndexer_GRPCRouteOperations(t *testing.T) {
 }
 
 func TestStatusIndexer_ReverseIndex(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	logger := zap.NewNop()
 	k8sClient := fake.NewClientset()
 
@@ -417,6 +422,7 @@ func TestStatusIndexer_ReverseIndex(t *testing.T) {
 }
 
 func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	logger := zap.NewNop()
 	k8sClient := fake.NewClientset()
 
@@ -471,6 +477,7 @@ func TestStatusIndexer_ConcurrentAccess(t *testing.T) {
 }
 
 func TestStatusIndexer_MultipleStarts(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	logger := zap.NewNop()
 	k8sClient := fake.NewClientset()
 	gatewayClient := gatewayfake.NewClientset()
