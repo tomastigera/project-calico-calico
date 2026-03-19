@@ -99,6 +99,11 @@ func (r *eventGenerator) GenerateEventsForWEP(wepKey model.WorkloadEndpointKey) 
 	w := &wepWorker{cancel: cancel}
 	fileRelativePath := fileutils.AlertFileRelativePath(r.dpiKey, wepKey)
 
+	// Increment the WaitGroup before publishing the worker so that a
+	// concurrent StopGeneratingEventsForWEP (or another GenerateEventsForWEP
+	// for the same key) that calls cancel+Wait cannot observe a zero count.
+	w.wg.Add(2)
+
 	r.mu.Lock()
 	old := r.workers[fileRelativePath]
 	r.workers[fileRelativePath] = w
@@ -111,7 +116,6 @@ func (r *eventGenerator) GenerateEventsForWEP(wepKey model.WorkloadEndpointKey) 
 		old.wg.Wait()
 	}
 
-	w.wg.Add(2)
 	go func() { defer w.wg.Done(); r.readRotatedFiles(ctx, wepKey) }()
 	go func() { defer w.wg.Done(); r.tailFile(ctx, wepKey) }()
 }

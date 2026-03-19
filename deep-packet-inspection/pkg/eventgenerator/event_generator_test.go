@@ -61,11 +61,6 @@ var _ = Describe("File Parser", func() {
 		mockForwarder = &alert.MockForwarder{}
 		cfg = &config.Config{SnortAlertFileBasePath: "test"}
 
-		// The tail goroutine may call UpdateStatusWithError on any error path
-		// (e.g. file not yet created, inotify watcher closed). Allow these
-		// calls in all tests to avoid unexpected-call panics.
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
-
 		// Cleanup
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		_ = os.RemoveAll(path)
@@ -88,6 +83,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should start tailing alert file, parse and send it to Linseed", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -181,6 +179,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should send pod name and namespace in Alert when available", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -240,6 +241,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should send current pod name and namespace in Alert", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -349,6 +353,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should handle multiple snorts producing alerts", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path1 := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path1, orgFile, expectedFile)
