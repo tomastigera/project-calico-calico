@@ -17,3 +17,4 @@ packages:
   github.com/projectcalico/calico/lma/pkg/rbac:
     interfaces:
       FlowHelper:
+        
