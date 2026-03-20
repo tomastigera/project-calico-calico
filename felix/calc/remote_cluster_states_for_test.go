@@ -18,7 +18,7 @@ import "github.com/projectcalico/calico/felix/proto"
 
 var (
 	localRemote     = []proto.RouteType{proto.RouteType_LOCAL_WORKLOAD, proto.RouteType_REMOTE_WORKLOAD}
-	remoteTunnelWep = []proto.RouteType{proto.RouteType_REMOTE_TUNNEL, proto.RouteType_REMOTE_WORKLOAD}
+	remoteTunnelWep = []proto.RouteType{proto.RouteType_REMOTE_TUNNEL}
 )
 
 // Base state for remote cluster VXLAN block tests. This base ensures that there is always local VXLAN encap, which is useful
