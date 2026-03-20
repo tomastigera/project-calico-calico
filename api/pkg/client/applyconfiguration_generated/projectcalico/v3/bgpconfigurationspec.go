@@ -67,6 +67,16 @@ type BGPConfigurationSpecApplyConfiguration struct {
 	// confd and BIRD program that route. When ProgramClusterRoutes is Disabled, it is expected that Felix will program that route.
 	// Felix always programs such routes for IP Pools with vxlanMode: Always or vxlanMode: CrossSubnet. [Default: Enabled]
 	ProgramClusterRoutes *string `json:"programClusterRoutes,omitempty"`
+	// IPv4NormalRoutePriority is the normal route priority (metric) that Felix uses for IPv4
+	// workload routes. This must match the value configured in FelixConfiguration. BIRD uses
+	// this to identify elevated-priority routes during live migration and to override local
+	// workload routes with higher-priority BGP-learned routes. [Default: 1024]
+	IPv4NormalRoutePriority *int `json:"ipv4NormalRoutePriority,omitempty"`
+	// IPv6NormalRoutePriority is the normal route priority (metric) that Felix uses for IPv6
+	// workload routes. This must match the value configured in FelixConfiguration. BIRD uses
+	// this to identify elevated-priority routes during live migration and to override local
+	// workload routes with higher-priority BGP-learned routes. [Default: 1024]
+	IPv6NormalRoutePriority *int `json:"ipv6NormalRoutePriority,omitempty"`
 }
 
 // BGPConfigurationSpecApplyConfiguration constructs a declarative configuration of the BGPConfigurationSpec type for use with
@@ -249,5 +259,21 @@ func (b *BGPConfigurationSpecApplyConfiguration) WithLocalWorkloadPeeringIPV6(va
 // If called multiple times, the ProgramClusterRoutes field is set to the value of the last call.
 func (b *BGPConfigurationSpecApplyConfiguration) WithProgramClusterRoutes(value string) *BGPConfigurationSpecApplyConfiguration {
 	b.ProgramClusterRoutes = &value
+	return b
+}
+
+// WithIPv4NormalRoutePriority sets the IPv4NormalRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv4NormalRoutePriority field is set to the value of the last call.
+func (b *BGPConfigurationSpecApplyConfiguration) WithIPv4NormalRoutePriority(value int) *BGPConfigurationSpecApplyConfiguration {
+	b.IPv4NormalRoutePriority = &value
+	return b
+}
+
+// WithIPv6NormalRoutePriority sets the IPv6NormalRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv6NormalRoutePriority field is set to the value of the last call.
+func (b *BGPConfigurationSpecApplyConfiguration) WithIPv6NormalRoutePriority(value int) *BGPConfigurationSpecApplyConfiguration {
+	b.IPv6NormalRoutePriority = &value
 	return b
 }
