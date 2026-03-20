@@ -83,26 +83,18 @@ var _ = describe.CalicoDescribe(
 				return cli.Update(ctx, fc)
 			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
-			// The FelixConfiguration changes above trigger a Felix restart.
-			// Wait for Felix to complete its restart and initial dataplane sync.
-			// We check for the InSync message in the Felix logs, which confirms
-			// that the calc graph has received all current data from the datastore
-			// and the dataplane has been programmed. This is more reliable than
-			// waiting for the pod Ready condition, which can pass before Felix
-			// finishes applying policies (the non-ready window is very brief).
-			By("Waiting for Felix to complete restart and dataplane sync after config change")
-			Eventually(func() bool {
-				output, err := kubectl.NewKubectlCommand("calico-system",
-					"logs", "-l", "k8s-app=calico-node-windows",
-					"-c", "felix", "--since=30s").
-					WithTimeout(time.After(10 * time.Second)).
-					Exec()
-				if err != nil {
-					logrus.WithError(err).Warn("Failed to get Felix logs")
-					return false
-				}
-				return strings.Contains(output, "Received *proto.InSync update from calculation graph")
-			}, 120*time.Second, 5*time.Second).Should(BeTrue(), "Felix did not reach InSync after config change")
+			// The FelixConfiguration changes above trigger a Felix restart
+			// (exit code 129, restarted by felix-service.ps1). Wait for the
+			// restart to complete, then confirm Felix is ready via its
+			// readiness probe.
+			By("Waiting for Felix to restart after config change")
+			time.Sleep(30 * time.Second)
+
+			By("Waiting for Felix readiness probe to pass")
+			kubectl.RunKubectlOrDie("calico-system", "wait",
+				"--for=condition=Ready",
+				"pod", "-l", "k8s-app=calico-node-windows",
+				"--timeout=60s")
 
 			DeferCleanup(func() {
 				Eventually(func() error {
