@@ -5,6 +5,7 @@ package runloop
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 func TestOnDemand(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	var done bool
+	var done atomic.Bool
 	var lock sync.Mutex
 	wake := sync.NewCond(&lock)
 
@@ -24,28 +25,29 @@ func TestOnDemand(t *testing.T) {
 		lock.Lock()
 		wake.Broadcast()
 		lock.Unlock()
-		g.Eventually(func() bool { return done }, 10*time.Second, 1*time.Second).Should(BeTrue(), "run terminates on context cancellation")
+		g.Eventually(func() bool { return done.Load() }, 10*time.Second, 1*time.Second).Should(BeTrue(), "run terminates on context cancellation")
 	}()
 
 	run, enqueue := OnDemand()
 
-	var last int
+	var last atomic.Int64
 	var wg sync.WaitGroup
 	go func() {
 		run(ctx, func(ctx context.Context, i any) {
-			last = i.(int)
-			g.Expect(last).ShouldNot(Equal(2))
+			v := int64(i.(int))
+			last.Store(v)
+			g.Expect(v).ShouldNot(Equal(int64(2)))
 			lock.Lock()
 			wg.Done()
 			wake.Wait()
 			lock.Unlock()
 		})
-		done = true
+		done.Store(true)
 	}()
 
-	enqueue(1)
 	wg.Add(1)
-	g.Eventually(func() int { return last }, 10*time.Second, 1*time.Second).Should(Equal(1))
+	enqueue(1)
+	g.Eventually(func() int64 { return last.Load() }, 10*time.Second, 1*time.Second).Should(Equal(int64(1)))
 
 	// wait for wake.Wait() in run() to be called before adding items to enqueue and sending wake.Signal()
 	wg.Wait()
@@ -57,7 +59,7 @@ func TestOnDemand(t *testing.T) {
 	wake.Signal()
 	lock.Unlock()
 
-	g.Eventually(func() int { return last }, 10*time.Second, 1*time.Second).Should(Equal(3))
+	g.Eventually(func() int64 { return last.Load() }, 10*time.Second, 1*time.Second).Should(Equal(int64(3)))
 	// wait for wake.Wait() in run() to be called before sending wake.Broadcast() in defer()
 	wg.Wait()
 }

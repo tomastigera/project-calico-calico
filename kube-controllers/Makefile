@@ -129,6 +129,13 @@ check-copyright:
 	./check-copyrights.sh
 
 ###############################################################################
+# Code generation
+###############################################################################
+.PHONY: gen-files
+gen-files:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'controller-gen crd paths=./pkg/controllers/migration/... output:crd:dir=pkg/controllers/migration/crd/'
+
+###############################################################################
 # Tests
 ###############################################################################
 # Disable spider for now, it's barfing on a missing embed file.
@@ -152,7 +159,7 @@ TEST_BINARIES=$(addsuffix /ut.test,$(WHAT))
 
 ## Run the unit tests in a container.
 test: ut
-ut fv: $(TEST_BINARIES) $(KUBE_CONTROLLER_CONTAINER_CREATED)
+ut fv: $(TEST_BINARIES) $(KUBE_CONTROLLER_CONTAINER_CREATED) setup-envtest
 	mkdir -p report
 	KUBE_IMAGE=$(CALICO_BUILD) \
 		   ETCD_IMAGE=$(ETCD_IMAGE) \
@@ -161,6 +168,7 @@ ut fv: $(TEST_BINARIES) $(KUBE_CONTROLLER_CONTAINER_CREATED)
 		   MIGRATION_CONTAINER_NAME=$(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) \
 		   CRDS=$(REPO_ROOT)/$(CALICO_CRD_PATH) \
 		   CERTS_PATH=$(CERTS_PATH) \
+		   KUBEBUILDER_ASSETS=$$(ls -d $(ENVTEST_DIR)/k8s/*-$(BUILDOS)-$(BUILDARCH) | tail -1) \
 		   ./run-uts $(WHAT)
 
 st:

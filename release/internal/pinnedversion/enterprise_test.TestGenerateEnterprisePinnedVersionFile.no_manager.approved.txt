@@ -156,6 +156,8 @@
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     upstream-fluentd:
       version: 1.19.2
+    upstream-istio:
+      version: 1.28.1
     voltron:
       version: v3.22.1-calient-0.dev-741-gde13c547862d
     waf-http-filter:

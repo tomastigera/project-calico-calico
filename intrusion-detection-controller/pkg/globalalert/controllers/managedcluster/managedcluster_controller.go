@@ -73,5 +73,7 @@ func (m *managedClusterController) Run(parentCtx context.Context) {
 func (m *managedClusterController) Close() {
 	log.Infof("closing a managed cluster controller %+v", m)
 	m.worker.Close()
-	m.cancel()
+	if m.cancel != nil {
+		m.cancel()
+	}
 }

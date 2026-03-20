@@ -63,6 +63,56 @@ type backendClientAccessor interface {
 	Backend() bapi.Client
 }
 
+// runnableCloser is something that can be Run and Closed, used to
+// abstract controllers/watchers for the license loop.
+type runnableCloser interface {
+	Run(ctx context.Context)
+	Close()
+}
+
+// licenseChecker abstracts the license feature check.
+type licenseChecker interface {
+	GetFeatureStatus(feature string) bool
+}
+
+// licenseLoop waits for a license, starts controllers, and keeps them running
+// until a shutdown signal is received. Controllers are never stopped on license
+// expiry — the operator is responsible for scaling down the deployment.
+func licenseLoop(
+	ctx context.Context,
+	licenseCheck licenseChecker,
+	licenseFeature string,
+	licenseChangedChan <-chan struct{},
+	shutdownChan <-chan struct{},
+	controllers []runnableCloser,
+) {
+	var started bool
+	for {
+		hasLicense := licenseCheck.GetFeatureStatus(licenseFeature)
+		if hasLicense && !started {
+			log.Info("Starting watchers and controllers for intrusion detection.")
+			for _, c := range controllers {
+				c.Run(ctx)
+			}
+			started = true
+		}
+
+		select {
+		case <-shutdownChan:
+			log.Info("got signal; shutting down")
+			if started {
+				for _, c := range controllers {
+					c.Close()
+				}
+			}
+			return
+		case <-licenseChangedChan:
+			log.Info("License status has changed")
+			continue
+		}
+	}
+}
+
 func main() {
 	var ver, debug bool
 	var healthzSockPort, maxLinseedTimeSkew int
@@ -275,69 +325,32 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	var runningControllers bool
-	for {
-		hasLicense := licenseMonitor.GetFeatureStatus(features.ThreatDefense)
-		if hasLicense && !runningControllers {
-			log.Info("Starting watchers and controllers for intrusion detection.")
-			if enableFeeds {
-				s.Run(ctx)
-				defer s.Close()
-			}
-
-			if enableAlerts {
-				if cfg.TenantNamespace == "" {
-					managementAlertController.Run(ctx)
-					defer managementAlertController.Close()
-
-					wafEventController.Run(ctx)
-					defer wafEventController.Close()
-				}
-
-				managedClusterController.Run(ctx)
-				defer managedClusterController.Close()
-			}
-
-			if enableForwarding {
-				f.Run(ctx)
-				defer f.Close()
-			}
-
-			runningControllers = true
-		} else if !hasLicense && runningControllers {
-			log.Info("License is no longer active/feature is disabled.")
-
-			if enableFeeds {
-				s.Close()
-			}
-
-			if enableAlerts {
-				if cfg.TenantNamespace == "" {
-					managementAlertController.Close()
-				}
-
-				managedClusterController.Close()
-			}
-
-			if enableForwarding {
-				f.Close()
-			}
-
-			runningControllers = false
+	// Build the list of controllers to start when licensed.
+	var controllers []runnableCloser
+	if enableFeeds {
+		controllers = append(controllers, s)
+	}
+	if enableAlerts {
+		if cfg.TenantNamespace == "" {
+			controllers = append(controllers, managementAlertController, wafEventController)
 		}
+		controllers = append(controllers, managedClusterController)
+	}
+	if enableForwarding {
+		controllers = append(controllers, f)
+	}
 
-		select {
-		case <-sig:
-			log.Info("got signal; shutting down")
-			err = hs.Close()
-			if err != nil {
-				log.WithError(err).Error("failed to stop healthz server")
-			}
-			return
-		case <-licenseChangedChan:
-			log.Info("License status has changed")
-			continue
-		}
+	shutdownChan := make(chan struct{})
+	go func() {
+		<-sig
+		close(shutdownChan)
+	}()
+
+	licenseLoop(ctx, licenseMonitor, features.ThreatDefense, licenseChangedChan, shutdownChan, controllers)
+
+	err = hs.Close()
+	if err != nil {
+		log.WithError(err).Error("failed to stop healthz server")
 	}
 }
 
