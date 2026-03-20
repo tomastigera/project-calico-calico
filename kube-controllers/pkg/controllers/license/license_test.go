@@ -18,7 +18,7 @@ import (
 var _ = Describe("License Controller tests", func() {
 
 	It("Copies license when the managed cluster is missing a license", func() {
-		managedCalicoCLI := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
+		managedCalicoCLI := tigeraapifake.NewSimpleClientset()    //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
 		managementCalicoCLI := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
 		reconciler := license.NewLicenseReconciler(managedCalicoCLI, managementCalicoCLI, "cluster")
 
@@ -44,7 +44,7 @@ var _ = Describe("License Controller tests", func() {
 	})
 
 	It("Fail to copy license when the management cluster is missing the license", func() {
-		managedCalicoCLI := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
+		managedCalicoCLI := tigeraapifake.NewSimpleClientset()    //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
 		managementCalicoCLI := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
 		reconciler := license.NewLicenseReconciler(managedCalicoCLI, managementCalicoCLI, "cluster")
 
