@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
+
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
 )
 
