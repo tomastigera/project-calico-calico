@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
+	k8scache "k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
 )
@@ -32,25 +33,6 @@ func (m *mockReconciler) Reconcile(key types.NamespacedName) error {
 
 func (m *mockReconciler) Calls() int {
 	return int(atomic.LoadInt32(&m.callCount))
-}
-
-// fakeListWatch wraps cache.ListWatch and opts out of WatchList semantics
-// which are enabled by default in client-go 1.35 but not supported by the fake client.
-type fakeListWatch struct {
-	ListFunc  func(options metav1.ListOptions) (runtime.Object, error)
-	WatchFunc func(options metav1.ListOptions) (k8swatch.Interface, error)
-}
-
-func (f *fakeListWatch) List(options metav1.ListOptions) (runtime.Object, error) {
-	return f.ListFunc(options)
-}
-
-func (f *fakeListWatch) Watch(options metav1.ListOptions) (k8swatch.Interface, error) {
-	return f.WatchFunc(options)
-}
-
-func (f *fakeListWatch) IsWatchListSemanticsUnSupported() bool {
-	return true
 }
 
 var _ = Describe("Watcher", func() {
@@ -84,7 +66,7 @@ var _ = Describe("Watcher", func() {
 				fakeCalicoClient = fakecalico.NewClientset()
 				testWatcher = watcher.NewWatcher(
 					mockRec,
-					&fakeListWatch{
+					&k8scache.ListWatch{
 						ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 							options.FieldSelector = fields.OneTermEqualSelector("metadata.namespace", "policy-recommendation").String()
 							return fakeCalicoClient.ProjectcalicoV3().PolicyRecommendationScopes().List(ctx, options)

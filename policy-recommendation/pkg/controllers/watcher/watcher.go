@@ -53,12 +53,22 @@ type watchedObj struct {
 	obj runtime.Object
 }
 
+// noWatchListLW wraps a ListerWatcher and opts out of WatchList semantics
+// (streaming list), which are enabled by default in client-go 1.35. Custom
+// ListerWatcher implementations that manually define List/Watch functions do
+// not support the WatchList protocol.
+type noWatchListLW struct {
+	cache.ListerWatcher
+}
+
+func (noWatchListLW) IsWatchListSemanticsUnSupported() bool { return true }
+
 func NewWatcher(reconciler ctrl.Reconciler, listWatcher cache.ListerWatcher, obj runtime.Object) Watcher {
 	return &watcher{
 		TypedRateLimitingInterface: workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]()),
 		reconciler:                 reconciler,
 		resource: watchedObj{
-			listWatcher: listWatcher,
+			listWatcher: noWatchListLW{listWatcher},
 			obj:         obj,
 		},
 		maxRequeueAttempts: maxRequeueAttempts,
