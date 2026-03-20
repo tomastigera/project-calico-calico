@@ -881,7 +881,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				m.activeWlIfaceNameToID[workload.Name] = id
 				delete(m.pendingWlEpUpdates, id)
 
-				if !m.bpfEnabled {
+				if !m.cfg.bpfEnabled {
 					if m.tcpStatsEnabled {
 						l, err := netlink.LinkByName(workload.Name)
 						if err != nil {
