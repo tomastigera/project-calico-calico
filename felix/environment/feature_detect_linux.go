@@ -146,6 +146,7 @@ func (d *FeatureDetector) refreshFeaturesLockHeld() {
 		KernelHasUDPGSOFix:       kerV.Compare(v6Dot16Dot0) >= 0,
 		NFQueueBypass:            kerV.Compare(v3Dot13Dot0) >= 0,
 		BPFKprobes:               kerV.Compare(v4Dot4Dot0) >= 0,
+		NFTablesSupported:        true,
 	}
 
 	for k, v := range d.featureOverride {
