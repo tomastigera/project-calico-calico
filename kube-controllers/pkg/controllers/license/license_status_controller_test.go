@@ -39,7 +39,7 @@ var _ = Describe("LicenseStatusController tests", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		cli = tigeraapifake.NewClientset()
+		cli = tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
 		informer = &mockInformer{}
 		c := NewStatusController(ctx, cli, informer)
 		ctrl = c.(*LicenseStatusController)
