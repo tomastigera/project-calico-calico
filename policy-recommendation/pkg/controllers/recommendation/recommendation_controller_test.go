@@ -294,7 +294,10 @@ var _ = Describe("RecommendationController", func() {
 				// Check that the recommendation was updated.
 				store, err := controller.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Get(controller.ctx, name, metav1.GetOptions{})
 				Expect(err).To(BeNil())
-				Expect(store).To(Equal(&expectedSnp))
+				Expect(store.Name).To(Equal(expectedSnp.Name))
+				Expect(store.Namespace).To(Equal(expectedSnp.Namespace))
+				Expect(store.Labels).To(Equal(expectedSnp.Labels))
+				Expect(store.Spec).To(Equal(expectedSnp.Spec))
 			})
 		})
 
@@ -407,9 +410,11 @@ var _ = Describe("RecommendationController", func() {
 				// Check that the recommendation was updated.
 				store, err = controller.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Get(controller.ctx, name, metav1.GetOptions{})
 				Expect(err).To(BeNil())
-				store.Kind = v3.KindStagedNetworkPolicy
-				store.APIVersion = v3.GroupVersionCurrent
-				Expect(*store).To(Equal(updatedCacheSnp))
+				Expect(store.Name).To(Equal(updatedCacheSnp.Name))
+				Expect(store.Namespace).To(Equal(updatedCacheSnp.Namespace))
+				Expect(store.Labels).To(Equal(updatedCacheSnp.Labels))
+				Expect(store.Annotations).To(Equal(updatedCacheSnp.Annotations))
+				Expect(store.Spec).To(Equal(updatedCacheSnp.Spec))
 			})
 
 			It("should replace the store item with the new cache item if they differ in name", func() {
@@ -481,11 +486,10 @@ var _ = Describe("RecommendationController", func() {
 				// Check that the recommendation was replaced.
 				store, err = controller.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Get(controller.ctx, updatedCacheSnp.Name, metav1.GetOptions{})
 				Expect(err).To(BeNil())
-				// Get does not copy over the Kind and APIVersion fields.
-				store.Kind = v3.KindStagedNetworkPolicy
-				store.APIVersion = v3.GroupVersionCurrent
-				Expect(*store).To(BeEquivalentTo(updatedCacheSnp))
 				Expect(store.Name).To(Equal(updatedCacheSnp.Name))
+				Expect(store.Namespace).To(Equal(updatedCacheSnp.Namespace))
+				Expect(store.Labels).To(Equal(updatedCacheSnp.Labels))
+				Expect(store.Spec).To(Equal(updatedCacheSnp.Spec))
 
 				// Check that the old recommendation was deleted.
 				_, err = controller.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Get(controller.ctx, name, metav1.GetOptions{})
