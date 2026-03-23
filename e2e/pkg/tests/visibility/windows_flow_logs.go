@@ -68,44 +68,27 @@ var _ = describe.CalicoDescribe(
 			// Save original Felix config and apply test-specific settings.
 			// Use Eventually to retry on conflict (the felixconfig may be modified
 			// by other controllers between our Get and Update).
-			originalFC := v3.NewFelixConfiguration()
-			err = cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
-			Expect(err).NotTo(HaveOccurred())
-
+			var originalFC *v3.FelixConfiguration
 			Eventually(func() error {
-				fc := v3.NewFelixConfiguration()
-				if err := cli.Get(ctx, types.NamespacedName{Name: "default"}, fc); err != nil {
-					return err
-				}
-				fc.Spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 1 * time.Second}
-				fc.Spec.FlowLogsFileAggregationKindForAllowed = ptr.To(0)
-				fc.Spec.FlowLogsDynamicAggregationEnabled = ptr.To(false)
-				return cli.Update(ctx, fc)
+				originalFC = v3.NewFelixConfiguration()
+				return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
 			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
-			// The FelixConfiguration changes above trigger a Felix restart
-			// (exit code 129, restarted by felix-service.ps1). Wait for the
-			// restart to complete, then confirm Felix is ready via its
-			// readiness probe.
-			By("Waiting for Felix to restart after config change")
-			time.Sleep(30 * time.Second)
-
-			By("Waiting for Felix readiness probe to pass")
-			kubectl.RunKubectlOrDie("calico-system", "wait",
-				"--for=condition=Ready",
-				"pod", "-l", "k8s-app=calico-node-windows",
-				"--timeout=60s")
+			Eventually(func() error {
+				return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+					spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 1 * time.Second}
+					spec.FlowLogsFileAggregationKindForAllowed = ptr.To(0)
+					spec.FlowLogsDynamicAggregationEnabled = ptr.To(false)
+				})
+			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 			DeferCleanup(func() {
 				Eventually(func() error {
-					fc := v3.NewFelixConfiguration()
-					if err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc); err != nil {
-						return err
-					}
-					fc.Spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
-					fc.Spec.FlowLogsFileAggregationKindForAllowed = originalFC.Spec.FlowLogsFileAggregationKindForAllowed
-					fc.Spec.FlowLogsDynamicAggregationEnabled = originalFC.Spec.FlowLogsDynamicAggregationEnabled
-					return cli.Update(context.Background(), fc)
+					return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+						spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
+						spec.FlowLogsFileAggregationKindForAllowed = originalFC.Spec.FlowLogsFileAggregationKindForAllowed
+						spec.FlowLogsDynamicAggregationEnabled = originalFC.Spec.FlowLogsDynamicAggregationEnabled
+					})
 				}, 10*time.Second, 1*time.Second).Should(Succeed())
 			})
 		})
