@@ -115,13 +115,21 @@ var _ = describe.CalicoDescribe(
 				cancelFunc()
 			}
 
-			// There used to be issues on deleting windows pods.
 			// If windows pods hung on termination, the code below fails quickly so we don't wait for framework to
 			// timeout on deleting the pods (which can take a very long time).
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			if err := f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(ctx, f.Namespace.Name, metav1.DeleteOptions{}); err != nil {
-				logrus.WithError(err).Infof("unable to cleanup pods in the client namespace %v", f.Namespace.Name)
+
+			// Explicitly delete the client and server pods created by this test.
+			if clientPod != nil && clientPod.Pod() != nil {
+				if err := f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(ctx, clientPod.Pod().Name, metav1.DeleteOptions{}); err != nil {
+					logrus.WithError(err).Infof("unable to cleanup client pod %v in namespace %v", clientPod.Pod().Name, f.Namespace.Name)
+				}
+			}
+			if server != nil && server.Pod() != nil {
+				if err := f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(ctx, server.Pod().Name, metav1.DeleteOptions{}); err != nil {
+					logrus.WithError(err).Infof("unable to cleanup server pod %v in namespace %v", server.Pod().Name, f.Namespace.Name)
+				}
 			}
 		})
 

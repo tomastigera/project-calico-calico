@@ -66,13 +66,13 @@ func DumpFelixDiags() {
 		podName, nodeName := parts[0], parts[1]
 		logrus.Infof("[DIAGS] === Felix diagnostics for node %s (pod %s) ===", nodeName, podName)
 
-		// Get the last 2 minutes of Felix container logs.
+		// Get the last 10 minutes of Felix container logs.
 		logsOutput, err := e2ekubectl.RunKubectl("calico-system",
 			"logs", podName, "-c", "felix", "--since=10m")
 		if err != nil {
 			logrus.WithError(err).Warnf("[DIAGS] Failed to get Felix logs from %s", podName)
 		} else {
-			logrus.Infof("[DIAGS] Felix logs (last 2m) from %s:\n%s", nodeName, logsOutput)
+			logrus.Infof("[DIAGS] Felix logs (last 10m) from %s:\n%s", nodeName, logsOutput)
 		}
 
 		// Check flows.log freshness: read the last 5 entries to see the most recent timestamps.
