@@ -5,7 +5,6 @@ package flows_test
 import (
 	"context"
 	"encoding/json"
-	gojson "encoding/json"
 	"fmt"
 	"slices"
 	"testing"
@@ -1076,7 +1075,7 @@ func TestAggregations(t *testing.T) {
 					require.NoError(t, err)
 					bytes, err := json.Marshal(src)
 					require.NoError(t, err)
-					params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+					params.Aggregations = map[string]json.RawMessage{"count": bytes}
 
 					// Use the backend to perform a query.
 					aggs, err := flb.Aggregations(ctx, clusterInfo, &params)
@@ -1154,7 +1153,7 @@ func TestAggregations(t *testing.T) {
 			require.NoError(t, err)
 			bytes, err := json.Marshal(src)
 			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+			params.Aggregations = map[string]json.RawMessage{"count": bytes}
 
 			// Use the backend to perform a stats query.
 			result, err := flb.Aggregations(ctx, clusterInfo, &params)

@@ -3,7 +3,7 @@
 package v1
 
 import (
-	gojson "encoding/json"
+	"encoding/json"
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -35,8 +35,8 @@ func (w *WAFLogParams) GetPermissions() []v3.AuthorizedResourceVerbs {
 type WAFLogAggregationParams struct {
 	// Inherit all the normal DNS log selection parameters.
 	WAFLogParams `json:",inline"`
-	Aggregations map[string]gojson.RawMessage `json:"aggregations"`
-	NumBuckets   int                          `json:"num_buckets"`
+	Aggregations map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets   int                        `json:"num_buckets"`
 }
 
 type WAFLog struct {

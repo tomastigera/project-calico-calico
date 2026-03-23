@@ -6,7 +6,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	gojson "encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1875,8 +1874,8 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 }
 
 func msg(got []v1.L3Flow, exp v1.L3Flow) string {
-	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
-	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
+	expJSON, _ := json.MarshalIndent(exp, "", "  ")
+	gotJSON, _ := json.MarshalIndent(got, "", "  ")
 	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n\nFull Exp Structure:\n%#v\n\nFull Got Structure:\n%#v", expJSON, gotJSON, exp, got)
 }
 

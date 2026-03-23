@@ -4,7 +4,6 @@ package v1
 
 import (
 	"encoding/json"
-	gojson "encoding/json"
 	"fmt"
 	"time"
 
@@ -97,8 +96,8 @@ func (a *AuditLogParams) GetSortBy() []SearchRequestSortBy {
 type AuditLogAggregationParams struct {
 	// Inherit all the normal audit log selection parameters.
 	AuditLogParams `json:",inline"`
-	Aggregations   map[string]gojson.RawMessage `json:"aggregations"`
-	NumBuckets     int                          `json:"num_buckets"`
+	Aggregations   map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets     int                        `json:"num_buckets"`
 }
 
 // ObjectReference is the set of fields we support in query requests

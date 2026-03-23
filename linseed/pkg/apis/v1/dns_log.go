@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	gojson "encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -51,8 +50,8 @@ type DomainMatch struct {
 type DNSAggregationParams struct {
 	// Inherit all the normal DNS log selection parameters.
 	DNSLogParams `json:",inline"`
-	Aggregations map[string]gojson.RawMessage `json:"aggregations"`
-	NumBuckets   int                          `json:"num_buckets"`
+	Aggregations map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets   int                        `json:"num_buckets"`
 }
 
 type DNSLog struct {

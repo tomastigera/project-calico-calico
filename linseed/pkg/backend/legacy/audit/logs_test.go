@@ -5,7 +5,6 @@ package audit_test
 import (
 	"context"
 	"encoding/json"
-	gojson "encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -954,7 +953,7 @@ func TestAggregations(t *testing.T) {
 					require.NoError(t, err)
 					bytes, err := json.Marshal(src)
 					require.NoError(t, err)
-					params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
+					params.Aggregations = map[string]json.RawMessage{"user": bytes}
 
 					// Use the backend to perform a query.
 					aggs, err := b.Aggregations(ctx, clusterInfo, &params)
@@ -1054,7 +1053,7 @@ func TestAggregations(t *testing.T) {
 			require.NoError(t, err)
 			bytes, err := json.Marshal(src)
 			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
+			params.Aggregations = map[string]json.RawMessage{"user": bytes}
 
 			// Use the backend to perform a stats query.
 			result, err := b.Aggregations(ctx, clusterInfo, &params)

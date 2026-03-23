@@ -4,7 +4,6 @@ package search
 import (
 	"context"
 	"encoding/json"
-	gojson "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -499,7 +498,7 @@ func searchLogs[T any](
 
 	// Build the hits response. We want to keep track of errors, but still return
 	// as many results as we can.
-	var hits []gojson.RawMessage
+	var hits []json.RawMessage
 	for _, item := range items.Items {
 		// ID is only set when the UI needs it.
 		var id string
@@ -520,7 +519,7 @@ func searchLogs[T any](
 				Err:    err,
 			}
 		}
-		hits = append(hits, gojson.RawMessage(hitJSON))
+		hits = append(hits, json.RawMessage(hitJSON))
 	}
 
 	// Calculate the number of pages, given the request's page size.
