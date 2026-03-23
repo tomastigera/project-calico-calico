@@ -52,7 +52,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 		mockNamespaced = types.NamespacedName{}
 
 		mockClientSet = &lmak8s.MockClientSet{}
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewClientset().ProjectcalicoV3()).Maybe()
 	})
 
 	Describe("Reconcile", func() {

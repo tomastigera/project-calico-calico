@@ -26,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -71,7 +73,7 @@ func setup(t *testing.T) func() {
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 
 	// Create fake client sets.
-	cs = fake.NewSimpleClientset()
+	cs = fake.NewClientset()
 
 	// Generate a private key for the tests.
 	var err error
@@ -80,7 +82,7 @@ func setup(t *testing.T) func() {
 
 	// Set up expected mock calls. We expect a clientset to be generated for the
 	// managed cluster which will be used to check and create a secret.
-	mockK8sClient = k8sfake.NewSimpleClientset()
+	mockK8sClient = k8sfake.NewClientset()
 	mockClientSet = clientSetSet{mockK8sClient, cs}
 
 	mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -158,6 +160,7 @@ func TestOptions(t *testing.T) {
 }
 
 func TestMainlineFunction(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	testCases := []struct {
 		tenantNamespace string
 		tenantID        string
@@ -721,7 +724,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
-		mockK8sClient2 := k8sfake.NewSimpleClientset()
+		mockK8sClient2 := k8sfake.NewClientset()
 		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
@@ -819,7 +822,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
-		mockK8sClient2 := k8sfake.NewSimpleClientset()
+		mockK8sClient2 := k8sfake.NewClientset()
 		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
@@ -933,7 +936,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 
 		// Configure the client to error on attempts to create secrets in the second managed cluster. Because this is constantly erroring,
 		// it will result in the kickChan trigger being called repeatedly.
-		mockK8sClient2 := k8sfake.NewSimpleClientset()
+		mockK8sClient2 := k8sfake.NewClientset()
 		mockClientSet2 := clientSetSet{mockK8sClient2, cs}
 		mockK8sClient2.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("create", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, &corev1.Secret{}, fmt.Errorf("Error creating secret")
@@ -1066,8 +1069,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := clientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			k8sfake.NewClientset(),
+			fake.NewClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1153,8 +1156,8 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		require.NotNil(t, controller)
 
 		managedClientSet := clientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			k8sfake.NewClientset(),
+			fake.NewClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)
@@ -1431,6 +1434,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 }
 
 func TestMultiTenant(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
 	t.Run("verify Impersonation headers are added", func(t *testing.T) {
 		defer setup(t)()
 
@@ -1476,8 +1480,8 @@ func TestMultiTenant(t *testing.T) {
 		require.NotNil(t, controller)
 
 		managedClientSet := clientSetSet{
-			k8sfake.NewSimpleClientset(),
-			fake.NewSimpleClientset(),
+			k8sfake.NewClientset(),
+			fake.NewClientset(),
 		}
 
 		factory.On("NewClientSetForApplication", mc.Name).Return(&managedClientSet, nil)

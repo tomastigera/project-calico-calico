@@ -3,11 +3,14 @@
 package calico
 
 import (
+	"sync"
+
 	"k8s.io/apimachinery/pkg/watch"
 )
 
 type MockWatch struct {
-	C chan watch.Event
+	C        chan watch.Event
+	stopOnce sync.Once
 }
 
 func (w *MockWatch) ResultChan() <-chan watch.Event {
@@ -15,5 +18,7 @@ func (w *MockWatch) ResultChan() <-chan watch.Event {
 }
 
 func (w *MockWatch) Stop() {
-	close(w.C)
+	w.stopOnce.Do(func() {
+		close(w.C)
+	})
 }

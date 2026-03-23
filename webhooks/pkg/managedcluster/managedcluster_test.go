@@ -66,7 +66,7 @@ func TestAdmit(t *testing.T) {
 
 	for _, multiTenant := range testCases {
 		t.Run(fmt.Sprintf("multiTenant=%v", multiTenant), func(t *testing.T) {
-			k8sClient := fake.NewSimpleClientset()
+			k8sClient := fake.NewClientset()
 			h := &ManagedClusterHook{
 				k8sClient:               k8sClient,
 				managementClusterAddr:   "1.2.3.4:5678",
@@ -128,7 +128,7 @@ func TestAdmitSuccess(t *testing.T) {
 
 	for _, multiTenant := range testCases {
 		t.Run(fmt.Sprintf("multiTenant=%v", multiTenant), func(t *testing.T) {
-			k8sClient := fake.NewSimpleClientset()
+			k8sClient := fake.NewClientset()
 			h := &ManagedClusterHook{
 				k8sClient:               k8sClient,
 				managementClusterAddr:   "1.2.3.4:5678",

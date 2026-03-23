@@ -139,7 +139,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
+			fakeCoreV1 := fake.NewClientset().CoreV1()
 			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			// k8s fake corev1 will return an empty jwt token which is invalid
@@ -172,7 +172,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
+			fakeCoreV1 := fake.NewClientset().CoreV1()
 			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)

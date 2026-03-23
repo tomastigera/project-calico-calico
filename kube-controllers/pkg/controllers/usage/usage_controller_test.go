@@ -18,7 +18,7 @@ import (
 var _ = Describe("Usage Controller UTs", func() {
 	It("should cease operations when stop is issued", func() {
 		// Fake kubernetes client with no objects associated with it.
-		fakeClientSet := k8sFake.NewSimpleClientset()
+		fakeClientSet := k8sFake.NewClientset()
 
 		// Fake calico client that will only respond to License GET with a 404.
 		fakeCalicoClient := fakeCalicoClient{}

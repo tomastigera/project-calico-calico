@@ -712,20 +712,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			{
 				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
 					{
-						IP: "2.0.0.1",
-					},
-				},
-				Ports: []v1.EndpointPort{ //nolint:staticcheck
-					{
-						Name:     "port2",
-						Port:     1234,
-						Protocol: v1.ProtocolTCP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
-					{
 						IP:       "1.0.0.1",
 						NodeName: &node1Name,
 					},
@@ -746,6 +732,20 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						Name:     "port1",
 						Port:     1234,
 						Protocol: v1.ProtocolUDP,
+					},
+				},
+			},
+			{
+				Addresses: []v1.EndpointAddress{ //nolint:staticcheck
+					{
+						IP: "2.0.0.1",
+					},
+				},
+				Ports: []v1.EndpointPort{ //nolint:staticcheck
+					{
+						Name:     "port2",
+						Port:     1234,
+						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},

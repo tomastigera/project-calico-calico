@@ -143,7 +143,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		fakeK8s = k8sfake.NewClientset()
 		k8sAPI = &k8sClient{
 			Interface:                fakeK8s,
-			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
+			ProjectcalicoV3Interface: fake.NewClientset().ProjectcalicoV3(),
 		}
 
 		scheme := kscheme.Scheme
@@ -1156,7 +1156,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 	Context("auth cache TTLs are configured above the maximum permitted", func() {
 		k8sAPI = &k8sClient{
-			Interface: k8sfake.NewSimpleClientset(),
+			Interface: k8sfake.NewClientset(),
 		}
 
 		It("creating an authenticator should fail when TokenReviewCacheTTL is too large", func() {

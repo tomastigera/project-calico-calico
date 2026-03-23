@@ -789,7 +789,7 @@ func NewTestState(getEvents func(context.Context, *query.Query, time.Time, time.
 	testState.Running = false
 	testState.FetchingInterval = 2 * time.Second
 	testState.Providers = providers
-	testState.K8sClient = fake.NewSimpleClientset()
+	testState.K8sClient = fake.NewClientset()
 
 	return testState
 }

@@ -65,7 +65,7 @@ var _ = Describe("EventStatistics middleware tests", func() {
 	)
 
 	BeforeEach(func() {
-		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+		fakeClientSet = datastore.NewClientSet(nil, fake.NewClientset().ProjectcalicoV3())
 
 		mockDoer = new(thirdpartymock.MockDoer)
 

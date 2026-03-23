@@ -42,7 +42,7 @@ var _ = Describe("Usage Writer UTs", func() {
 		// Fake runtime client that can be configured to return errors at specific request counts.
 		fakeRuntimeClient = newErrorReturningFakeRuntimeClient()
 		// Fake kubernetes client with no objects associated with it.
-		fakeK8sClient = k8sFake.NewSimpleClientset()
+		fakeK8sClient = k8sFake.NewClientset()
 		// Fake calico client that will only respond to License GET with a 404.
 		fakeV3Client = fakeCalicoClient{}
 		// Stop channel used for tests where we run the main loop.

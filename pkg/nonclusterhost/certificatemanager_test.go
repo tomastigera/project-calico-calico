@@ -62,7 +62,7 @@ var _ = Describe("NonClusterHost Certificate Manager Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Setenv("KUBECONFIG", kubeconfigPath)).NotTo(HaveOccurred())
 
-		fakeClientSet = fake.NewSimpleClientset()
+		fakeClientSet = fake.NewClientset()
 	})
 
 	AfterEach(func() {
