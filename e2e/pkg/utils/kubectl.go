@@ -2,9 +2,12 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"time"
 
+	"github.com/onsi/gomega"
 	"k8s.io/kubernetes/test/e2e/framework/kubectl"
 )
 
@@ -55,6 +58,25 @@ func (k *Kubectl) PortForward(ns, pod, remotePort, user string, timeOut chan tim
 		}
 	}()
 	return localPort, nil
+}
+
+// WaitForPortForward waits for the port-forward to be ready by making an HTTP GET request to the given URL.
+// It waits at most 5 seconds and polls every 100 milliseconds.
+func (k *Kubectl) WaitForPortForward(httpClient *http.Client, url string) {
+	gomega.Eventually(func() error {
+		resp, err := httpClient.Get(url)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		_, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}, 5*time.Second, 100*time.Millisecond).Should(gomega.Succeed(), "timed out waiting for port-forward to %s to be ready", url)
 }
 
 func getFreePort() (int, error) {

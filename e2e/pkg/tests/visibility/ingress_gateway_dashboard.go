@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -94,10 +93,14 @@ var _ = describe.CalicoDescribe(
 			cancelForward = elasticsearch.PortForward()
 
 			// HTTP client with proper TLS CA verification
-			caCert := getManagerCACert(ctx, f)
+			caCert := utils.GetTigeraCACert(ctx, f)
 			httpClient = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
 				RootCAs: caCert,
 			}}}
+
+			// Ensure the port-forward is ready before proceeding.
+			kubectl := utils.Kubectl{}
+			kubectl.WaitForPortForward(httpClient, config.ManagerURL())
 
 			// Create network-admin service account and get token for dashboard API access.
 			// The utility creates the SA/CRB and registers DeferCleanup automatically.
@@ -500,21 +503,6 @@ func newReferenceGrant(name, namespace, fromNamespace string) *gatewayv1beta1.Re
 			},
 		},
 	}
-}
-
-// getManagerCACert retrieves the CA certificate for TLS connections from the tigera-ca-bundle.
-// This bundle is created by the tigera-operator and contains the CA used to sign all Tigera component certificates.
-func getManagerCACert(ctx context.Context, f *framework.Framework) *x509.CertPool {
-	cm, err := f.ClientSet.CoreV1().ConfigMaps("tigera-operator").Get(ctx, "tigera-ca-bundle", metav1.GetOptions{})
-	if err != nil {
-		logrus.WithError(err).Warn("Failed to get tigera-ca-bundle, TLS verification may fail")
-		return nil
-	}
-	roots := x509.NewCertPool()
-	if caCert, ok := cm.Data["tigera-ca-bundle.crt"]; ok {
-		roots.AppendCertsFromPEM([]byte(caCert))
-	}
-	return roots
 }
 
 // queryDashboardsAPI sends a query to the dashboards service API.
