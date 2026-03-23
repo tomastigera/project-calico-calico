@@ -71,7 +71,7 @@ func (c *collectionClientDNS) List(ctx context.Context, params lsv1.Params) (res
 		Hits: listResult.TotalHits,
 		Documents: slices.Map(listResult.Items, func(item lsv1.DNSLog) result.QueryResultDocument {
 			return result.QueryResultDocument{
-				Content: dnsLogDocument{
+				Content: &dnsLogDocument{
 					DNSLog:   item,
 					ClientIP: result.QueryResultDocumentContentIP(item.ClientIP),
 				},
