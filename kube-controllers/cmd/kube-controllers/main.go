@@ -754,7 +754,7 @@ func (cc *controllerControl) InitControllers(
 			DynamicClient: dynClient,
 			APIRegClient:  apiregCS.ApiregistrationV1(),
 			CRDClient:     crdClient,
-			Migrators:     dsmigration.NewMigrators(bc, rtClient),
+			Migrators:     append(dsmigration.NewMigrators(bc, rtClient), dsmigration.NewEnterpriseMigrators(bc, rtClient)...),
 		})
 		cc.controllerStates["DatastoreMigration"] = &controllerState{controller: migrationController}
 	}
