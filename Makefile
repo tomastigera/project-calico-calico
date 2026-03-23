@@ -167,7 +167,7 @@ gen-prometheus-crds:
 	# Strip all description fields to reduce manifest size
 	$(DOCKER_GO_BUILD) /bin/bash -c "                                        \
     		for file in $(PROM_CRD_TARGET_LOCATION)/* ;                                                 \
-            	do /usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' \$$file ; \
+            	do yq -i 'del(.. | select(has(\"description\")).description)' \$$file ; \
             done"
 	$(MAKE) -C third_party/prometheus-operator clean
 
@@ -177,7 +177,7 @@ gen-eck-crds:
 	$(MAKE) -C third_party/eck-operator/cloud-on-k8s generate-manifests
 	cp third_party/eck-operator/cloud-on-k8s/config/crds.yaml charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml
 	# Strip all description fields to reduce manifest size.
-	$(DOCKER_GO_BUILD) /bin/bash -c "/usr/local/bin/yq -i 'del(.. | select(has(\"description\")).description)' charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml"
+	$(DOCKER_GO_BUILD) /bin/bash -c "yq -i 'del(.. | select(has(\"description\")).description)' charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml"
 	cp charts/crd.projectcalico.org.v1/templates/eck/01-crd-eck-bundle.yaml manifests/eck-operator-crds.yaml
 	$(MAKE) -C third_party/eck-operator clean
 
