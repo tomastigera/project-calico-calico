@@ -47,7 +47,7 @@ var _ = describe.EnterpriseDescribe(
 			err           error
 			customTier    string
 			checker       conncheck.ConnectionTester
-			cancelForward func()
+			pf            *elasticsearch.PortForwardInfo
 
 			f                   = utils.NewDefaultFramework("staged-policy")
 			serverPodNamePrefix = "server-pod"
@@ -57,10 +57,10 @@ var _ = describe.EnterpriseDescribe(
 
 		BeforeEach(func() {
 			// We read flow logs from ES, and access Kibana via Manager. We start port forward so we can query the flows.
-			cancelForward = elasticsearch.PortForward()
+			pf = elasticsearch.PortForward()
 
 			// initialize esclient
-			esclient = initializeSetup(f)
+			esclient = initializeSetup(f, pf.ElasticsearchURL)
 			elasticsearch.WaitForElastic(esclient)
 
 			cli, err = client.New(f.ClientConfig())
@@ -70,7 +70,7 @@ var _ = describe.EnterpriseDescribe(
 		})
 
 		AfterEach(func() {
-			cancelForward()
+			pf.Stop()
 		})
 
 		Context("Test presence in flow logs", func() {
@@ -509,8 +509,8 @@ var _ = describe.EnterpriseDescribe(
 		})
 	})
 
-func initializeSetup(f *framework.Framework) *elastic.Client {
-	esclient := elasticsearch.InitClient(f)
+func initializeSetup(f *framework.Framework, esURL string) *elastic.Client {
+	esclient := elasticsearch.InitClient(f, esURL)
 
 	cli, err := client.New(f.ClientConfig())
 	Expect(err).NotTo(HaveOccurred())

@@ -39,11 +39,11 @@ var _ = describe.CalicoDescribe(
 	"flow logs",
 	func() {
 		var (
-			f          = utils.NewDefaultFramework("cnx-flowlogs-es")
-			cli        client.Client
-			esclient   *elastic.Client
-			checker    conncheck.ConnectionTester
-			cancelFunc func()
+			f        = utils.NewDefaultFramework("cnx-flowlogs-es")
+			cli      client.Client
+			esclient *elastic.Client
+			checker  conncheck.ConnectionTester
+			pf       *esutil.PortForwardInfo
 		)
 
 		BeforeEach(func() {
@@ -69,9 +69,9 @@ var _ = describe.CalicoDescribe(
 				fc := v3.NewFelixConfiguration()
 				err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc)
 				Expect(err).NotTo(HaveOccurred())
-				fc.Spec.FlowLogsFlushInterval = nil
-				fc.Spec.FlowLogsCollectProcessInfo = nil
-				fc.Spec.FlowLogsCollectTcpStats = nil
+				fc.Spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
+				fc.Spec.FlowLogsCollectProcessInfo = originalFC.Spec.FlowLogsCollectProcessInfo
+				fc.Spec.FlowLogsCollectTcpStats = originalFC.Spec.FlowLogsCollectTcpStats
 				err = cli.Update(context.Background(), fc)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -80,14 +80,14 @@ var _ = describe.CalicoDescribe(
 			checker = conncheck.NewConnectionTester(f)
 
 			// Set up ES port forwarding and client.
-			cancelFunc = esutil.PortForward()
-			esclient = esutil.InitClient(f)
+			pf = esutil.PortForward()
+			esclient = esutil.InitClient(f, pf.ElasticsearchURL)
 			esutil.WaitForElastic(esclient)
 		})
 
 		AfterEach(func() {
-			if cancelFunc != nil {
-				cancelFunc()
+			if pf != nil {
+				pf.Stop()
 			}
 		})
 
@@ -406,7 +406,7 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 		// Flowlogs check if the expected policy is applied.
 		policyString := policies[0]
 		Expect(strings.Contains(policyString, expectation.policy)).To(BeTrue())
-		Expect(fl.Action == expectation.action)
+		Expect(fl.Action).To(Equal(expectation.action))
 
 		// If process name is given in the expectation, verify process information.
 		// In some cases, like reporter=dst with action=deny, packets do not reach the destination

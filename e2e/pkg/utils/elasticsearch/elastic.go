@@ -140,41 +140,44 @@ func (c *TestConfig) MarshalYAML() (any, error) {
 	return &v, nil
 }
 
-var elasticClient *elastic.Client
+// PortForwardInfo holds per-test port-forwarding state. Each test gets its own
+// instance so parallel specs don't race on shared globals.
+type PortForwardInfo struct {
+	ElasticsearchURL string
+	ManagerURL       string
+	stopCh           chan time.Time
+}
+
+// Stop terminates the port-forward processes.
+func (p *PortForwardInfo) Stop() {
+	if p.stopCh != nil {
+		p.stopCh <- time.Now()
+		close(p.stopCh)
+	}
+}
 
 // PortForward sets up port forwarding to the Elasticsearch and Manager services in the cluster.
-// It allocates random local ports to avoid conflicts when tests run in parallel, and stores them
-// in the config package so that ElasticsearchURL() and ManagerURL() return the correct addresses.
-// It returns a function that can be called to stop the port forwarding.
-func PortForward() func() {
+// It allocates random local ports to avoid conflicts when tests run in parallel, and returns
+// a PortForwardInfo struct containing the per-test URLs. The caller should call Stop() when done.
+func PortForward() *PortForwardInfo {
 	stopCh := make(chan time.Time, 1)
 	kubectl := utils.Kubectl{}
 
 	esPort, err := kubectl.PortForward("tigera-elasticsearch", "svc/tigera-secure-es-http", "9200", "", stopCh)
 	Expect(err).NotTo(HaveOccurred(), "failed to set up port forward for Elasticsearch")
-	config.SetElasticsearchPort(esPort)
 
 	mgrPort, err := kubectl.PortForward("calico-system", "svc/calico-manager", "9443", "", stopCh)
 	Expect(err).NotTo(HaveOccurred(), "failed to set up port forward for Manager")
-	config.SetManagerPort(mgrPort)
 
-	// Reset the cached elastic client so InitClient creates a new one using the new port.
-	elasticClient = nil
-
-	return func() {
-		stopCh <- time.Now()
-		close(stopCh)
+	return &PortForwardInfo{
+		ElasticsearchURL: config.ElasticsearchURLForPort(esPort),
+		ManagerURL:       config.ManagerURLForPort(mgrPort),
+		stopCh:           stopCh,
 	}
 }
 
-// InitClient initializes and returns an Elasticsearch client as well as a cleanup function to close the client.
-// If a client already exists, it reuses the existing client.
-func InitClient(f *framework.Framework) *elastic.Client {
-	if elasticClient != nil {
-		logrus.Info("Reusing existing elastic client")
-		return elasticClient
-	}
-
+// InitClient initializes and returns an Elasticsearch client connected to the given ES URL.
+func InitClient(f *framework.Framework, esURL string) *elastic.Client {
 	elasticCert := getElasticCert(f)
 	httpClient := &http.Client{
 		Transport: &http.Transport{TLSClientConfig: &tls.Config{
@@ -188,7 +191,7 @@ func InitClient(f *framework.Framework) *elastic.Client {
 		elastic.SetErrorLog(logger),
 		elastic.SetInfoLog(logger),
 		elastic.SetTraceLog(logger),
-		elastic.SetURL(config.ElasticsearchURL()),
+		elastic.SetURL(esURL),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
 		elastic.SetHttpClient(httpClient),
@@ -198,15 +201,17 @@ func InitClient(f *framework.Framework) *elastic.Client {
 		options = append(options, elastic.SetBasicAuth(username, userPwd))
 	}
 
-	var err error
-	elasticClient, err = elastic.NewClient(options...)
+	client, err := elastic.NewClient(options...)
 	Expect(err).NotTo(HaveOccurred())
-	return elasticClient
+	return client
 }
 
-func GetKibanaStatusURL(f *framework.Framework) string {
-	kibanaUri := config.ManagerURL()
-	u, err := url.Parse(kibanaUri)
+func GetKibanaStatusURL(f *framework.Framework, managerURL ...string) string {
+	mgrURL := config.ManagerURL()
+	if len(managerURL) > 0 {
+		mgrURL = managerURL[0]
+	}
+	u, err := url.Parse(mgrURL)
 	Expect(err).NotTo(HaveOccurred())
 
 	pass := getElasticUserSecretPassword(f)

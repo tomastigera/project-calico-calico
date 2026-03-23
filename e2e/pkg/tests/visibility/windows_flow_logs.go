@@ -41,13 +41,13 @@ var _ = describe.CalicoDescribe(
 	"windows flow logs",
 	func() {
 		var (
-			f          = utils.NewDefaultFramework("windows-flowlogs")
-			cli        client.Client
-			esclient   *elastic.Client
-			checker    conncheck.ConnectionTester
-			clientPod  *conncheck.Client
-			server     *conncheck.Server
-			cancelFunc func()
+			f         = utils.NewDefaultFramework("windows-flowlogs")
+			cli       client.Client
+			esclient  *elastic.Client
+			checker   conncheck.ConnectionTester
+			clientPod *conncheck.Client
+			server    *conncheck.Server
+			pf        *esutil.PortForwardInfo
 		)
 
 		BeforeEach(func() {
@@ -58,8 +58,8 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred())
 
 			// Set up ES port forwarding and client.
-			cancelFunc = esutil.PortForward()
-			esclient = esutil.InitClient(f)
+			pf = esutil.PortForward()
+			esclient = esutil.InitClient(f, pf.ElasticsearchURL)
 			esutil.WaitForElastic(esclient)
 
 			// Create a connection tester for the test.
@@ -111,8 +111,8 @@ var _ = describe.CalicoDescribe(
 		})
 
 		AfterEach(func() {
-			if cancelFunc != nil {
-				cancelFunc()
+			if pf != nil {
+				pf.Stop()
 			}
 
 			// If windows pods hung on termination, the code below fails quickly so we don't wait for framework to

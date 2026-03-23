@@ -18,33 +18,44 @@ import "fmt"
 
 // Default ports used when no port forwarding has been configured.
 const (
-	defaultElasticsearchPort = 9200
-	defaultManagerPort       = 9443
+	DefaultElasticsearchPort = 9200
+	DefaultManagerPort       = 9443
 )
 
-var (
-	elasticsearchPort = defaultElasticsearchPort
-	managerPort       = defaultManagerPort
-)
+// ElasticsearchURLForPort returns the Elasticsearch URL for a given local port.
+func ElasticsearchURLForPort(port int) string {
+	return fmt.Sprintf("https://localhost:%d", port)
+}
 
-// SetElasticsearchPort sets the local port allocated for Elasticsearch port forwarding.
+// ManagerURLForPort returns the Manager URL for a given local port.
+func ManagerURLForPort(port int) string {
+	return fmt.Sprintf("https://localhost:%d", port)
+}
+
+// Deprecated: SetElasticsearchPort exists for backward compatibility with external consumers.
+// New code should use the PortForwardInfo struct returned by elasticsearch.PortForward() instead.
+var elasticsearchPort = DefaultElasticsearchPort
+
+// Deprecated: SetManagerPort exists for backward compatibility with external consumers.
+// New code should use the PortForwardInfo struct returned by elasticsearch.PortForward() instead.
+var managerPort = DefaultManagerPort
+
+// Deprecated: Use ElasticsearchURLForPort instead.
 func SetElasticsearchPort(port int) {
 	elasticsearchPort = port
 }
 
-// SetManagerPort sets the local port allocated for Manager port forwarding.
+// Deprecated: Use ManagerURLForPort instead.
 func SetManagerPort(port int) {
 	managerPort = port
 }
 
-// ElasticsearchURL returns the URL of the Elasticsearch instance to use for tests.
-// The port is set dynamically by SetElasticsearchPort when port forwarding is configured.
+// Deprecated: Use ElasticsearchURLForPort with the port from PortForwardInfo instead.
 func ElasticsearchURL() string {
 	return fmt.Sprintf("https://localhost:%d", elasticsearchPort)
 }
 
-// ManagerURL returns the URL of the Calico Manager instance to use for tests.
-// The port is set dynamically by SetManagerPort when port forwarding is configured.
+// Deprecated: Use ManagerURLForPort with the port from PortForwardInfo instead.
 func ManagerURL() string {
 	return fmt.Sprintf("https://localhost:%d", managerPort)
 }
