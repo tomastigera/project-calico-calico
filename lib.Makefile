@@ -1030,14 +1030,14 @@ gen-mocks:
 	# The generated files need import reordering to pass static-checks
 	$(MAKE) fix-changed
 
-# Run mockery for each path in MOCKERY_FILE_PATHS. The the generated mocks are
-# created in package and in test files. Look here for more information https://github.com/vektra/mockery
+# Run mockery (v3) to generate mocks using .mockery.yaml config.
+# Look here for more information https://github.com/vektra/mockery
 mockery-run:
-	for FILE_PATH in $(MOCKERY_FILE_PATHS); do\
-		DIR=$$(dirname $$FILE_PATH); \
-		INTERFACE_NAME=$$(basename $$FILE_PATH); \
-		mockery --dir $$DIR --name $$INTERFACE_NAME --inpackage; \
-	done
+	if [ -f .mockery.yaml ] || [ -f .mockery.yml ]; then \
+		mockery; \
+	else \
+		echo "No .mockery.yaml found, skipping mock generation"; \
+	fi
 
 ###############################################################################
 # Docker helpers

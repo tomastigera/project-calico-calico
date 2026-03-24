@@ -1,0 +1,24 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/processor:
+    interfaces:
+      Processor:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/exec:
+    interfaces:
+      Exec:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/dispatcher:
+    interfaces:
+      Dispatcher:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator:
+    interfaces:
+      EventGenerator:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/alert:
+    interfaces:
+      Forwarder:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater:
+    interfaces:
+      DPIStatusUpdater:
+  github.com/projectcalico/calico/deep-packet-inspection/pkg/file:
+    interfaces:
+      FileMaintainer:

@@ -19,20 +19,39 @@
 
 set -euo pipefail
 
-# v2 fields that were renamed or removed in v3:
-#   mockname    -> structname
-#   outpkg      -> pkgname
-#   with-expecter (removed, always enabled in v3)
+# v2 top-level fields that were renamed or removed in v3:
+#   mockname      -> structname
+#   outpkg        -> pkgname
+#   with-expecter -> (removed, always enabled in v3)
 deprecated_keys="mockname|outpkg|with-expecter"
+
+# v2-only top-level fields that indicate a v2 config (not valid in v3 at top level):
+#   name, output, recursive, testonly, case
+v2_only_keys="name|output|recursive|testonly|case"
 
 rc=0
 for config in $(find . -name '.mockery.yaml' -o -name '.mockery.yml' | sort); do
-  # Match top-level keys only (lines starting with the key name, no leading whitespace).
+  # Check for deprecated v2 fields (renamed in v3).
   if grep -En "^(${deprecated_keys}):" "$config"; then
     echo "ERROR: $config contains deprecated mockery v2 config keys. Please migrate to v3 format."
-    echo "  mockname    -> structname"
-    echo "  outpkg      -> pkgname"
+    echo "  mockname      -> structname"
+    echo "  outpkg        -> pkgname"
     echo "  with-expecter -> (remove, always enabled in v3)"
+    echo ""
+    rc=1
+  fi
+
+  # Check for v2-only top-level fields that are not valid in v3.
+  if grep -En "^(${v2_only_keys}):" "$config"; then
+    echo "ERROR: $config contains v2-only config keys at the top level. Please migrate to v3 format."
+    echo ""
+    rc=1
+  fi
+
+  # Every v3 config must have a 'packages:' key to define what to generate.
+  if ! grep -q "^packages:" "$config"; then
+    echo "ERROR: $config is missing the required 'packages:' key. This looks like a v2 config."
+    echo "  v3 configs must define interfaces under the 'packages:' key."
     echo ""
     rc=1
   fi

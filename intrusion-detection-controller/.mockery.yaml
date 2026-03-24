@@ -1,0 +1,9 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query:
+    interfaces:
+      Service:
+  github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder:
+    interfaces:
+      LogDispatcher:
