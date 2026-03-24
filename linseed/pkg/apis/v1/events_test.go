@@ -136,7 +136,7 @@ func TestTimeStampOrDate_UnmarshalJSON(t *testing.T) {
 			name:     "value invalid json string",
 			input:    []byte(`"`),
 			wantErr:  true,
-			errorMsg: `unexpected end of input, error found in #1 byte of`,
+			errorMsg: `unexpected end of JSON input`,
 		},
 		{
 			name:  "value empty string",

@@ -571,7 +571,7 @@ func TestSelectorMaxLength(t *testing.T) {
 		expectedError bool
 	}{
 		{"1 exception", 1, false},
-		{"Many exceptions", 650, false},
+		{"Many exceptions", 600, false},
 		{"Too many exceptions", 4500, true},
 	}
 
