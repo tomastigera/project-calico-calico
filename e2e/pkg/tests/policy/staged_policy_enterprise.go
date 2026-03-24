@@ -42,12 +42,12 @@ var _ = describe.EnterpriseDescribe(
 	"staged network policy",
 	func() {
 		var (
-			esclient      *elastic.Client
-			cli           ctrlclient.Client
-			err           error
-			customTier    string
-			checker       conncheck.ConnectionTester
-			pf            *elasticsearch.PortForwardInfo
+			esclient   *elastic.Client
+			cli        ctrlclient.Client
+			err        error
+			customTier string
+			checker    conncheck.ConnectionTester
+			pf         *elasticsearch.PortForwardInfo
 
 			f                   = utils.NewDefaultFramework("staged-policy")
 			serverPodNamePrefix = "server-pod"

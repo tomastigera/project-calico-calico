@@ -99,7 +99,7 @@ var _ = describe.CalicoDescribe(
 
 			// Ensure the port-forward is ready before proceeding.
 			kubectl := utils.Kubectl{}
-			kubectl.WaitForPortForward(httpClient, config.ManagerURL())
+			kubectl.WaitForPortForward(httpClient, pf.ManagerURL)
 
 			// Create network-admin service account and get token for dashboard API access.
 			// The utility creates the SA/CRB and registers DeferCleanup automatically.
