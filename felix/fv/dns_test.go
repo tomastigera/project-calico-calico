@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -1110,7 +1110,7 @@ var _ = infrastructure.DatastoreDescribe("DNS Policy Mode: DelayDeniedPacket", [
 					}
 					return out
 				}
-			}).Should(ContainSubstring("allow-wl2"))
+			}, "5s", "200ms").Should(ContainSubstring("allow-wl2"))
 
 			// Now, the packet should get through, but it should hit the
 			// new rule, not the old one.
