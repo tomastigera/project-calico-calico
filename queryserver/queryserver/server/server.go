@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 package server
 
 import (
@@ -61,7 +61,7 @@ func (s *Server) Start() error {
 	}
 
 	sm := http.NewServeMux()
-	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg, s.authorizer)
+	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh, s.servercfg.LinseedPolicyActivity), s.servercfg, s.authorizer)
 	sm.HandleFunc("/endpoints", s.authhandler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST))
 	sm.HandleFunc("/endpoints/", s.authhandler.AuthenticationHandler(qh.Endpoint, authhandler.MethodGET))
 	sm.HandleFunc("/nodes", s.authhandler.AuthenticationHandler(qh.Nodes, authhandler.MethodGET))

@@ -14,6 +14,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
+func int64Ptr(v int64) *int64 { return &v }
+
 func RunPolicyActivityTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {
 	// Policy activity always uses single-index backend regardless of the configured backend strategy
 	// (see linseed/cmd/main.go), so we only test with single-index.
@@ -32,7 +34,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -72,7 +74,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -118,7 +120,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "policy-a", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "policy-a", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -153,7 +155,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -169,7 +171,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -181,7 +183,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 	RunPolicyActivityTest(t, "should return error when policy kind is empty", func(t *testing.T, idx bapi.Index) {
 		req := &v1.PolicyActivityParams{
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 
@@ -190,10 +192,23 @@ func TestFV_PolicyActivity(t *testing.T) {
 		require.Contains(t, err.Error(), "status 400")
 	})
 
-	RunPolicyActivityTest(t, "should return error when generation is not positive", func(t *testing.T, idx bapi.Index) {
+	RunPolicyActivityTest(t, "nil generation is valid (all-generation query)", func(t *testing.T, idx bapi.Index) {
 		req := &v1.PolicyActivityParams{
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 0},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: nil},
+			},
+		}
+
+		resp, err := cli.PolicyActivity(cluster1).GetPolicyActivities(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Empty(t, resp.Items)
+	})
+
+	RunPolicyActivityTest(t, "negative generation returns error", func(t *testing.T, idx bapi.Index) {
+		req := &v1.PolicyActivityParams{
+			Policies: []v1.PolicyActivityQueryPolicy{
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(-1)},
 			},
 		}
 
@@ -227,7 +242,7 @@ func TestFV_PolicyActivity(t *testing.T) {
 			From: &from,
 			To:   &to,
 			Policies: []v1.PolicyActivityQueryPolicy{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 1},
+				{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(1)},
 			},
 		}
 

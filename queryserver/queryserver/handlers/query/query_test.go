@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Tigera. All rights reserved.
+// Copyright (c) 2022-2026 Tigera, Inc. All rights reserved.
 package query
 
 import (
@@ -256,6 +256,96 @@ var _ = Describe("Queryserver query tests", func() {
 			Expect(len(pfs)).To(Equal(0))
 		})
 
+	})
+
+	Context("parseTimeRange", func() {
+		It("should return nil from and to when neither is provided", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).To(BeNil())
+			Expect(to).To(BeNil())
+		})
+
+		It("should parse valid RFC3339 from and to parameters", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=2026-01-01T00:00:00Z&to=2026-01-02T00:00:00Z", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).NotTo(BeNil())
+			Expect(to).NotTo(BeNil())
+			Expect(from.Year()).To(Equal(2026))
+			Expect(to.Day()).To(Equal(2))
+		})
+
+		It("should return error for invalid from parameter", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=not-a-date", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid 'from' parameter"))
+			Expect(from).To(BeNil())
+			Expect(to).To(BeNil())
+		})
+
+		It("should return error for invalid to parameter", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?to=not-a-date", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid 'to' parameter"))
+			Expect(from).To(BeNil())
+			Expect(to).To(BeNil())
+		})
+
+		It("should parse from alone without to", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=2026-03-01T12:00:00Z", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).NotTo(BeNil())
+			Expect(to).To(BeNil())
+		})
+
+		It("should parse to alone without from", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?to=2026-03-01T12:00:00Z", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).To(BeNil())
+			Expect(to).NotTo(BeNil())
+		})
+
+		It("should return error when to is before from", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=2026-01-02T00:00:00Z&to=2026-01-01T00:00:00Z", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("'to' is before 'from'"))
+			Expect(from).To(BeNil())
+			Expect(to).To(BeNil())
+		})
+
+		It("should accept when from equals to", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=2026-01-01T00:00:00Z&to=2026-01-01T00:00:00Z", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).NotTo(BeNil())
+			Expect(to).NotTo(BeNil())
+			Expect(from.Equal(*to)).To(BeTrue())
+		})
+
+		It("should parse relative time formats like now-15m", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=now-15m&to=now-0m", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).NotTo(BeNil())
+			Expect(to).NotTo(BeNil())
+			Expect(to.After(*from)).To(BeTrue())
+		})
+
+		It("should parse 'now' as a valid time", func() {
+			r := httptest.NewRequest("GET", "http://example.com/policies?from=now-1h&to=now", nil)
+			from, to, err := parseTimeRange(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(from).NotTo(BeNil())
+			Expect(to).NotTo(BeNil())
+			Expect(to.After(*from)).To(BeTrue())
+		})
 	})
 
 })

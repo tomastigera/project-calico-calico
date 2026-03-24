@@ -108,9 +108,29 @@ func TestGetPolicyActivities(t *testing.T) {
 			},
 		},
 		{
-			name: "non-positive generation returns 400",
+			name: "nil generation is valid (all-generation query)",
+			reqBody: `{
+				"policies": [{"kind": "NetworkPolicy", "name": "p"}]
+			}`,
+			backendResponse: successResponse,
+			want: testResult{
+				httpStatus: http.StatusOK,
+			},
+		},
+		{
+			name: "zero generation returns 400",
 			reqBody: `{
 				"policies": [{"kind": "NetworkPolicy", "name": "p", "generation": 0}]
+			}`,
+			want: testResult{
+				httpStatus: http.StatusBadRequest,
+				wantErr:    true,
+			},
+		},
+		{
+			name: "negative generation returns 400",
+			reqBody: `{
+				"policies": [{"kind": "NetworkPolicy", "name": "p", "generation": -1}]
 			}`,
 			want: testResult{
 				httpStatus: http.StatusBadRequest,
@@ -204,6 +224,7 @@ func TestGetPolicyActivities(t *testing.T) {
 									{
 										"direction": "ingress",
 										"index": "0",
+										"generation": 0,
 										"last_evaluated": "` + now.Format(time.RFC3339Nano) + `"
 									}
 								]
