@@ -143,11 +143,11 @@ var (
 					ServiceAccounts: &v3.ServiceAccountMatch{
 						Names: []string{serviceAccountNameSource},
 					},
-					Ports: []numorstring.Port{numorstring.NamedPort(namedPortSourceName)},
+					Ports: []numorstring.Port{numorstring.Port{PortName: namedPortSourceName}},
 				},
 				Destination: v3.EntityRule{
 					Selector: "destination == 'true'",
-					Ports:    []numorstring.Port{numorstring.NamedPort(namedPortDestinationName)},
+					Ports:    []numorstring.Port{numorstring.Port{PortName: namedPortDestinationName}},
 				},
 			}},
 			Egress: []v3.Rule{{
@@ -157,11 +157,11 @@ var (
 					ServiceAccounts: &v3.ServiceAccountMatch{
 						Names: []string{serviceAccountNameSource},
 					},
-					Ports: []numorstring.Port{numorstring.NamedPort(namedPortSourceName)},
+					Ports: []numorstring.Port{numorstring.Port{PortName: namedPortSourceName}},
 				},
 				Destination: v3.EntityRule{
 					Selector: "destination == 'true'",
-					Ports:    []numorstring.Port{numorstring.NamedPort(namedPortDestinationName)},
+					Ports:    []numorstring.Port{numorstring.Port{PortName: namedPortDestinationName}},
 				},
 			}},
 		},
