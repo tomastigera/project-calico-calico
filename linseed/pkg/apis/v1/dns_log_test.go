@@ -4,6 +4,7 @@ package v1
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -159,10 +160,12 @@ func TestDNSClass_NilPointerReceiver(t *testing.T) {
 		require.Empty(t, c.String())
 	})
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
+		// MarshalJSON uses a value receiver, so encoding/json handles nil pointers
+		// by outputting "null" without calling the method.
 		var c *DNSClass
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {
@@ -182,7 +185,7 @@ func TestDNSRData_MarshalJSON(t *testing.T) {
 		{
 			"empty",
 			DNSRData{},
-			[]byte{},
+			[]byte(`""`),
 			false,
 		},
 		{
@@ -390,9 +393,9 @@ func TestDNSData_NilPointerReceiver(t *testing.T) {
 	})
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *DNSRData
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {
@@ -412,7 +415,7 @@ func TestDNSRRSets_MarshalJSON(t *testing.T) {
 		{
 			"empty RRSets",
 			DNSRRSets{DNSName{}: DNSRDatas{{}}},
-			[]byte(`[{"name":"","class":0,"type":0,"rdata":[]}]`), false,
+			[]byte(`[{"name":"","class":0,"type":0,"rdata":[""]}]`), false,
 		},
 		{
 			"multiple RData per key",
@@ -733,9 +736,9 @@ func TestDNSRRSets_NilPointerReceiver(t *testing.T) {
 	})
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *DNSRRSets
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {
@@ -885,9 +888,9 @@ func TestDNSResponseCode_NilPointerReceiver(t *testing.T) {
 	})
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *DNSResponseCode
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {
@@ -1004,9 +1007,9 @@ func TestDNSServer_UnmarshalJSON(t *testing.T) {
 func TestDNSServer_NilPointerReceiver(t *testing.T) {
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *DNSServer
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {
@@ -1168,9 +1171,9 @@ func TestDNSType_NilPointerReceiver(t *testing.T) {
 	})
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *DNSType
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {

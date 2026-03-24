@@ -4,6 +4,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"math"
 	"reflect"
 	"testing"
@@ -190,9 +191,9 @@ func parseTime(t *testing.T, val string, wantErr bool) *time.Time {
 func TestTimestampOrDate_NilPointerReceiver(t *testing.T) {
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
 		var c *TimestampOrDate
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {

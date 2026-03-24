@@ -178,11 +178,7 @@ type internalObjectReference struct {
 	Subresource     string    `json:"subresource,omitempty"`
 }
 
-func (auditLog *AuditLog) MarshalJSON() ([]byte, error) {
-	if auditLog == nil {
-		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
-	}
-
+func (auditLog AuditLog) MarshalJSON() ([]byte, error) {
 	// Create an internal representation of the K8S event
 	// We are doing this because K8S Audit event is currently
 	// stored in ES with camel case for fields instead of
