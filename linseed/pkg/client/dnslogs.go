@@ -84,7 +84,7 @@ func (f *dnsLogs) Create(ctx context.Context, dnsLogs []v1.DNSLog) (*v1.BulkResp
 		}
 
 		// Add each item.
-		out, err := json.Marshal(e)
+		out, err := json.Marshal(&e)
 		if err != nil {
 			return nil, err
 		}

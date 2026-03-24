@@ -95,15 +95,13 @@ func Start(config *Config) {
 }
 
 func getReverseProxy(target *url.URL) *httputil.ReverseProxy {
-	reverseProxy := httputil.NewSingleHostReverseProxy(target)
-	// applies the prometheus target URL to the request
-	reverseProxy.Director = func(req *http.Request) {
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	return &httputil.ReverseProxy{
+		// applies the prometheus target URL to the request
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Header.Set("X-Forwarded-Host", pr.In.Host)
+		},
 	}
-
-	return reverseProxy
 }
 
 func Wait() {

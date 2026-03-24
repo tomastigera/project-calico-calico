@@ -127,7 +127,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &log)
-			logStr, err := json.Marshal(log)
+			logStr, err := json.Marshal(&log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
 		}

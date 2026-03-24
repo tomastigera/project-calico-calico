@@ -35,19 +35,17 @@ func (t *loggerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.
 func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) error) (http.HandlerFunc, error) {
-	p := httputil.NewSingleHostReverseProxy(t.Dest)
-	p.FlushInterval = -1
-
-	// Augment the default director that is created by httputil.NewSingleHostReverseProxy
-	// because we need to explicitly set the Host header, which is not done by default.
-	defaultDirector := p.Director
-	p.Director = func(req *http.Request) {
-		// Run logic from the defaultDirector first to set things up for the request.
-		defaultDirector(req)
-
-		// Set the request Host explicitly, so it's not set to the default value.
-		// Request URL Host should be the correct value at this point.
-		req.Host = req.URL.Host
+	p := &httputil.ReverseProxy{
+		FlushInterval: -1,
+		// Use Rewrite to configure the outbound request. SetURL rewrites the
+		// target URL (equivalent to what the old default Director did) and
+		// SetXForwarded sets X-Forwarded-For/Proto/Host headers.
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(t.Dest)
+			pr.SetXForwarded()
+			// Set the request Host explicitly so it matches the destination.
+			pr.Out.Host = t.Dest.Host
+		},
 	}
 
 	if t.Transport != nil {

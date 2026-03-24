@@ -146,7 +146,7 @@ func (c *ConfigTree) Render(startSection, linePrefix string) string {
 
 	for _, k := range getSortedKey(c.kv) {
 		v := c.kv[k]
-		result.WriteString(fmt.Sprintf("%s%s = %s\n", linePrefix, k, v))
+		fmt.Fprintf(&result, "%s%s = %s\n", linePrefix, k, v)
 	}
 	return result.String()
 }
