@@ -68,6 +68,13 @@ func TestGoldmaneFlows_Bulk(t *testing.T) {
 	invalidFlow.Key = nil
 	invalidBatch := []*proto.Flow{invalidFlow, newFlow(4)}
 
+	// Create a batch where all flows are invalid.
+	allInvalidFlow1 := newFlow(5)
+	allInvalidFlow1.Key = nil
+	allInvalidFlow2 := newFlow(6)
+	allInvalidFlow2.Key = nil
+	allInvalidBatch := []*proto.Flow{allInvalidFlow1, allInvalidFlow2}
+
 	// Tests.
 	tests := []struct {
 		name            string
@@ -88,13 +95,26 @@ func TestGoldmaneFlows_Bulk(t *testing.T) {
 			},
 		},
 
-		// An invalid flow should fail validation.
+		// A batch with one invalid flow should partially succeed, skipping the invalid one.
+		// The backend receives 1 valid flow (Total:1, Succeeded:1), then FailedCount (1) is added.
 		{
 			name:            "invalid flow",
 			backendError:    nil,
-			backendResponse: nil,
+			backendResponse: &v1.BulkResponse{Total: 1, Succeeded: 1, Failed: 0},
 			reqBody:         testutils.MarshalBulkParams[*proto.Flow](invalidBatch),
-			want:            testResult{true, 400, `{"Msg":"key is required", "Status":400}`},
+			want:            testResult{false, 200, ""},
+		},
+
+		// A batch where all flows are invalid should return 400.
+		{
+			name:            "all flows invalid",
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         testutils.MarshalBulkParams[*proto.Flow](allInvalidBatch),
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains no valid flow logs", "Status":400}`,
+			},
 		},
 
 		// Ingest all flow logs

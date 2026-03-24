@@ -130,7 +130,7 @@ func (h events) Bulk() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		events, httpErr := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
+		decoded, httpErr := handler.DecodeAndValidateBulkParams[v1.Event](w, req)
 		if httpErr != nil {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				// Include the request body in our logs.
@@ -176,7 +176,7 @@ func (h events) Bulk() http.HandlerFunc {
 		}
 
 		// Call the chosen handler.
-		response, err := handler(ctx, clusterInfo, events)
+		response, err := handler(ctx, clusterInfo, decoded.Items)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to perform bulk action on events")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -185,6 +185,8 @@ func (h events) Bulk() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.Debugf("%s %s response is: %+v", req.Method, EventsPathBulk, response)
 		httputils.Encode(w, response)
 	}
