@@ -108,6 +108,9 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 
 	trimBody := bytes.Trim(body, "\r\n")
 	scanner := bufio.NewScanner(bytes.NewReader(trimBody))
+	// Increase scanner buffer to handle large JSON lines (e.g., compliance snapshots
+	// containing entire resource lists). The default 64KB is too small.
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), maxBulkBytes)
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
@@ -124,6 +127,13 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 			continue
 		}
 		result.Items = append(result.Items, input)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return result, &v1.HTTPError{
+			Status: http.StatusBadRequest,
+			Msg:    fmt.Sprintf("Error reading request body: %s", err.Error()),
+		}
 	}
 
 	if len(result.Items) == 0 {

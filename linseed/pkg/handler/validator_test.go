@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -253,6 +254,32 @@ func TestValidateFlowLogBulkParams(t *testing.T) {
 			req:  req("BAD1\nBAD2\n", jsonNewlineContentType),
 			want: []v1.FlowLog{}, wantErr: true,
 			errorMsg: "Request body contains badly-formed JSON", statusCode: http.StatusBadRequest,
+		},
+		{
+			name: "large JSON line exceeding default 64KB scanner buffer",
+			req: func() *http.Request {
+				// Create a flow log with a field value larger than the default
+				// bufio.Scanner buffer (64KB) to verify the increased buffer works.
+				largeValue := strings.Repeat("a", 100*1024) // 100KB
+				fl := v1.FlowLog{DestNameAggr: largeValue}
+				return req(marshall(fl), jsonNewlineContentType)
+			}(),
+			want:    []v1.FlowLog{{DestNameAggr: strings.Repeat("a", 100*1024)}},
+			wantErr: false, errorMsg: "", statusCode: http.StatusOK, wantFailedCount: 0,
+		},
+		{
+			name: "multiple lines with one large JSON line",
+			req: func() *http.Request {
+				largeValue := strings.Repeat("b", 80*1024) // 80KB
+				lines := marshall(params[0]) + "\n" + marshall(v1.FlowLog{DestNameAggr: largeValue}) + "\n" + marshall(params[1]) + "\n"
+				return req(lines, jsonNewlineContentType)
+			}(),
+			want: []v1.FlowLog{
+				params[0],
+				{DestNameAggr: strings.Repeat("b", 80*1024)},
+				params[1],
+			},
+			wantErr: false, errorMsg: "", statusCode: http.StatusOK, wantFailedCount: 0,
 		},
 	}
 	for _, tt := range tests {
