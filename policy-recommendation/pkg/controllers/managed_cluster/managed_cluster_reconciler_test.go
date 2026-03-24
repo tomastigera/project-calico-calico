@@ -36,8 +36,8 @@ var _ = Describe("ManagedClusterReconciler", func() {
 		ctx = context.TODO()
 
 		mockClientSet = &lmak8s.MockClientSet{}
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1()).Maybe()
 
 		mockClientSetFactory = &lmak8s.MockClientSetFactory{}
 		mockClientSetFactory.On("NewClientSetForApplication", "managed-cluster-1").Return(mockClientSet, nil).Maybe()

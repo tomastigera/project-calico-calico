@@ -368,7 +368,9 @@ func (f *eventForwarder) Run(ctx context.Context) {
 
 // Close ensures we handle cleaning up the forwarder context.
 func (f *eventForwarder) Close() {
-	f.cancel()
+	if f.cancel != nil {
+		f.cancel()
+	}
 }
 
 // retrieveAndForward handles the actual querying for events and forwarding to file.
@@ -382,10 +384,9 @@ func (f *eventForwarder) retrieveAndForward(pager client.ListPager[lsv1.Event], 
 	defer close(doneCh)
 	resultsCh := make(chan *lmaAPI.EventResult, 1000)
 	numEvents := 0
-	var err error
 	go func() {
 		defer close(resultsCh)
-		err = retry.Do(
+		err := retry.Do(
 			func() error {
 				for e := range f.events.GetSecurityEvents(f.ctx, pager) {
 					if e.Err != nil {
@@ -429,7 +430,7 @@ func (f *eventForwarder) retrieveAndForward(pager client.ListPager[lsv1.Event], 
 	// ---------------------------------------------------------------------------------------------------
 	go func() {
 		for e := range resultsCh {
-			err = retry.Do(
+			err := retry.Do(
 				func() error {
 					sec, dec := math.Modf(float64(e.Time))
 					epoch := time.Unix(int64(sec), int64(dec*(1e9)))

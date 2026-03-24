@@ -857,15 +857,15 @@ var _ = Describe("Policy Recommendation", func() {
 			// The mock k8s client set, with test data.
 			mockLmaK8sClientSet := lmak8s.MockClientSet{}
 			mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-				clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+				clientsetfake.NewClientset().ProjectcalicoV3(),
 			)
-			coreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+			coreV1 := fakeK8s.NewClientset().CoreV1()
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace1Namespace, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace2Namespace, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
-			appV1 := fakeK8s.NewSimpleClientset().AppsV1()
+			appV1 := fakeK8s.NewClientset().AppsV1()
 			_, err = appV1.Deployments(app1Dep.Namespace).Create(req.Context(), app1Dep, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 			_, err = appV1.Deployments(app2Dep.Namespace).Create(req.Context(), app2Dep, metav1.CreateOptions{})
@@ -892,9 +892,9 @@ var _ = Describe("Policy Recommendation", func() {
 			_, err = appV1.ReplicaSets(nginx3Rs.Namespace).Create(req.Context(), nginx3Rs, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
-			batchV1 := fakeK8s.NewSimpleClientset().BatchV1()
+			batchV1 := fakeK8s.NewClientset().BatchV1()
 
-			batchV1Beta1 := fakeK8s.NewSimpleClientset().BatchV1beta1()
+			batchV1Beta1 := fakeK8s.NewClientset().BatchV1beta1()
 
 			// Define the return methods called by this test.
 			mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
@@ -1031,9 +1031,9 @@ var _ = Describe("Policy Recommendation", func() {
 			// The mock k8s client set, with test data.
 			mockLmaK8sClientSet := lmak8s.MockClientSet{}
 			mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-				clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+				clientsetfake.NewClientset().ProjectcalicoV3(),
 			)
-			coreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+			coreV1 := fakeK8s.NewClientset().CoreV1()
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace1Namespace, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 			_, err = coreV1.Namespaces().Create(req.Context(), namespace2Namespace, metav1.CreateOptions{})

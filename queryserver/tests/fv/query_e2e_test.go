@@ -64,7 +64,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			// Get server configuration variables meant for FVs.
 			servercfg := getDummyConfigFromEnvFv(addr, "", "")
 
-			fakeK8sClient := fake.NewSimpleClientset()
+			fakeK8sClient := fake.NewClientset()
 			mh := &mockHandler{}
 
 			authz := &mockAuthorizer{}

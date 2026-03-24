@@ -310,7 +310,7 @@ func setup(t *testing.T) (*CapacityUpdater, *cuTestFakes) {
 
 	node := &v1.Node{}
 	node.SetName(nodeName)
-	fakeKube := fakek8s.NewSimpleClientset(node)
+	fakeKube := fakek8s.NewClientset(node)
 
 	cu := NewCapacityUpdater(
 		nodeName,

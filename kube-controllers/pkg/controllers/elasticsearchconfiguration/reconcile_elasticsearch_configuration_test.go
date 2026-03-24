@@ -188,7 +188,7 @@ var _ = Describe("Reconcile", func() {
 	})
 
 	JustBeforeEach(func() {
-		managementK8sCli = k8sfake.NewSimpleClientset(managementClientObjects...)
+		managementK8sCli = k8sfake.NewClientset(managementClientObjects...)
 	})
 
 	AfterEach(func() {
@@ -284,7 +284,7 @@ var _ = Describe("Reconcile", func() {
 					},
 				},
 			}...)
-			managementK8sCli = k8sfake.NewSimpleClientset(mgmtClientObjs...)
+			managementK8sCli = k8sfake.NewClientset(mgmtClientObjs...)
 
 			mgdClientObjs := []runtime.Object{&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -292,7 +292,7 @@ var _ = Describe("Reconcile", func() {
 					Namespace: common.TigeraOperatorNamespace,
 				},
 			}}
-			managedK8sCli := k8sfake.NewSimpleClientset(mgdClientObjs...)
+			managedK8sCli := k8sfake.NewClientset(mgdClientObjs...)
 
 			// We need to override what gets returned by GetUsers() so that we can test the functionality of our
 			// deletion of decommissioned users so recreate the mock client here.
@@ -460,7 +460,7 @@ var _ = Describe("Reconcile", func() {
 					"shards":      "5",
 				},
 			}
-			managedK8sCli = k8sfake.NewSimpleClientset()
+			managedK8sCli = k8sfake.NewClientset()
 		})
 
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
@@ -643,7 +643,7 @@ var _ = Describe("Reconcile", func() {
 					"active-namespace": altOperatorNamespace,
 				},
 			}
-			managedK8sCli = k8sfake.NewSimpleClientset(activeOperatorConfigMap)
+			managedK8sCli = k8sfake.NewClientset(activeOperatorConfigMap)
 		})
 
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {

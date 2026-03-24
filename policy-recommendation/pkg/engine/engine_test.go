@@ -84,8 +84,8 @@ var _ = Describe("RecommendationEngine", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		mockClientSet := &lmak8s.MockClientSet{}
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1()).Maybe()
 
 		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("test-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())

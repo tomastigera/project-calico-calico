@@ -1989,7 +1989,7 @@ func createServiceGraphHandlers(
 ) (servicegraph.ServiceGraphHandler, http.Handler) {
 	authz := auth.NewRBACAuthorizer(k8sClient)
 
-	reviewer := authzreview.NewAuthzReviewer(authzreview.NewCalculator(k8sClient, calicofake.NewSimpleClientset()), clientSetFactory)
+	reviewer := authzreview.NewAuthzReviewer(authzreview.NewCalculator(k8sClient, calicofake.NewClientset()), clientSetFactory)
 
 	var cfg *servicegraph.Config
 	if len(suppliedCfg) > 0 {
@@ -2259,7 +2259,7 @@ func (f failingClient) NewClientSetForApplication(cluster string) (k8s.ClientSet
 
 	// Leave the calico fake clientset untouched. The authorization review calls will succeed.
 	cc := &k8s.MockClientSet{}
-	cc.On("ProjectcalicoV3").Return(calicofake.NewSimpleClientset().ProjectcalicoV3())
+	cc.On("ProjectcalicoV3").Return(calicofake.NewClientset().ProjectcalicoV3())
 
 	css := &clientSetSet{
 		Interface: kc,

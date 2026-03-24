@@ -46,9 +46,10 @@ type dispatcher struct {
 	// affected snort processes if interface changes.
 	wepKeyToIface map[any]string
 
-	// wepKeyToDPIs maps WEP key to set of DPI object as each WEP can map to multiple DPI selectors, it is used in
-	// combination with wepKeyToIface to restart affected snort processes if interface changes.
-	wepKeyToDPIs map[any]set.Set[DPI]
+	// wepKeyToDPIs maps WEP key to set of DPI keys (as any) as each WEP can map to multiple DPI selectors.
+	// It is used in combination with wepKeyToIface to restart affected snort processes if interface changes.
+	// The DPI struct is looked up from dpiKeyToDPI when needed.
+	wepKeyToDPIs map[any]set.Set[any]
 
 	// dpiKeyToDPI maps DPI key to DPI object that has processor and event generator.
 	dpiKeyToDPI map[any]DPI
@@ -116,7 +117,7 @@ func NewDispatcher(cfg *config.Config,
 	dispatch := &dispatcher{
 		wepKeyToIface:       make(map[any]string),
 		dpiKeyToDPI:         make(map[any]DPI),
-		wepKeyToDPIs:        make(map[any]set.Set[DPI]),
+		wepKeyToDPIs:        make(map[any]set.Set[any]),
 		snortProcessor:      snortProcessor,
 		eventGenerator:      eventGenerator,
 		cfg:                 cfg,
@@ -241,15 +242,19 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 			oldIface := h.wepKeyToIface[i.wepKey]
 			log.Debugf("Updating the cached WEP interface from %s to %s for WEP %v", oldIface, i.ifaceName, i.wepKey)
 			h.wepKeyToIface[i.wepKey] = i.ifaceName
-			// stop and remove all old WEP interfaces
-			prcs, ok := h.wepKeyToDPIs[i.wepKey]
+			// stop all DPI processes using the old WEP interface, then restart with the new one
+			dpiKeys, ok := h.wepKeyToDPIs[i.wepKey]
 			if ok {
-				for dpi := range prcs.All() {
-					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+				wepKey := i.wepKey.(model.WorkloadEndpointKey)
+				for dpiKey := range dpiKeys.All() {
+					if dpi, ok := h.dpiKeyToDPI[dpiKey]; ok {
+						h.stopDPIOnWEP(ctx, dpi, dpiKey.(model.ResourceKey), wepKey)
+					}
 				}
-				// add the updated WEP interfaces
-				for dpi := range prcs.All() {
-					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+				for dpiKey := range dpiKeys.All() {
+					if dpi, ok := h.dpiKeyToDPI[dpiKey]; ok {
+						h.startDPIOnWEP(ctx, dpi, dpiKey.(model.ResourceKey), wepKey)
+					}
 				}
 			}
 		case ifaceDeleted:
@@ -260,28 +265,35 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 			dpi, ok := h.dpiKeyToDPI[i.dpiKey]
 			if !ok {
 				dpi = h.initializeDPI(ctx, i.dpiKey.(model.ResourceKey))
-				// Update the mapping of WEP interface to snortProcessor and also mapping of DPI key to snortProcessor
-				dpis, ok := h.wepKeyToDPIs[i.wepKey]
-				if !ok {
-					dpis = set.New[DPI]()
-				}
-				dpis.Add(dpi)
-				h.wepKeyToDPIs[i.wepKey] = dpis
 				h.dpiKeyToDPI[i.dpiKey] = dpi
 			}
+
+			// Always track the WEP-to-DPI association so that ifaceUpdated can
+			// find all DPIs for a given WEP.
+			dpiKeys, ok := h.wepKeyToDPIs[i.wepKey]
+			if !ok {
+				dpiKeys = set.New[any]()
+				h.wepKeyToDPIs[i.wepKey] = dpiKeys
+			}
+			dpiKeys.Add(i.dpiKey)
 
 			h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
 		case labelOrSelectorMatchStopped:
 			dpi, ok := h.dpiKeyToDPI[i.dpiKey]
 			if ok {
-				h.stopDPIOnWEP(dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+				h.stopDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+
+				// Always remove the WEP-to-DPI association for the stopped match.
+				if dpiKeys, ok := h.wepKeyToDPIs[i.wepKey]; ok {
+					dpiKeys.Discard(i.dpiKey)
+					if dpiKeys.Len() == 0 {
+						delete(h.wepKeyToDPIs, i.wepKey)
+					}
+				}
+
+				// If no more WEPs use this DPI, shut it down entirely.
 				if dpi.snortProcessor.WEPInterfaceCount() == 0 {
 					h.stopDPI(dpi, i.dpiKey.(model.ResourceKey))
-					v, ok := h.wepKeyToDPIs[i.wepKey]
-					if ok {
-						v.Discard(dpi)
-					}
-					h.wepKeyToDPIs[i.wepKey] = v
 					delete(h.dpiKeyToDPI, i.dpiKey)
 				}
 			}
@@ -309,7 +321,7 @@ func (h *dispatcher) startDPIOnWEP(ctx context.Context, dpiProcess DPI, dpiKey m
 	h.alertFileMaintainer.Maintain(fileutils.AlertFileAbsolutePath(dpiKey, wepKey, h.cfg.SnortAlertFileBasePath))
 }
 
-func (h *dispatcher) stopDPIOnWEP(dpiProcess DPI, dpiKey model.ResourceKey, wepKey model.WorkloadEndpointKey) {
+func (h *dispatcher) stopDPIOnWEP(_ context.Context, dpiProcess DPI, dpiKey model.ResourceKey, wepKey model.WorkloadEndpointKey) {
 	log.Debugf("Stopping deep packet inspection %s on %s", dpiKey, wepKey)
 	dpiProcess.snortProcessor.Remove(wepKey)
 	dpiProcess.eventGenerator.StopGeneratingEventsForWEP(wepKey)

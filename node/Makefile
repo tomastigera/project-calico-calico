@@ -38,7 +38,7 @@ BUILD_DEPS = $(LIBBPF_A) \
 	     filesystem/etc/calico/confd/templates
 
 ## IMAGE_DEPS lists non-Go files the calico/node image depends on.
-IMAGE_DEPS = ./Dockerfile.$(ARCH) $(BUILD_DEPS)
+IMAGE_DEPS = ./Dockerfile $(BUILD_DEPS)
 
 # Run these tests against the projectcalico.org/v3 API group by default.
 CALICO_API_GROUP ?= projectcalico.org/v3
@@ -281,13 +281,23 @@ dist/LICENSE: ../LICENSE.md
 # register is order-only (|) so binfmt setup doesn't trigger unnecessary rebuilds.
 image $(NODE_IMAGE): $(NODE_CONTAINER_MARKER) | register
 $(NODE_CONTAINER_CREATED): $(IMAGE_DEPS) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY) dist/LICENSE
-	$(DOCKER_BUILD) --network=host --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg GIT_VERSION=$(GIT_VERSION) -t $(NODE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
+	$(DOCKER_BUILD) \
+		--build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) \
+		--build-arg BIRD_IMAGE=$(BIRD_IMAGE) \
+		--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE) \
+		--build-arg GIT_VERSION=$(GIT_VERSION) \
+		-t $(NODE_IMAGE):latest-$(ARCH) -f ./Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	docker run $(NODE_IMAGE):latest-$(ARCH) versions
 	touch $@
 
 $(NODE_CONTAINER_FIPS_CREATED): $(IMAGE_DEPS) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) $(NODE_CONTAINER_FILES) $(TOOLS_MOUNTNS_BINARY) dist/LICENSE
-	$(DOCKER_BUILD) --network=host --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg GIT_VERSION=$(GIT_VERSION) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f ./Dockerfile.$(ARCH) .
+	$(DOCKER_BUILD) \
+		--build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) \
+		--build-arg BIRD_IMAGE=$(BIRD_IMAGE) \
+		--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE) \
+		--build-arg GIT_VERSION=$(GIT_VERSION) \
+		-t $(NODE_IMAGE):latest-fips-$(ARCH) -f ./Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
 

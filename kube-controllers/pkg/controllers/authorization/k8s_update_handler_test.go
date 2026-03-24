@@ -460,7 +460,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"randomSubjectId1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -529,7 +529,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -638,7 +638,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -738,7 +738,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			mockUserCache := userscache.NewMockOIDCUserCache()
 			data, err := configMapDataToOIDCUsers(configMap.Data)
@@ -804,7 +804,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"subId1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -875,7 +875,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			mockUserCache.On("SubjectIDs").Return([]string{"randomSubjectId1"})
 			mockUserCache.On("SubjectIDToUserOrGroups", "randomSubjectId1").Return([]string{"group1", "group2", "testuser1"})
 
-			fakeK8CLI := k8sfake.NewSimpleClientset()
+			fakeK8CLI := k8sfake.NewClientset()
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -940,7 +940,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"subId1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1003,7 +1003,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1070,7 +1070,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"subId1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1129,7 +1129,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			mockUserCache.On("SubjectIDToUserOrGroups", "subId1").Return([]string{"group1"})
 			mockUserCache.On("DeleteOIDCUser", "subId1").Return(true)
 
-			fakeK8CLI := k8sfake.NewSimpleClientset()
+			fakeK8CLI := k8sfake.NewClientset()
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1195,7 +1195,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1266,7 +1266,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1320,7 +1320,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"xyz-1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1371,7 +1371,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1419,7 +1419,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
@@ -1470,7 +1470,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 					"xyz-1": []byte("Hello"),
 				},
 			}
-			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+			fakeK8CLI := k8sfake.NewClientset(oidcSecret)
 
 			resourceUpdates := make(chan resourceUpdate)
 			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)

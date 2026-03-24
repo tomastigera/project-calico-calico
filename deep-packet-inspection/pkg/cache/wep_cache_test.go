@@ -26,6 +26,36 @@ var _ = Describe("WEP cache", func() {
 		EndpointID:     "eth0",
 	}
 
+	It("should retain IPs that stay across a WEP update", func() {
+		c := cache.NewWEPCache()
+
+		By("adding WEP with two IPs")
+		c.Update(bapi.UpdateTypeKVNew, model.KVPair{
+			Key: wepKey1,
+			Value: &model.WorkloadEndpoint{
+				IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"), mustParseNet("10.0.0.2/32")},
+			},
+		})
+		ok, _, _ := c.Get("10.0.0.1")
+		Expect(ok).Should(BeTrue())
+		ok, _, _ = c.Get("10.0.0.2")
+		Expect(ok).Should(BeTrue())
+
+		By("updating WEP: keep first IP, replace second")
+		c.Update(bapi.UpdateTypeKVUpdated, model.KVPair{
+			Key: wepKey1,
+			Value: &model.WorkloadEndpoint{
+				IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"), mustParseNet("10.0.0.3/32")},
+			},
+		})
+		ok, _, _ = c.Get("10.0.0.1")
+		Expect(ok).Should(BeTrue(), "retained IP should still be resolvable")
+		ok, _, _ = c.Get("10.0.0.3")
+		Expect(ok).Should(BeTrue(), "new IP should be resolvable")
+		ok, _, _ = c.Get("10.0.0.2")
+		Expect(ok).Should(BeFalse(), "removed IP should no longer be resolvable")
+	})
+
 	It("should add/update/delete cached WEP and its IP", func() {
 		c := cache.NewWEPCache()
 

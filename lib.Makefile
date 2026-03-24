@@ -21,28 +21,7 @@ test: ut fv st
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-# This variable is only set if ARCHES is not set
-ARCHES ?= $(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
-
-# Some repositories keep their Dockerfile(s) in the sub-directories of the 'docker-image'
-# directory (e.g., voltron). Make sure ARCHES gets filled from all unique Dockerfiles.
-ifeq ($(ARCHES),)
-	dockerfiles_in_subdir=$(wildcard docker-image/**/Dockerfile.*)
-	ifneq ($(dockerfiles_in_subdir),)
-		ARCHES=$(patsubst Dockerfile.%,%,$(shell basename -a $(dockerfiles_in_subdir) | sort | uniq))
-	endif
-endif
-
-# Some repositories keep their Dockerfile(s) in the root directory instead of in
-# the 'docker-image' subdir. Make sure ARCHES gets filled in either way.
-ifeq ($(ARCHES),)
-	ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
-endif
-
-# If architectures cannot infer from Dockerfiles, set default supported architecture.
-ifeq ($(ARCHES),)
-	ARCHES=amd64 arm64
-endif
+ARCHES ?= amd64 arm64
 
 # list of arches *not* to build when doing *-all
 EXCLUDEARCH?=ppc64le s390x
@@ -399,11 +378,10 @@ DOCKER_PULL =
 endif
 
 # DOCKER_BUILD is the base build command used for building all images.
-DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
-	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
-	--build-arg GIT_VERSION=$(GIT_VERSION) \
+DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL) \
 	--build-arg CALICO_BASE=$(CALICO_BASE) \
-	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
+	--build-arg GIT_VERSION=$(GIT_VERSION) \
+	--build-arg UBI_IMAGE=$(UBI_IMAGE)
 
 DOCKER_BUILD_THIRD_PARTY = $(DOCKER_BUILD) \
 	--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
@@ -1052,14 +1030,19 @@ gen-mocks:
 	# The generated files need import reordering to pass static-checks
 	$(MAKE) fix-changed
 
-# Run mockery for each path in MOCKERY_FILE_PATHS. The the generated mocks are
-# created in package and in test files. Look here for more information https://github.com/vektra/mockery
+# Run mockery to generate mocks. If a .mockery.yaml config file exists (mockery v3),
+# run mockery with that config. Otherwise, fall back to the v2 CLI flags using MOCKERY_FILE_PATHS.
+# Look here for more information https://github.com/vektra/mockery
 mockery-run:
-	for FILE_PATH in $(MOCKERY_FILE_PATHS); do\
-		DIR=$$(dirname $$FILE_PATH); \
-		INTERFACE_NAME=$$(basename $$FILE_PATH); \
-		mockery --dir $$DIR --name $$INTERFACE_NAME --inpackage; \
-	done
+	if [ -f .mockery.yaml ] || [ -f .mockery.yml ]; then \
+		mockery; \
+	else \
+		for FILE_PATH in $(MOCKERY_FILE_PATHS); do\
+			DIR=$$(dirname $$FILE_PATH); \
+			INTERFACE_NAME=$$(basename $$FILE_PATH); \
+			mockery --dir $$DIR --name $$INTERFACE_NAME --inpackage; \
+		done; \
+	fi
 
 ###############################################################################
 # Docker helpers
@@ -1540,6 +1523,7 @@ run-k8s-apiserver: run-etcd
 			--max-requests-inflight=0 \
 			--enable-aggregator-routing \
 			--requestheader-client-ca-file=/home/user/certs/ca.pem \
+			--requestheader-allowed-names=kubernetes \
 			--requestheader-username-headers=X-Remote-User \
 			--requestheader-group-headers=X-Remote-Group \
 			--requestheader-extra-headers-prefix=X-Remote-Extra- \

@@ -134,12 +134,12 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.3
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.18.0
-	github.com/tigera/api v0.0.0-20260115201458-bce624761bbd
+	github.com/tigera/api v0.0.0-20260227222130-df0b9e289a34
 	github.com/tigera/operator v1.41.1
 	github.com/tigera/operator/api v0.0.0-20260120220012-4a3f8a7d8399
 	github.com/tigera/tds-apiserver v0.88.0
 	github.com/tigera/tds-apiserver/lib v0.0.0-20250728135247-8accc909ea3d
-	github.com/tigera/windows-networking v0.0.0-20250716211943-7305bf7191dd
+	github.com/tigera/windows-networking v0.0.0-20260309182927-2869ff784a49
 	github.com/urfave/cli/v3 v3.6.2
 	github.com/vishvananda/netlink v1.3.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
@@ -169,27 +169,35 @@ require (
 	helm.sh/helm/v3 v3.19.5
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
-	k8s.io/api v0.34.4
-	k8s.io/apiextensions-apiserver v0.34.4
-	k8s.io/apimachinery v0.34.4
-	k8s.io/apiserver v0.34.4
-	k8s.io/client-go v0.34.4
-	k8s.io/component-base v0.34.4
+	k8s.io/api v0.35.2
+	k8s.io/apiextensions-apiserver v0.35.2
+	k8s.io/apimachinery v0.35.2
+	k8s.io/apiserver v0.35.2
+	k8s.io/client-go v0.35.2
+	k8s.io/component-base v0.35.2
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-aggregator v0.34.4
+	k8s.io/kube-aggregator v0.35.2
 	k8s.io/kube-openapi v0.31.0
-	k8s.io/kubectl v0.34.4
-	k8s.io/kubernetes v1.34.4
+	k8s.io/kubectl v0.35.2
+	k8s.io/kubernetes v1.35.2
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
-	kubevirt.io/api v1.7.0
-	kubevirt.io/client-go v1.7.0
+	kubevirt.io/api v1.8.0-alpha.0
+	kubevirt.io/client-go v1.8.0-alpha.0
 	modernc.org/memory v1.11.0
 	sigs.k8s.io/controller-runtime v0.22.5
 	sigs.k8s.io/gateway-api v1.4.1
 	sigs.k8s.io/kind v0.31.0
 	sigs.k8s.io/knftables v0.0.19
-	sigs.k8s.io/network-policy-api v0.1.8-0.20260212153203-412bf65729a5
+	sigs.k8s.io/network-policy-api v0.1.8-0.20260217173220-6bb86defe1a7
 	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/openshift/custom-resource-status v1.1.2 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
+	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
+	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
 )
 
 require (
@@ -212,7 +220,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hnslib v0.1.1 // indirect
+	github.com/Microsoft/hnslib v0.1.2 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
@@ -263,13 +271,13 @@ require (
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
-	github.com/containerd/containerd/api v1.8.0 // indirect
+	github.com/containerd/containerd/api v1.9.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
-	github.com/containerd/ttrpc v1.2.6 // indirect
-	github.com/containerd/typeurl/v2 v2.2.2 // indirect
+	github.com/containerd/ttrpc v1.2.7 // indirect
+	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
@@ -293,7 +301,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -320,7 +327,7 @@ require (
 	github.com/gonvenience/text v1.0.7 // indirect
 	github.com/gonvenience/wrap v1.1.2 // indirect
 	github.com/gonvenience/ytbx v1.4.4 // indirect
-	github.com/google/cadvisor v0.52.1 // indirect
+	github.com/google/cadvisor v0.53.0 // indirect
 	github.com/google/cel-go v0.26.0 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -397,12 +404,11 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/opencontainers/cgroups v0.0.1 // indirect
+	github.com/opencontainers/cgroups v0.0.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/opencontainers/runtime-spec v1.2.0 // indirect
+	github.com/opencontainers/runtime-spec v1.2.1 // indirect
 	github.com/opencontainers/selinux v1.13.0 // indirect
-	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/oschwald/maxminddb-golang/v2 v2.0.0-beta.10 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
@@ -483,22 +489,20 @@ require (
 	gorm.io/driver/postgres v1.6.0 // indirect
 	gorm.io/gorm v1.31.0 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/cli-runtime v0.34.4 // indirect
-	k8s.io/cloud-provider v0.34.4 // indirect
-	k8s.io/component-helpers v0.34.4 // indirect
-	k8s.io/controller-manager v0.34.4 // indirect
-	k8s.io/cri-api v0.34.4 // indirect
-	k8s.io/cri-client v0.34.4 // indirect
-	k8s.io/csi-translation-lib v0.34.4 // indirect
-	k8s.io/dynamic-resource-allocation v0.34.4 // indirect
-	k8s.io/kms v0.34.4 // indirect
-	k8s.io/kube-scheduler v0.34.4 // indirect
-	k8s.io/kubelet v0.34.4 // indirect
-	k8s.io/metrics v0.34.4 // indirect
-	k8s.io/mount-utils v0.34.4 // indirect
-	k8s.io/pod-security-admission v0.34.4
-	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
-	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
+	k8s.io/cli-runtime v0.35.2 // indirect
+	k8s.io/cloud-provider v0.35.2 // indirect
+	k8s.io/component-helpers v0.35.2 // indirect
+	k8s.io/controller-manager v0.35.2 // indirect
+	k8s.io/cri-api v0.35.2 // indirect
+	k8s.io/cri-client v0.35.2 // indirect
+	k8s.io/csi-translation-lib v0.35.2 // indirect
+	k8s.io/dynamic-resource-allocation v0.35.2 // indirect
+	k8s.io/kms v0.35.2 // indirect
+	k8s.io/kube-scheduler v0.35.2 // indirect
+	k8s.io/kubelet v0.35.2 // indirect
+	k8s.io/metrics v0.35.2 // indirect
+	k8s.io/mount-utils v0.35.2 // indirect
+	k8s.io/pod-security-admission v0.35.2
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
@@ -524,35 +528,36 @@ replace (
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
 	// transient imports.
-	k8s.io/api => k8s.io/api v0.34.4
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.34.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.34.4
-	k8s.io/apiserver => k8s.io/apiserver v0.34.4
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.34.4
-	k8s.io/client-go => k8s.io/client-go v0.34.4
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.34.4
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.4
-	k8s.io/code-generator => k8s.io/code-generator v0.34.4
-	k8s.io/component-base => k8s.io/component-base v0.34.4
-	k8s.io/component-helpers => k8s.io/component-helpers v0.34.4
-	k8s.io/controller-manager => k8s.io/controller-manager v0.34.4
-	k8s.io/cri-api => k8s.io/cri-api v0.34.4
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.34.4
-	k8s.io/endpointslice => k8s.io/endpointslice v0.34.4
-	k8s.io/externaljwt => k8s.io/externaljwt v0.34.4
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.4
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.4
+	k8s.io/api => k8s.io/api v0.35.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.35.2
+	k8s.io/apiserver => k8s.io/apiserver v0.35.2
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.35.2
+	k8s.io/client-go => k8s.io/client-go v0.35.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.35.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.35.2
+	k8s.io/code-generator => k8s.io/code-generator v0.35.2
+	k8s.io/component-base => k8s.io/component-base v0.35.2
+	k8s.io/component-helpers => k8s.io/component-helpers v0.35.2
+	k8s.io/controller-manager => k8s.io/controller-manager v0.35.2
+	k8s.io/cri-api => k8s.io/cri-api v0.35.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.35.2
+	k8s.io/endpointslice => k8s.io/endpointslice v0.35.2
+	k8s.io/externaljwt => k8s.io/externaljwt v0.35.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.35.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.35.2
+
 	// kubevirt.io/client-go requires a tagged kube-openapi version that doesn't
 	// exist; pin to the pseudo-version used by the rest of our k8s dependencies.
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.4
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.4
-	k8s.io/kubectl => k8s.io/kubectl v0.34.4
-	k8s.io/kubelet => k8s.io/kubelet v0.34.4
-	k8s.io/metrics => k8s.io/metrics v0.34.4
-	k8s.io/mount-utils => k8s.io/mount-utils v0.34.4
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.4
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.4
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.35.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.35.2
+	k8s.io/kubectl => k8s.io/kubectl v0.35.2
+	k8s.io/kubelet => k8s.io/kubelet v0.35.2
+	k8s.io/metrics => k8s.io/metrics v0.35.2
+	k8s.io/mount-utils => k8s.io/mount-utils v0.35.2
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.35.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.35.2
 
 	kubevirt.io/client-go => github.com/tigera/kubevirt-client-go v1.7.0-tigera1
 )

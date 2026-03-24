@@ -89,12 +89,12 @@ var _ = Describe("LiveMigrationClient", func() {
 				Kind:       internalapi.KindLiveMigration,
 				APIVersion: apiv3.GroupVersionCurrent,
 			}))
-			Expect(*lm.Spec.Destination.Selector).To(Equal(
+			Expect(*lm.Spec.Target.Selector).To(Equal(
 				"(vmi.kubevirt.io/id == 'my-vmi' || vm.kubevirt.io/name == 'my-vmi') && kubevirt.io/migrationJobUID == 'uid-123'",
 			))
-			Expect(*lm.Spec.Source).To(Equal(types.NamespacedName{
-				Name:      "source-pod-abc",
-				Namespace: "test-ns",
+			Expect(lm.Spec.Source.Workload).To(Equal(&internalapi.WorkloadIdentifier{
+				OrchestratorID: "k8s",
+				WorkloadID:     "test-ns/source-pod-abc",
 			}))
 			Expect(kvp.Key).To(Equal(model.ResourceKey{
 				Kind:      internalapi.KindLiveMigration,
@@ -147,7 +147,7 @@ var _ = Describe("LiveMigrationClient", func() {
 			Expect(kvp).NotTo(BeNil())
 			lm := kvp.Value.(*internalapi.LiveMigration)
 			Expect(lm.Spec.Source).To(BeNil())
-			Expect(lm.Spec.Destination).NotTo(BeNil())
+			Expect(lm.Spec.Target).NotTo(BeNil())
 		})
 	})
 
@@ -169,12 +169,12 @@ var _ = Describe("LiveMigrationClient", func() {
 			lm1 := kvps.KVPairs[0].Value.(*internalapi.LiveMigration)
 			Expect(lm1.Name).To(Equal("vmim-1"))
 			Expect(lm1.Namespace).To(Equal("test-ns"))
-			Expect(lm1.Spec.Source.Name).To(Equal("src-pod-1"))
+			Expect(lm1.Spec.Source.Workload.WorkloadID).To(Equal("test-ns/src-pod-1"))
 
 			lm2 := kvps.KVPairs[1].Value.(*internalapi.LiveMigration)
 			Expect(lm2.Name).To(Equal("vmim-2"))
 			Expect(lm2.Namespace).To(Equal("test-ns"))
-			Expect(lm2.Spec.Source.Name).To(Equal("src-pod-2"))
+			Expect(lm2.Spec.Source.Workload.WorkloadID).To(Equal("test-ns/src-pod-2"))
 		})
 
 		It("lists VMIMs across all namespaces", func() {
@@ -257,7 +257,7 @@ var _ = Describe("LiveMigrationClient", func() {
 					lm := event.New.Value.(*internalapi.LiveMigration)
 					Expect(lm.Name).To(Equal("vmim-watch-1"))
 					Expect(lm.Namespace).To(Equal("test-ns"))
-					Expect(lm.Spec.Source.Name).To(Equal("src-pod-w"))
+					Expect(lm.Spec.Source.Workload.WorkloadID).To(Equal("test-ns/src-pod-w"))
 				case <-timer.C:
 					Fail(fmt.Sprintf("expected a watch event before timer expired"))
 				}
@@ -343,7 +343,7 @@ var _ = Describe("LiveMigrationClient", func() {
 				lm := event.New.Value.(*internalapi.LiveMigration)
 				Expect(lm.Name).To(Equal("vmim-sched"))
 				Expect(lm.Spec.Source).To(BeNil())
-				Expect(lm.Spec.Destination).NotTo(BeNil())
+				Expect(lm.Spec.Target).NotTo(BeNil())
 			case <-timer.C:
 				Fail("expected a watch event for Scheduling phase VMIM")
 			}
@@ -425,12 +425,14 @@ var _ = Describe("LiveMigrationClient", func() {
 						Expect(e.New).NotTo(BeNil())
 						Expect(e.New.Value).To(BeAssignableToTypeOf(&internalapi.LiveMigration{}))
 						lm := e.New.Value.(*internalapi.LiveMigration)
-						Expect(lm.Spec.Destination.NamespacedName).To(BeNil())
-						Expect(*lm.Spec.Destination.Selector).To(Equal("(vmi.kubevirt.io/id == 'vm12' || vm.kubevirt.io/name == 'vm12') && kubevirt.io/migrationJobUID == 'c05275a7-f85b-42d5-a1d0-acdd49c26d57'"))
+						Expect(lm.Spec.Target.WorkloadEndpoint).To(BeNil())
+						Expect(*lm.Spec.Target.Selector).To(Equal("(vmi.kubevirt.io/id == 'vm12' || vm.kubevirt.io/name == 'vm12') && kubevirt.io/migrationJobUID == 'c05275a7-f85b-42d5-a1d0-acdd49c26d57'"))
 						// Source is only populated when MigrationState.SourcePod is available.
 						if lm.Spec.Source != nil {
-							Expect(lm.Spec.Source.Namespace).To(Equal("test-ns"))
-							Expect(lm.Spec.Source.Name).To(Equal("virt-launcher-vm12-snq7w"))
+							Expect(lm.Spec.Source.Workload).To(Equal(&internalapi.WorkloadIdentifier{
+								OrchestratorID: "k8s",
+								WorkloadID:     "test-ns/virt-launcher-vm12-snq7w",
+							}))
 						}
 					})
 				}

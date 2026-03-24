@@ -99,7 +99,7 @@ var _ = describe.CalicoDescribe(
 				url = buildURL(localPort, server.Pod().Namespace, server.Pod().Namespace, "-1800")
 
 				// Port forward should be working and whisker-backend should return 200 status
-				verifyPortForward(url)
+				kubectl.WaitForPortForward(http.DefaultClient, url)
 			})
 
 			AfterEach(func() {
@@ -356,28 +356,6 @@ func buildURL(port int, sourceNamespace, destinationNamespace, startTime string)
 	params.Add("filters", string(filtersJSON))
 	params.Add("startTimeGte", startTime)
 	return fmt.Sprintf("%s?%s", baseURL, params.Encode())
-}
-
-func verifyPortForward(url string) {
-	// Port forward should be working and whisker-backend should return 200 status
-	Eventually(func() error {
-		resp, err := http.Get(url)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = resp.Body.Close() }()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("http response is not successful %d, body: %s", resp.StatusCode, string(body))
-		}
-
-		return nil
-	}, 30*time.Second, 1*time.Second).Should(Not(HaveOccurred()))
 }
 
 func verifyFlowCount(url string, count int) {

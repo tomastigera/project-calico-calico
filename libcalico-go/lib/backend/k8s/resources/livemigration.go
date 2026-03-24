@@ -198,7 +198,7 @@ func convertVMIMToLiveMigration(vmim *kubevirtv1.VirtualMachineInstanceMigration
 			string(vmim.UID),
 		)
 		lm.Spec = internalapi.LiveMigrationSpec{
-			Destination: &internalapi.WorkloadEndpointIdentifier{
+			Target: &internalapi.LiveMigrationTarget{
 				Selector: &selector,
 			},
 		}
@@ -206,9 +206,11 @@ func convertVMIMToLiveMigration(vmim *kubevirtv1.VirtualMachineInstanceMigration
 		// PreparingTarget/TargetReady phase onwards).  In earlier phases we emit without
 		// Source so that the TARGET role reaches Felix as early as possible.
 		if vmim.Status.MigrationState != nil && vmim.Status.MigrationState.SourcePod != "" {
-			lm.Spec.Source = &types.NamespacedName{
-				Name:      vmim.Status.MigrationState.SourcePod,
-				Namespace: vmim.Namespace,
+			lm.Spec.Source = &internalapi.LiveMigrationSource{
+				Workload: &internalapi.WorkloadIdentifier{
+					OrchestratorID: "k8s",
+					WorkloadID:     vmim.Namespace + "/" + vmim.Status.MigrationState.SourcePod,
+				},
 			}
 		}
 		kvp.Value = lm

@@ -38,7 +38,7 @@ gcloud --quiet compute instances create "${vm_name}" \
   --zone=${zone} \
   --image-family=${image_family} \
   --image-project=ubuntu-os-cloud \
-  --machine-type=n4-highcpu-4 \
+  --machine-type=n4-standard-4 \
   --boot-disk-size=20G \
   --boot-disk-type=hyperdisk-balanced
 ```

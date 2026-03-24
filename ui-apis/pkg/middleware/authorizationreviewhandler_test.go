@@ -410,8 +410,8 @@ var _ = Describe("AuthorizationReviewHandler", func() {
 			BeforeEach(func() {
 				mockCSFactory = &lmak8s.MockClientSetFactory{}
 				fCS := &fakeClientSet{
-					Clientset: k8sfake.NewSimpleClientset(),
-					calico:    calicofake.NewSimpleClientset().ProjectcalicoV3(),
+					Clientset: k8sfake.NewClientset(),
+					calico:    calicofake.NewClientset().ProjectcalicoV3(),
 				}
 				mockCSFactory.On("NewClientSetForApplication", "managed-01").Return(fCS, nil)
 				handler = middleware.NewAuthorizationReviewHandler(authzreview.NewAuthzReviewer(calc, mockCSFactory))
@@ -498,8 +498,8 @@ var _ = Describe("AuthorizationReviewHandler", func() {
 			BeforeEach(func() {
 				mockCSFactory = &lmak8s.MockClientSetFactory{}
 				fCS := &fakeClientSet{
-					Clientset:         k8sfake.NewSimpleClientset(),
-					calico:            calicofake.NewSimpleClientset().ProjectcalicoV3(),
+					Clientset:         k8sfake.NewClientset(),
+					calico:            calicofake.NewClientset().ProjectcalicoV3(),
 					discoveryOverride: &forbiddenDiscovery{},
 				}
 				mockCSFactory.On("NewClientSetForApplication", "managed-01").Return(fCS, nil)

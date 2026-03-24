@@ -13,7 +13,7 @@ var _ = Describe("", func() {
 
 	Context("test label handler", func() {
 		It("Labels", func() {
-			k8sClient := fake.NewSimpleClientset()
+			k8sClient := fake.NewClientset()
 			authz := &mockAuthorizer{}
 			calicoClient := newMockCalicoClient()
 

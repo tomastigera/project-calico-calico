@@ -55,6 +55,7 @@ type MockDataplane struct {
 	endpointComputedData           map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData
 	endpointToAllPolicyIDs         map[string][]types.PolicyID
 	endpointToProfiles             map[string][]string
+	endpointToLiveMigrationRole    map[string]proto.LiveMigrationRole
 	serviceAccounts                map[types.ServiceAccountID]*proto.ServiceAccountUpdate
 	namespaces                     map[types.NamespaceID]*proto.NamespaceUpdate
 	config                         map[string]string
@@ -215,6 +216,13 @@ func (d *MockDataplane) EndpointToProfiles() map[string][]string {
 	return epToProfCopy
 }
 
+func (d *MockDataplane) EndpointToLiveMigrationRole() map[string]proto.LiveMigrationRole {
+	d.Lock()
+	defer d.Unlock()
+
+	return maps.Clone(d.endpointToLiveMigrationRole)
+}
+
 func (d *MockDataplane) EndpointToPolicyOrder() map[string][]TierInfo {
 	d.Lock()
 	defer d.Unlock()
@@ -329,6 +337,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
 		endpointComputedData:           make(map[string]map[calc.EndpointComputedDataKind]calc.EndpointComputedData),
 		endpointToProfiles:             make(map[string][]string),
+		endpointToLiveMigrationRole:    make(map[string]proto.LiveMigrationRole),
 		endpointToAllPolicyIDs:         make(map[string][]types.PolicyID),
 		serviceAccounts:                make(map[types.ServiceAccountID]*proto.ServiceAccountUpdate),
 		namespaces:                     make(map[types.NamespaceID]*proto.NamespaceUpdate),
@@ -486,6 +495,11 @@ func (d *MockDataplane) OnEvent(event any) {
 					"update %v to be active", profID, event))
 		}
 		d.endpointToProfiles[id.String()] = event.Endpoint.ProfileIds
+		if event.Endpoint.LiveMigrationRole != proto.LiveMigrationRole_NO_ROLE {
+			d.endpointToLiveMigrationRole[id.String()] = event.Endpoint.LiveMigrationRole
+		} else {
+			delete(d.endpointToLiveMigrationRole, id.String())
+		}
 	case *proto.WorkloadEndpointRemove:
 		id := workloadId(types.ProtoToWorkloadEndpointID(event.GetId()))
 		delete(d.endpointToPolicyOrder, id.String())
@@ -493,6 +507,7 @@ func (d *MockDataplane) OnEvent(event any) {
 		delete(d.endpointToPreDNATPolicyOrder, id.String())
 		delete(d.endpointComputedData, id.String())
 		delete(d.endpointToProfiles, id.String())
+		delete(d.endpointToLiveMigrationRole, id.String())
 		delete(d.endpointToAllPolicyIDs, id.String())
 	case *proto.HostEndpointUpdate:
 		tiers := event.Endpoint.Tiers

@@ -60,6 +60,12 @@ func (m *MockListerWatcher) Watch(options metav1.ListOptions) (watch.Interface, 
 	return &MockWatch{m.eventCh}, nil
 }
 
+// IsWatchListSemanticsUnSupported opts out of WatchList semantics which are
+// enabled by default in client-go 1.35 but not supported by this mock.
+func (m *MockListerWatcher) IsWatchListSemanticsUnSupported() bool {
+	return true
+}
+
 func (m *MockListerWatcher) AddEvent(event watch.Event) {
 	m.eventCh <- event
 }

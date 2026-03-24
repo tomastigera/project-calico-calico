@@ -395,8 +395,8 @@ func getPolicyRecommendationScope(
 
 // getMockResources returns a mock client set and linseed client for testing
 func getMockResources(ctx context.Context) (*lmak8s.MockClientSet, lsclient.MockClient) {
-	fakeClient := fakecalico.NewSimpleClientset()
-	fakeCoreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+	fakeClient := fakecalico.NewClientset()
+	fakeCoreV1 := fakeK8s.NewClientset().CoreV1()
 
 	// Simplify mock creation with a single mock struct
 	mockClientSet := lmak8s.NewMockClientSet(simpleMockT{})

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -55,11 +56,9 @@ var _ = Describe("File Parser", func() {
 
 	BeforeEach(func() {
 		mockDPIUpdater = &dpiupdater.MockDPIStatusUpdater{}
-		mockDPIUpdater.AssertExpectations(GinkgoT())
 		mockLinseedClient = client.NewMockClient("")
 		ctx = context.Background()
 		mockForwarder = &alert.MockForwarder{}
-		mockForwarder.AssertExpectations(GinkgoT())
 		cfg = &config.Config{SnortAlertFileBasePath: "test"}
 
 		// Cleanup
@@ -73,17 +72,21 @@ var _ = Describe("File Parser", func() {
 	})
 
 	AfterEach(func() {
+		mockForwarder.AssertExpectations(GinkgoT())
+		mockDPIUpdater.AssertExpectations(GinkgoT())
+
 		// Cleanup
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		_ = os.RemoveAll(path)
-		_ = os.MkdirAll(path, os.ModePerm)
 
 		path = fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName2)
 		_ = os.RemoveAll(path)
-		_ = os.MkdirAll(path, os.ModePerm)
 	})
 
 	It("should start tailing alert file, parse and send it to Linseed", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -110,7 +113,10 @@ var _ = Describe("File Parser", func() {
 			Record:        lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
 		event.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
-		mockForwarder.On("Forward", event).Return(nil).Times(1)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", event).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil).Times(1)
 
 		// GenerateEventsForWEP should parse file and call elastic service.
 		wepCache := cache2.NewWEPCache()
@@ -122,7 +128,7 @@ var _ = Describe("File Parser", func() {
 		})
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -152,7 +158,9 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
+		// The tail goroutine may call UpdateStatusWithError multiple times depending
+		// on timing (file not yet created, watcher closed, etc.) before Stop cancels it.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Maybe()
 
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
@@ -174,6 +182,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should send pod name and namespace in Alert when available", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -202,7 +213,10 @@ var _ = Describe("File Parser", func() {
 			Record:        lsv1.DPIRecord{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
 		event.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
-		mockForwarder.On("Forward", event).Return(nil).Times(1)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", event).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil).Times(1)
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
@@ -216,7 +230,7 @@ var _ = Describe("File Parser", func() {
 				},
 			})
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -230,6 +244,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should send current pod name and namespace in Alert", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
@@ -277,14 +294,14 @@ var _ = Describe("File Parser", func() {
 		}
 		event2.ID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event2.SourceIP, srcPort, *event2.DestIP, destPort, event2.Host)
 
-		numberOfCallsToSend := 0
+		var numberOfCallsToSend atomic.Int32
 		mockForwarder.On("Forward", mock.Anything).Run(
 			func(args mock.Arguments) {
 				defer GinkgoRecover()
 
-				numberOfCallsToSend++
-				logrus.Infof("Calling %d", numberOfCallsToSend)
-				switch numberOfCallsToSend {
+				n := numberOfCallsToSend.Add(1)
+				logrus.Infof("Calling %d", n)
+				switch n {
 				case 1:
 					Expect(args.Get(0).(lsv1.Event)).Should(BeEquivalentTo(event1))
 				case 2:
@@ -304,7 +321,7 @@ var _ = Describe("File Parser", func() {
 				},
 			})
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(1))
+		Eventually(func() int32 { return numberOfCallsToSend.Load() }, 5*time.Second).Should(Equal(int32(1)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -325,7 +342,7 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path, orgFile, expectedFile)
 
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return numberOfCallsToSend }, 5*time.Second).Should(Equal(2))
+		Eventually(func() int32 { return numberOfCallsToSend.Load() }, 5*time.Second).Should(Equal(int32(2)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)
@@ -339,6 +356,9 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should handle multiple snorts producing alerts", func() {
+		// Allow UpdateStatusWithError calls from the tail goroutine's error paths.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Maybe()
+
 		// Copy and create an alert file
 		path1 := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path1, orgFile, expectedFile)
@@ -353,13 +373,16 @@ var _ = Describe("File Parser", func() {
 			EndpointID:     "eth0",
 		}
 
-		mockForwarder.On("Forward", mock.Anything, mock.Anything, mock.Anything).Return(nil, false, nil).Times(2)
+		var forwardCalls atomic.Int32
+		mockForwarder.On("Forward", mock.Anything, mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+			forwardCalls.Add(1)
+		}).Return(nil, false, nil).Times(2)
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
 		r.GenerateEventsForWEP(wepKey2)
 
-		Eventually(func() int { return len(mockForwarder.Calls) }, 5*time.Second).Should(Equal(2))
+		Eventually(func() int32 { return forwardCalls.Load() }, 5*time.Second).Should(Equal(int32(2)))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.Close()
@@ -398,7 +421,8 @@ var _ = Describe("File Parser", func() {
 		alertForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Times(1)
+		// The tail goroutine may call UpdateStatusWithError on any error path.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, true, mock.Anything).Return(nil).Maybe()
 
 		// Copy and create an alert file
 		path1 := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)

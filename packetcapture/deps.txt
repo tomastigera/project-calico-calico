@@ -9,7 +9,6 @@ github.com/cenkalti/backoff/v5 v5.0.3
 github.com/cespare/xxhash/v2 v2.3.0
 github.com/coreos/go-oidc v2.4.0+incompatible
 github.com/coreos/go-semver v0.3.1
-github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/v22 v22.6.0
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/emicklei/go-restful v2.15.0+incompatible
@@ -86,15 +85,15 @@ gopkg.in/evanphx/json-patch.v4 v4.13.0
 gopkg.in/go-jose/go-jose.v2 v2.6.3
 gopkg.in/inf.v0 v0.9.1
 gopkg.in/yaml.v3 v3.0.1
-k8s.io/api v0.34.4
-k8s.io/apimachinery v0.34.4
-k8s.io/apiserver v0.34.4
-k8s.io/client-go v0.34.4
-k8s.io/component-base v0.34.4
+k8s.io/api v0.35.2
+k8s.io/apimachinery v0.35.2
+k8s.io/apiserver v0.35.2
+k8s.io/client-go v0.35.2
+k8s.io/component-base v0.35.2
 k8s.io/klog v0.2.0
 k8s.io/klog/v2 v2.130.1
-k8s.io/kube-aggregator v0.34.4
-k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
+k8s.io/kube-aggregator v0.35.2
+k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
 k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 sigs.k8s.io/randfill v1.0.0
@@ -113,12 +112,16 @@ local:libcalico-go/lib/backend/model
 local:libcalico-go/lib/errors
 local:libcalico-go/lib/json
 local:libcalico-go/lib/logutils
+local:libcalico-go/lib/metricsserver
 local:libcalico-go/lib/names
 local:libcalico-go/lib/namespace
 local:libcalico-go/lib/net
+local:libcalico-go/lib/winutils
 local:lma/pkg/auth
 local:lma/pkg/cache
 local:lma/pkg/k8s
+local:node/pkg/bgp
+local:node/pkg/metrics
 local:packetcapture/cmd
 local:packetcapture/pkg/cache
 local:packetcapture/pkg/capture

@@ -42,6 +42,7 @@ const (
 
 	// upstream components
 	upstreamFluentdComponentName = "upstream-fluentd"
+	upstreamIstioComponentName   = "upstream-istio"
 
 	operatorComponentsFileName = "pinned_components.yml"
 )
@@ -58,6 +59,7 @@ var thirdPartyEnterpriseComponents = map[string]registry.Component{
 	eckElasticsearchOperatorComponentName: {Version: "2.16.0"},
 	eckKibanaComponentName:                {Version: "8.19.12"},
 	upstreamFluentdComponentName:          {Version: "1.19.2"},
+	upstreamIstioComponentName:            {Version: "1.28.1"},
 }
 
 var (
@@ -83,6 +85,7 @@ var (
 		eckElasticsearchOperatorComponentName,
 		eckKibanaComponentName,
 		upstreamFluentdComponentName,
+		upstreamIstioComponentName,
 	}
 )
 

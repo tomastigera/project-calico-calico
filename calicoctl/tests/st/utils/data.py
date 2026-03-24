@@ -1868,6 +1868,8 @@ globalthreatfeed_name1 = {
     },
     'spec': {
         'content': 'IPSet',
+        'feedType': 'Custom',
+        'mode': 'Enabled',
         'globalNetworkSet': {
             'labels': {
                 'foo': 'bar',
@@ -1899,6 +1901,9 @@ globalthreatfeed_name2_rev1 = {
         'name': 'name2'
     },
     'spec': {
+        'content': 'IPSet',
+        'feedType': 'Custom',
+        'mode': 'Enabled',
         'pull': {
             'http': {
                 'url': 'https://notreal.tigera.io/threatfeed2',
@@ -1914,6 +1919,9 @@ globalthreatfeed_name2_rev2 = {
         'name': 'name2'
     },
     'spec': {
+        'content': 'IPSet',
+        'feedType': 'Custom',
+        'mode': 'Enabled',
         'pull': {
             'http': {
                 'url': 'https://notreal.tigera.io/threatfeed/rev2',
@@ -1929,6 +1937,11 @@ globalthreatfeed_name0 = {
     'metadata': {
         'name': 'name0'
     },
+    'spec': {
+        'content': 'IPSet',
+        'feedType': 'Custom',
+        'mode': 'Enabled',
+    }
 }
 
 # Note: whitespace matters!  Be careful editing.
