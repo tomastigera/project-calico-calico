@@ -1840,9 +1840,14 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 	case *apiv3.StagedKubernetesNetworkPolicy:
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
-		if er.Spec.StagedAction != "" {
-			p.StagedAction = &er.Spec.StagedAction
+		// The CRD schema has +kubebuilder:default=Set on StagedAction. The
+		// validator's validateCRD applies CRD schema defaults to the object
+		// before storing, so the server always returns "Set" when omitted.
+		stagedAction := er.Spec.StagedAction
+		if stagedAction == "" {
+			stagedAction = apiv3.StagedActionSet
 		}
+		p.StagedAction = &stagedAction
 		p.Selector = getStringPointer(conversion.K8sSelectorToCalico(&er.Spec.PodSelector, conversion.SelectorPod))
 		p.ServiceAccountSelector = nil
 	case *apiv3.StagedGlobalNetworkPolicy:
