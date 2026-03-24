@@ -4933,7 +4933,7 @@ func init() {
 			Selector: "all()",
 			Filters: []api.PacketCaptureRule{
 				{
-					Ports: []numorstring.Port{numorstring.NamedPort("http")},
+					Ports: []numorstring.Port{numorstring.Port{PortName: "http"}},
 				},
 			},
 		}, false),
