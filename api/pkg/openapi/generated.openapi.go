@@ -7549,7 +7549,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					"liveMigrationRouteConvergenceTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LiveMigrationRouteConvergenceTime is the time to keep elevated route priority after a VM live migration completes.  This allows routes to converge across the cluster before reverting to normal priority. [Default: 30s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
 					"wireguardEnabled": {

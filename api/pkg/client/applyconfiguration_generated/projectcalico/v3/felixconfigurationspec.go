@@ -998,6 +998,26 @@ type FelixConfigurationSpecApplyConfiguration struct {
 	ExternalNetworkSupport *string `json:"externalNetworkSupport,omitempty"`
 	// ExternalNetworkRoutingRulePriority controls the priority value to use for the external network routing rule. [Default: 102]
 	ExternalNetworkRoutingRulePriority *int `json:"externalNetworkRoutingRulePriority,omitempty"`
+	// Route Priority value for a normal priority Calico-programmed IPv4 route.  Note, higher
+	// values mean lower priority. [Default: 1024]
+	IPv4NormalRoutePriority *int `json:"ipv4NormalRoutePriority,omitempty"`
+	// Route Priority value for an elevated priority Calico-programmed IPv4 route.  Note, higher
+	// values mean lower priority.  Elevated priority is used during VM live migration, and for
+	// optimal behaviour IPv4ElevatedRoutePriority must be less than IPv4NormalRoutePriority
+	// [Default: 512]
+	IPv4ElevatedRoutePriority *int `json:"ipv4ElevatedRoutePriority,omitempty"`
+	// Route Priority value for a normal priority Calico-programmed IPv6 route.  Note, higher
+	// values mean lower priority. [Default: 1024]
+	IPv6NormalRoutePriority *int `json:"ipv6NormalRoutePriority,omitempty"`
+	// Route Priority value for an elevated priority Calico-programmed IPv6 route.  Note, higher
+	// values mean lower priority.  Elevated priority is used during VM live migration, and for
+	// optimal behaviour IPv6ElevatedRoutePriority must be less than IPv6NormalRoutePriority
+	// [Default: 512]
+	IPv6ElevatedRoutePriority *int `json:"ipv6ElevatedRoutePriority,omitempty"`
+	// LiveMigrationRouteConvergenceTime is the time to keep elevated route priority after a
+	// VM live migration completes.  This allows routes to converge across the cluster before
+	// reverting to normal priority. [Default: 30s]
+	LiveMigrationRouteConvergenceTime *v1.Duration `json:"liveMigrationRouteConvergenceTime,omitempty"`
 	// WireguardEnabled controls whether Wireguard is enabled for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network). [Default: false]
 	WireguardEnabled *bool `json:"wireguardEnabled,omitempty"`
 	// WireguardEnabledV6 controls whether Wireguard is enabled for IPv6 (encapsulating IPv6 traffic over an IPv6 underlay network). [Default: false]
@@ -3229,6 +3249,46 @@ func (b *FelixConfigurationSpecApplyConfiguration) WithExternalNetworkSupport(va
 // If called multiple times, the ExternalNetworkRoutingRulePriority field is set to the value of the last call.
 func (b *FelixConfigurationSpecApplyConfiguration) WithExternalNetworkRoutingRulePriority(value int) *FelixConfigurationSpecApplyConfiguration {
 	b.ExternalNetworkRoutingRulePriority = &value
+	return b
+}
+
+// WithIPv4NormalRoutePriority sets the IPv4NormalRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv4NormalRoutePriority field is set to the value of the last call.
+func (b *FelixConfigurationSpecApplyConfiguration) WithIPv4NormalRoutePriority(value int) *FelixConfigurationSpecApplyConfiguration {
+	b.IPv4NormalRoutePriority = &value
+	return b
+}
+
+// WithIPv4ElevatedRoutePriority sets the IPv4ElevatedRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv4ElevatedRoutePriority field is set to the value of the last call.
+func (b *FelixConfigurationSpecApplyConfiguration) WithIPv4ElevatedRoutePriority(value int) *FelixConfigurationSpecApplyConfiguration {
+	b.IPv4ElevatedRoutePriority = &value
+	return b
+}
+
+// WithIPv6NormalRoutePriority sets the IPv6NormalRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv6NormalRoutePriority field is set to the value of the last call.
+func (b *FelixConfigurationSpecApplyConfiguration) WithIPv6NormalRoutePriority(value int) *FelixConfigurationSpecApplyConfiguration {
+	b.IPv6NormalRoutePriority = &value
+	return b
+}
+
+// WithIPv6ElevatedRoutePriority sets the IPv6ElevatedRoutePriority field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the IPv6ElevatedRoutePriority field is set to the value of the last call.
+func (b *FelixConfigurationSpecApplyConfiguration) WithIPv6ElevatedRoutePriority(value int) *FelixConfigurationSpecApplyConfiguration {
+	b.IPv6ElevatedRoutePriority = &value
+	return b
+}
+
+// WithLiveMigrationRouteConvergenceTime sets the LiveMigrationRouteConvergenceTime field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the LiveMigrationRouteConvergenceTime field is set to the value of the last call.
+func (b *FelixConfigurationSpecApplyConfiguration) WithLiveMigrationRouteConvergenceTime(value v1.Duration) *FelixConfigurationSpecApplyConfiguration {
+	b.LiveMigrationRouteConvergenceTime = &value
 	return b
 }
 
