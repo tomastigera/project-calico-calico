@@ -74,7 +74,7 @@ func (h audit) BulkAuditEE() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		logs, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
+		decoded, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
 		if httpErr != nil {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				// Include the request body in our logs.
@@ -96,7 +96,7 @@ func (h audit) BulkAuditEE() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		response, err := h.logs.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
+		response, err := h.logs.Create(ctx, v1.AuditLogTypeEE, clusterInfo, decoded.Items)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to ingest EE audit logs")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -105,6 +105,8 @@ func (h audit) BulkAuditEE() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}
@@ -119,7 +121,7 @@ func (h audit) BulkAuditKube() http.HandlerFunc {
 		}
 		logCtx := logrus.WithFields(f)
 
-		logs, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
+		decoded, httpErr := handler.DecodeAndValidateBulkParams[v1.AuditLog](w, req)
 		if httpErr != nil {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				// Include the request body in our logs.
@@ -141,7 +143,7 @@ func (h audit) BulkAuditKube() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		response, err := h.logs.Create(ctx, v1.AuditLogTypeKube, clusterInfo, logs)
+		response, err := h.logs.Create(ctx, v1.AuditLogTypeKube, clusterInfo, decoded.Items)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to ingest Kube audit logs")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -150,6 +152,8 @@ func (h audit) BulkAuditKube() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}

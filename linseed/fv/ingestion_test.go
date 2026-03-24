@@ -81,6 +81,60 @@ func TestFV_FlowIngestion(t *testing.T) {
 	})
 }
 
+func TestFV_FlowIngestionTruncatedLogs(t *testing.T) {
+	addr := "https://localhost:8443/api/v1/flows/logs/bulk"
+	// 26 total lines: 1 malformed + 25 valid, so 1 failed and 25 succeeded
+	expectedResponse := `{"failed":1, "succeeded":25, "total":26}`
+
+	RunFlowLogTest(t, "ingest flow logs skipping malformed lines", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := mTLSClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(truncatedFlowLogs))
+
+		// make the request to ingest flows
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		err := testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(1675468688, 0),
+					To:   time.Unix(1675469001, 0),
+				},
+			},
+		}
+
+		resultList, err := cli.FlowLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+
+		// Only the 25 valid flow logs should have been ingested.
+		require.Equal(t, int64(25), resultList.TotalHits)
+
+		var esLogs []string
+		for _, log := range resultList.Items {
+			testutils.AssertFlowLogIDAndClusterAndReset(t, cluster, &log)
+			logStr, err := json.Marshal(log)
+			require.NoError(t, err)
+			esLogs = append(esLogs, string(logStr))
+		}
+
+		// truncatedFlowLogs is the same 25 flow logs as flowLogs with one malformed
+		// line prepended, so the ingested valid logs should match exactly.
+		assert.Equal(t, flowLogs, strings.Join(esLogs, "\n"))
+	})
+}
+
 func TestFV_DNSIngestion(t *testing.T) {
 	addr := "https://localhost:8443/api/v1/dns/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":11, "total":11}`

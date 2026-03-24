@@ -33,12 +33,17 @@ type PolicyActivityParams struct {
 	Policies []PolicyActivityQueryPolicy `json:"policies" validate:"dive"`
 }
 
-// PolicyActivityQueryPolicy identifies a specific policy and generation to query.
+// PolicyActivityQueryPolicy identifies a policy to query. When Generation is
+// non-nil, only activity for that specific generation is returned. When
+// Generation is nil, activity across all generations is returned.
 type PolicyActivityQueryPolicy struct {
-	Kind       string `json:"kind" validate:"required"`
-	Namespace  string `json:"namespace"`
-	Name       string `json:"name" validate:"required"`
-	Generation int64  `json:"generation" validate:"gt=0"`
+	Kind      string `json:"kind" validate:"required"`
+	Namespace string `json:"namespace"`
+	Name      string `json:"name" validate:"required"`
+	// Generation filters activity to a specific policy generation. When set,
+	// must be positive (generations start at 1 in Kubernetes). When nil,
+	// activity across all generations is returned.
+	Generation *int64 `json:"generation,omitempty" validate:"omitempty,gt=0"`
 }
 
 // PolicyActivityResponse is the response type for the /policy_activity endpoint.
@@ -60,7 +65,11 @@ type PolicyActivityRuleResult struct {
 	// string ("0", "1", …) but may also be a special sentinel: "implicit_deny"
 	// when the packet was denied by the policy's implicit default, or "unknown"
 	// when the rule index could not be determined.
-	Index         string    `json:"index"`
+	Index string `json:"index"`
+	// Generation is the policy generation that this rule activity was recorded
+	// against. This allows callers to determine whether a rule was evaluated at
+	// the current generation or a previous one.
+	Generation    int64     `json:"generation"`
 	LastEvaluated time.Time `json:"last_evaluated"`
 }
 

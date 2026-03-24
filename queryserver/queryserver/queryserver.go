@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/pkg/buildinfo"
 	"github.com/projectcalico/calico/queryserver/pkg/clientmgr"
 	authjwt "github.com/projectcalico/calico/queryserver/queryserver/auth"
@@ -96,6 +98,25 @@ func main() {
 	// only reviews the local cluster.
 	reviewer := authzreview.NewAuthzReviewer(authzreview.NewCalculator(k8sClient, calicoClient), nil)
 	authzHandler := authjwt.NewAuthorizer(reviewer)
+
+	// Create the linseed client for policy activity enrichment.
+	if serverCfg.LinseedClientCert == "" || serverCfg.LinseedClientKey == "" {
+		log.Fatal("Linseed client cert/key not configured; queryserver requires Linseed for policy activity enrichment")
+	}
+	linseedClient, err := lsclient.NewClient(
+		serverCfg.TenantID,
+		lsrest.Config{
+			URL:            serverCfg.LinseedURL,
+			CACertPath:     serverCfg.LinseedCA,
+			ClientKeyPath:  serverCfg.LinseedClientKey,
+			ClientCertPath: serverCfg.LinseedClientCert,
+		},
+		lsrest.WithTokenPath(serverCfg.LinseedToken),
+	)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create linseed client")
+	}
+	serverCfg.LinseedPolicyActivity = linseedClient.PolicyActivity(serverCfg.ClusterID)
 
 	// Start the server.
 	srv := server.NewServer(k8sClient, cfg, serverCfg, authnHandler, authzHandler)

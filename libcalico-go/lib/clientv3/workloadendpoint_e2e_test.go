@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -670,10 +670,10 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 	ctx := context.Background()
 
 	Describe("WorkloadEndpoint updated from multiple clients", func() {
-		now := metav1.NewTime(time.Now())
-		inOneMin := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(1)))
-		inTwoMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(2)))
-		inThreeMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(3)))
+		now := metav1.NewTime(time.Now().Truncate(time.Second))
+		inOneMin := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(1)).Truncate(time.Second))
+		inTwoMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(2)).Truncate(time.Second))
+		inThreeMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(3)).Truncate(time.Second))
 
 		It("should handle revision properly", func() {
 			c, err := clientv3.New(config)

@@ -269,10 +269,15 @@ local:licensing/client
 local:licensing/client/features
 local:licensing/crypto
 local:licensing/monitor
+local:linseed/pkg/apis/v1
+local:linseed/pkg/client
+local:linseed/pkg/client/rest
+local:lma/pkg/apis/v1
 local:lma/pkg/auth
 local:lma/pkg/cache
 local:lma/pkg/httputils
 local:lma/pkg/k8s
+local:lma/pkg/list
 local:lma/pkg/timeutils
 local:node/pkg/bgp
 local:node/pkg/lifecycle/utils

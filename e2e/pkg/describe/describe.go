@@ -77,6 +77,7 @@ var features = map[string]bool{
 	"Tiered-RBAC":         true,
 	"Dashboards":          true,
 	"AuthorizationReview": true,
+	"PolicyActivity":      true,
 	"Pods":                true,
 	"QoS":                 true,
 	"Datapath":            true,

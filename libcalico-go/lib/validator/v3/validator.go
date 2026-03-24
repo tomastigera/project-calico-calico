@@ -219,8 +219,11 @@ var (
 	uiSettingsRegexp = regexp.MustCompile(`[a-zA-Z0-9_]{1,64}$`)
 )
 
-// Validate is used to validate the supplied structure according to the
-// registered field and structure validators.
+// Validate validates the supplied structure according to registered field and
+// structure validators, plus CRD schema constraints (OpenAPI + CEL). For
+// runtime.Object values, CRD schema defaults are applied in-place before
+// validation so that omitted fields with CRD defaults are populated the same
+// way the Kubernetes API server would on admission.
 func Validate(current any) error {
 	var verr errors.ErrorValidation
 
@@ -230,11 +233,12 @@ func Validate(current any) error {
 		verr = convertError(err)
 	}
 
-	// Run CRD validation rules (OpenAPI schema constraints + CEL
-	// x-kubernetes-validations). In Kubernetes datastore mode, the API server
-	// enforces these. In etcd mode there is no API server, so we enforce them here.
+	// Apply CRD schema defaults and then run CRD validation rules (OpenAPI
+	// schema constraints + CEL x-kubernetes-validations). In Kubernetes
+	// datastore mode, the API server handles both defaulting and validation
+	// on admission. In etcd mode there is no API server, so we do both here.
 	if rObj, ok := current.(runtime.Object); ok {
-		if crdErrs := validateCRD(context.Background(), rObj, nil); len(crdErrs) > 0 {
+		if crdErrs := defaultAndValidateCRD(context.Background(), rObj, nil); len(crdErrs) > 0 {
 			for _, e := range crdErrs {
 				name := e.Field
 				if name == "" || name == "<nil>" {

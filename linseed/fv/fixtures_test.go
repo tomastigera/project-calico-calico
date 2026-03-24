@@ -49,6 +49,11 @@ var wafLogs string
 //go:embed testdata/backend/runtime_reports_legacy.txt
 var runtimeReports string
 
+// truncatedFlowLogs is a sample flow logs with a malformed first line to test partial ingestion
+//
+//go:embed testdata/backend/truncated_flowlogs.txt
+var truncatedFlowLogs string
+
 // anomalyDetectionEvent is a sample alert produced by anomaly detection to be ingested for testing purposes
 //
 //go:embed testdata/backend/anomaly_detection_event.json

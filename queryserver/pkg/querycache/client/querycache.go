@@ -1,13 +1,16 @@
-// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 package client
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -25,6 +28,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/cache"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/dispatcherv1v3"
@@ -32,8 +38,20 @@ import (
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/utils"
 )
 
+// policyActivityTimeout bounds how long the serializer goroutine can be blocked
+// waiting for a Linseed response. Without this, a slow or unreachable Linseed
+// would stall all queryserver queries and syncer updates indefinitely.
+const policyActivityTimeout = 10 * time.Second
+
+// maxPolicyActivityBatchSize caps the number of policies sent to Linseed in a
+// single request. This prevents oversized ES queries (each policy becomes a
+// should clause) and bounds the response size.
+const maxPolicyActivityBatchSize = 500
+
 // NewQueryInterface returns a queryable resource cache.
-func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, stopCh <-chan struct{}) QueryInterface {
+// linseedPolicyActivity is required — queryserver must have a working Linseed
+// connection to enrich policy responses with lastEvaluated timestamps.
+func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, stopCh <-chan struct{}, linseedPolicyActivity lsclient.PolicyActivityInterface) QueryInterface {
 	cq := &cachedQuery{
 		policies:                   cache.NewPoliciesCache(),
 		endpoints:                  cache.NewEndpointsCache(),
@@ -71,6 +89,7 @@ func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, st
 		nsConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewNetworkSetUpdateProcessor(),
 		),
+		linseedPolicyActivity: linseedPolicyActivity,
 	}
 
 	// We want to watch the v3 resource types (so that we can cache the actual configured
@@ -166,6 +185,9 @@ type cachedQuery struct {
 	sk8snpConverter dispatcherv1v3.Converter
 
 	nsConverter dispatcherv1v3.Converter
+
+	// linseedPolicyActivity provides lastEvaluated timestamps from Linseed.
+	linseedPolicyActivity lsclient.PolicyActivityInterface
 }
 
 // RunQuery is a callback from the SyncerQuerySerializer to run a query.  It is guaranteed
@@ -415,7 +437,9 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 	return e
 }
 
-func (c *cachedQuery) runQueryPolicies(_ context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
+func (c *cachedQuery) runQueryPolicies(ctx context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
+	needsActivity := c.needsPolicyActivity(req.FieldSelector)
+
 	// If a policy was specified, just return that (if it exists).
 	if req.Policy != nil {
 		req.Policy = translateLegacyPolicyQuery(req.Policy)
@@ -440,11 +464,15 @@ func (c *cachedQuery) runQueryPolicies(_ context.Context, req QueryPoliciesReq) 
 		if err != nil {
 			return nil, err
 		}
+		items := []Policy{*queryPolicy}
+		if needsActivity {
+			if err := c.enrichPoliciesWithActivity(ctx, req.From, req.To, items); err != nil {
+				return nil, err
+			}
+		}
 		return &QueryPoliciesResp{
 			Count: 1,
-			Items: []Policy{
-				*queryPolicy,
-			},
+			Items: items,
 		}, nil
 	}
 
@@ -549,6 +577,12 @@ func (c *cachedQuery) runQueryPolicies(_ context.Context, req QueryPoliciesReq) 
 		items = items[fromIdx:toIdx]
 	}
 
+	if needsActivity {
+		if err := c.enrichPoliciesWithActivity(ctx, req.From, req.To, items); err != nil {
+			return nil, err
+		}
+	}
+
 	return &QueryPoliciesResp{
 		Count: count,
 		Items: items,
@@ -580,6 +614,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		Selector:               p.GetSelector(),
 		NamespaceSelector:      p.GetNamespaceSelector(),
 		ServiceAccountSelector: p.GetServiceAccountSelector(),
+		Generation:             res.GetObjectMeta().GetGeneration(),
 	}
 
 	// Kubernetes network policies go through are converted to Calico network policies and in this process the UUID is getting converted
@@ -620,16 +655,24 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 			}
 		}
 
+		// Always preserve fields required by enrichPoliciesWithActivity so
+		// that policy activity lookups work even when Generation is not in
+		// the requested field set.
+		updatedPolicy.Kind = policy.Kind
+		updatedPolicy.Namespace = policy.Namespace
+		updatedPolicy.Name = policy.Name
+		updatedPolicy.Generation = policy.Generation
+
 		policy = *updatedPolicy
 	}
 
 	return &policy, nil
 }
 
-func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {
-	r := make([]RuleDirection, len(apiRules))
+func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleInfo {
+	r := make([]RuleInfo, len(apiRules))
 	for i, ar := range apiRules {
-		r[i] = RuleDirection{
+		r[i] = RuleInfo{
 			Source: RuleEntity{
 				NumWorkloadEndpoints: ar.Source.NumWorkloadEndpoints,
 				NumHostEndpoints:     ar.Source.NumHostEndpoints,
@@ -641,6 +684,131 @@ func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection
 		}
 	}
 	return r
+}
+
+// needsPolicyActivity returns true if the field selector requires lastEvaluated data.
+// When fieldSelector is nil (no fields filter), all fields are returned including
+// lastEvaluated. linseedPolicyActivity is a required dependency injected at
+// construction time and is guaranteed to be non-nil.
+func (c *cachedQuery) needsPolicyActivity(fieldSelector map[string]bool) bool {
+	return fieldSelector == nil || fieldSelector["lastevaluated"]
+}
+
+// enrichPoliciesWithActivity fetches policy activity data from Linseed and
+// merges lastEvaluated timestamps into the policy items and their rules.
+// A single all-generation query is made per batch. The response includes a
+// Generation field on each rule, which lets us split the results client-side:
+//   - LastEvaluated: latest timestamp where rule.Generation == item.Generation
+//   - LastEvaluatedAnyGeneration: latest timestamp across all generations
+//   - Per-rule timestamps: only populated for the current generation
+func (c *cachedQuery) enrichPoliciesWithActivity(ctx context.Context, from, to *time.Time, items []Policy) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	// Build a single query list without generation filter. Linseed returns
+	// rule-level results with Generation populated, so we can split client-side.
+	queryPolicies := make([]lsv1.PolicyActivityQueryPolicy, len(items))
+	for i := range items {
+		queryPolicies[i] = lsv1.PolicyActivityQueryPolicy{
+			Kind:      items[i].Kind,
+			Namespace: items[i].Namespace,
+			Name:      items[i].Name,
+			// Generation nil — fetch activity across all generations.
+		}
+	}
+
+	// policyActivity holds per-policy results split by generation.
+	type policyActivity struct {
+		// anyGenLastEvaluated is the latest timestamp across all generations.
+		anyGenLastEvaluated *time.Time
+		// currentGenLastEvaluated is the latest timestamp at the current generation.
+		currentGenLastEvaluated *time.Time
+		// currentGenRules are rule timestamps at the current generation,
+		// keyed by "direction/index".
+		currentGenRules map[string]*time.Time
+	}
+
+	// Map from policy key to the item's current generation, for splitting results.
+	currentGen := make(map[string]int64, len(items))
+	for i := range items {
+		currentGen[policyActivityKey(items[i].Kind, items[i].Namespace, items[i].Name)] = items[i].Generation
+	}
+
+	activityByPolicy := make(map[string]*policyActivity, len(queryPolicies))
+
+	// Fetch in batches to avoid oversized ES queries (each policy becomes a
+	// should clause subject to max_clause_count). Each batch gets its own
+	// timeout so that a slow batch doesn't starve later ones.
+	for start := 0; start < len(queryPolicies); start += maxPolicyActivityBatchSize {
+		end := start + maxPolicyActivityBatchSize
+		if end > len(queryPolicies) {
+			end = len(queryPolicies)
+		}
+
+		batchCtx, cancel := context.WithTimeout(ctx, policyActivityTimeout)
+		resp, err := c.linseedPolicyActivity.GetPolicyActivities(batchCtx, &lsv1.PolicyActivityParams{
+			From:     from,
+			To:       to,
+			Policies: queryPolicies[start:end],
+		})
+		cancel()
+		if err != nil {
+			return &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    fmt.Sprintf("failed to get policy activity from linseed: %v", err),
+				Err:    err,
+			}
+		}
+
+		for _, item := range resp.Items {
+			key := policyActivityKey(item.Policy.Kind, item.Policy.Namespace, item.Policy.Name)
+			pa := &policyActivity{
+				anyGenLastEvaluated: item.LastEvaluated,
+				currentGenRules:     make(map[string]*time.Time),
+			}
+			wantGen := currentGen[key]
+			for _, rule := range item.Rules {
+				if rule.Generation == wantGen {
+					t := rule.LastEvaluated
+					rk := ruleActivityKey(rule.Direction, rule.Index)
+					pa.currentGenRules[rk] = &t
+					if pa.currentGenLastEvaluated == nil || t.After(*pa.currentGenLastEvaluated) {
+						pa.currentGenLastEvaluated = &t
+					}
+				}
+			}
+			activityByPolicy[key] = pa
+		}
+	}
+
+	for i := range items {
+		key := policyActivityKey(items[i].Kind, items[i].Namespace, items[i].Name)
+		if pa, ok := activityByPolicy[key]; ok {
+			items[i].LastEvaluated = pa.currentGenLastEvaluated
+			items[i].LastEvaluatedAnyGeneration = pa.anyGenLastEvaluated
+			ingressImplicitDeny := pa.currentGenRules[ruleActivityKey("ingress", "implicit_deny")]
+			ingressUnknown := pa.currentGenRules[ruleActivityKey("ingress", "unknown")]
+			for j := range items[i].IngressRules {
+				if t, ok := pa.currentGenRules[ruleActivityKey("ingress", strconv.Itoa(j))]; ok {
+					items[i].IngressRules[j].LastEvaluated = t
+				}
+				items[i].IngressRules[j].ImplicitDenyLastEvaluated = ingressImplicitDeny
+				items[i].IngressRules[j].UnknownLastEvaluated = ingressUnknown
+			}
+			egressImplicitDeny := pa.currentGenRules[ruleActivityKey("egress", "implicit_deny")]
+			egressUnknown := pa.currentGenRules[ruleActivityKey("egress", "unknown")]
+			for j := range items[i].EgressRules {
+				if t, ok := pa.currentGenRules[ruleActivityKey("egress", strconv.Itoa(j))]; ok {
+					items[i].EgressRules[j].LastEvaluated = t
+				}
+				items[i].EgressRules[j].ImplicitDenyLastEvaluated = egressImplicitDeny
+				items[i].EgressRules[j].UnknownLastEvaluated = egressUnknown
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *cachedQuery) runQueryNodes(_ context.Context, req QueryNodesReq) (*QueryNodesResp, error) {
