@@ -101,12 +101,18 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 		log.WithError(err).Info("failed to execute queryserver request: ", err)
 		return nil, err
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	// read response from queryserver endpoints call
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("call to read response body from queryserver failed.")
 		return nil, errors.New("failed to read response from queryserver")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Errorf("queryserver returned status %d: %s", resp.StatusCode, string(respBytes))
+		return nil, fmt.Errorf("queryserver returned status %d: %s", resp.StatusCode, string(respBytes))
 	}
 
 	qsResp := querycacheclient.QueryEndpointsResp{}

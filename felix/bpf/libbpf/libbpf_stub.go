@@ -216,6 +216,7 @@ const (
 	GlobalsSkipEgressRedirect
 	GlobalsIngressPacketRateConfigured
 	GlobalsEgressPacketRateConfigured
+	GlobalsWorkloadSrcSpoofingConfigured
 	GlobalsUDPGSOLinearize
 
 	AttachTypeTcxIngress

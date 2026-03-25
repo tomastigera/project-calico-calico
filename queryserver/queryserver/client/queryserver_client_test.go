@@ -15,14 +15,13 @@ var _ = Describe("QuerysServerClient tests", func() {
 		var server *httptest.Server
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "" {
-					w.WriteHeader(http.StatusForbidden)
-				}
 				if r.Header.Get("Accept") != "application/json" {
-					w.WriteHeader(http.StatusBadRequest)
+					http.Error(w, "bad accept header", http.StatusBadRequest)
+					return
 				}
 				if r.Method != "POST" {
-					w.WriteHeader(http.StatusMethodNotAllowed)
+					http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+					return
 				}
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{"count": 0, "items": []}`))
@@ -88,12 +87,17 @@ var _ = Describe("QuerysServerClient tests", func() {
 			Expect(resp).To(BeNil())
 		})
 
-		It("query server token is empty", func() {
+		It("non-200 response from queryserver returns error", func() {
+			errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Error: unknown policy kind: test-policy", http.StatusBadRequest)
+			}))
+			defer errorServer.Close()
+
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: "",
-				QueryServerURL:       server.URL,
+				QueryServerURL:       errorServer.URL,
 				QueryServerCA:        "/etc/pki/tls/certs/ca.crt",
-				QueryServerToken:     "",
+				QueryServerToken:     "test_data/token",
 			}
 
 			client := queryServerClient{
@@ -103,6 +107,8 @@ var _ = Describe("QuerysServerClient tests", func() {
 			body := &querycacheclient.QueryEndpointsReqBody{}
 			resp, err := client.SearchEndpoints(config, body, "cluster")
 			Expect(err).Should(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("400"))
+			Expect(err.Error()).To(ContainSubstring("unknown policy kind"))
 			Expect(resp).To(BeNil())
 		})
 	})
