@@ -608,22 +608,23 @@ func (o *Obj) AttachCGroupLegacy(cgroup, progName string) error {
 
 const (
 	// Set when IPv6 is enabled to configure bpf dataplane accordingly
-	GlobalsTCPStatsEnabled             uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
-	GlobalsIsEgressGateway             uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
-	GlobalsIsEgressClient              uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
-	GlobalsRPFOptionEnabled            uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
-	GlobalsRPFOptionStrict             uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
-	GlobalsEgressIPEnabled             uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
-	GlobalsNoDSRCidrs                  uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
-	GlobalsLoUDPOnly                   uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
-	GlobalsDNSInline                   uint32 = C.CALI_GLOBALS_DNS_INLINE
-	GlobalsRedirectPeer                uint32 = C.CALI_GLOBALS_REDIRECT_PEER
-	GlobalsFlowLogsEnabled             uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
-	GlobalsNATOutgoingExcludeHosts     uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
-	GlobalsSkipEgressRedirect          uint32 = C.CALI_GLOBALS_SKIP_EGRESS_REDIRECT
-	GlobalsIngressPacketRateConfigured uint32 = C.CALI_GLOBALS_INGRESS_PACKET_RATE_CONFIGURED
-	GlobalsEgressPacketRateConfigured  uint32 = C.CALI_GLOBALS_EGRESS_PACKET_RATE_CONFIGURED
-	GlobalsUDPGSOLinearize             uint32 = C.CALI_GLOBALS_UDP_GSO_LINEARIZE
+	GlobalsTCPStatsEnabled               uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
+	GlobalsIsEgressGateway               uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
+	GlobalsIsEgressClient                uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
+	GlobalsRPFOptionEnabled              uint32 = C.CALI_GLOBALS_RPF_OPTION_ENABLED
+	GlobalsRPFOptionStrict               uint32 = C.CALI_GLOBALS_RPF_OPTION_STRICT
+	GlobalsEgressIPEnabled               uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
+	GlobalsNoDSRCidrs                    uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
+	GlobalsLoUDPOnly                     uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
+	GlobalsDNSInline                     uint32 = C.CALI_GLOBALS_DNS_INLINE
+	GlobalsRedirectPeer                  uint32 = C.CALI_GLOBALS_REDIRECT_PEER
+	GlobalsFlowLogsEnabled               uint32 = C.CALI_GLOBALS_FLOWLOGS_ENABLED
+	GlobalsNATOutgoingExcludeHosts       uint32 = C.CALI_GLOBALS_NATOUTGOING_EXCLUDE_HOSTS
+	GlobalsSkipEgressRedirect            uint32 = C.CALI_GLOBALS_SKIP_EGRESS_REDIRECT
+	GlobalsIngressPacketRateConfigured   uint32 = C.CALI_GLOBALS_INGRESS_PACKET_RATE_CONFIGURED
+	GlobalsEgressPacketRateConfigured    uint32 = C.CALI_GLOBALS_EGRESS_PACKET_RATE_CONFIGURED
+	GlobalsUDPGSOLinearize               uint32 = C.CALI_GLOBALS_UDP_GSO_LINEARIZE
+	GlobalsWorkloadSrcSpoofingConfigured uint32 = C.CALI_GLOBALS_WORKLOAD_SRC_SPOOFING_CONFIGURED
 
 	AttachTypeTcxIngress uint32 = C.BPF_TCX_INGRESS
 	AttachTypeTcxEgress  uint32 = C.BPF_TCX_EGRESS

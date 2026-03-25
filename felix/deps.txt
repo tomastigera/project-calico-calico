@@ -204,6 +204,7 @@ local:compliance/pkg/hashutils
 local:crypto/pkg/tls
 local:felix/aws
 local:felix/bpf
+local:felix/bpf/allowsources
 local:felix/bpf/arp
 local:felix/bpf/asm
 local:felix/bpf/bpfdefs
