@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
+	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/e2e/pkg/describe"
@@ -85,9 +86,11 @@ var _ = describe.CalicoDescribe(
 		}
 
 		Context("[RunsOnWindows] Test DNS policy of a workload. ", func() {
-			var cli ctrlclient.Client
-			var dnsPolicyMode *v3.DNSPolicyMode
-			var oldDNSPolicyMode *v3.DNSPolicyMode
+			var (
+				cli              ctrlclient.Client
+				dnsPolicyMode    *v3.DNSPolicyMode
+				oldDNSPolicyMode *v3.DNSPolicyMode
+			)
 
 			JustBeforeEach(func() {
 				runOnWindows = windows.ClusterIsWindows()
@@ -105,42 +108,51 @@ var _ = describe.CalicoDescribe(
 				waitForClient(namespace, runOnWindows)
 
 				By("Making any needed FelixConfiguration updates")
-				fc := v3.NewFelixConfiguration()
-				err = cli.Get(context.TODO(), types.NamespacedName{Name: "default"}, fc)
-				Expect(err).NotTo(HaveOccurred())
-
-				if dnsPolicyMode != nil && !runOnWindows {
-					// Apply the specified DNS policy mode.
-					oldDNSPolicyMode = fc.Spec.DNSPolicyMode
-					fc.Spec.DNSPolicyMode = dnsPolicyMode
-				}
-
-				// Increment dnsCacheEpoch so that Felix discards any DNS mapping info that
-				// it learned in earlier test cases.  This ensures that DNS policy in this
-				// test case must be using DNS information that is collected within this
-				// test case.
-				dnsCacheEpoch := 0
-				if fc.Spec.DNSCacheEpoch != nil {
-					dnsCacheEpoch = *(fc.Spec.DNSCacheEpoch)
-				}
-				dnsCacheEpoch += 1
-				fc.Spec.DNSCacheEpoch = &dnsCacheEpoch
-				logrus.Infof("Changing dnsCacheEpoch to %v...", dnsCacheEpoch)
-
-				// Apply the updated felix config.
-				err = cli.Update(context.TODO(), fc)
-				Expect(err).NotTo(HaveOccurred())
-
-				ctx := context.Background()
+				ctx := context.TODO()
 				var originalFC *v3.FelixConfiguration
 				Eventually(func() error {
 					originalFC = v3.NewFelixConfiguration()
 					return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
 				}, 10*time.Second, 1*time.Second).Should(Succeed())
 
+				if dnsPolicyMode != nil && !runOnWindows {
+					// Save the original DNS policy mode.
+					oldDNSPolicyMode = originalFC.Spec.DNSPolicyMode
+				}
+
+				Eventually(func() error {
+					return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+						if dnsPolicyMode != nil && !runOnWindows {
+							// Apply the specified DNS policy mode.
+							spec.DNSPolicyMode = dnsPolicyMode
+						}
+
+						// Increment dnsCacheEpoch so that Felix discards any DNS mapping info that
+						// it learned in earlier test cases.  This ensures that DNS policy in this
+						// test case must be using DNS information that is collected within this
+						// test case.
+						dnsCacheEpoch := 0
+						if originalFC.Spec.DNSCacheEpoch != nil {
+							dnsCacheEpoch = *(originalFC.Spec.DNSCacheEpoch)
+						}
+						dnsCacheEpoch += 1
+						logrus.Infof("Changing dnsCacheEpoch to %v...", dnsCacheEpoch)
+						spec.DNSCacheEpoch = &dnsCacheEpoch
+					})
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
+
 				DeferCleanup(func() {
 					if CurrentSpecReport().Failed() && runOnWindows {
 						windows.DumpFelixDiags()
+					}
+
+					if dnsPolicyMode != nil && !runOnWindows {
+						// Restore FelixConfiguration.
+						Eventually(func() error {
+							return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+								spec.DNSPolicyMode = oldDNSPolicyMode
+							})
+						}, 10*time.Second, 1*time.Second).Should(Succeed())
 					}
 
 					ctx := context.TODO()
@@ -212,8 +224,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=DelayDeniedPacket", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeDelayDeniedPacket
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeDelayDeniedPacket)
 				})
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the NetworkPolicy", func() {
@@ -236,8 +247,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=DelayDNSResponse", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeDelayDNSResponse
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeDelayDNSResponse)
 				})
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the NetworkSet", func() {
@@ -260,8 +270,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=NoDelay", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeNoDelay
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeNoDelay)
 				})
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the NetworkSet", func() {
@@ -311,8 +320,20 @@ var _ = describe.CalicoDescribe(
 				err = cli.Get(context.TODO(), types.NamespacedName{Name: "default"}, fc)
 				Expect(err).NotTo(HaveOccurred())
 
+				ctx := context.TODO()
+				var originalFC *v3.FelixConfiguration
+				Eventually(func() error {
+					originalFC = v3.NewFelixConfiguration()
+					return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
+
+				if dnsPolicyMode != nil {
+					// Save the original DNS policy mode.
+					oldDNSPolicyMode = originalFC.Spec.DNSPolicyMode
+				}
+
 				// Set DNSTrustedServers to include the host's DNS servers.
-				oldDNSTrustedServers = fc.Spec.DNSTrustedServers
+				oldDNSTrustedServers = originalFC.Spec.DNSTrustedServers
 				newDNSTrustedServers := []string{}
 				if oldDNSTrustedServers != nil {
 					logrus.Infof("Old DNS trusted servers are %v", *oldDNSTrustedServers)
@@ -332,47 +353,42 @@ var _ = describe.CalicoDescribe(
 					}
 				}
 				logrus.Infof("New DNS trusted servers are %v", newDNSTrustedServers)
-				fc.Spec.DNSTrustedServers = &newDNSTrustedServers
 
-				if dnsPolicyMode != nil {
-					// Apply the specified DNS policy mode.
-					oldDNSPolicyMode = fc.Spec.DNSPolicyMode
-					fc.Spec.DNSPolicyMode = dnsPolicyMode
-				}
+				Eventually(func() error {
+					return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+						spec.DNSTrustedServers = &newDNSTrustedServers
 
-				// Increment dnsCacheEpoch so that Felix discards any DNS mapping info that
-				// it learned in earlier test cases.  This ensures that DNS policy in this
-				// test case must be using DNS information that is collected within this
-				// test case.
-				dnsCacheEpoch := 0
-				if fc.Spec.DNSCacheEpoch != nil {
-					dnsCacheEpoch = *(fc.Spec.DNSCacheEpoch)
-				}
-				dnsCacheEpoch += 1
-				fc.Spec.DNSCacheEpoch = &dnsCacheEpoch
-				logrus.Infof("Changing dnsCacheEpoch to %v...", dnsCacheEpoch)
+						if dnsPolicyMode != nil {
+							// Apply the specified DNS policy mode.
+							spec.DNSPolicyMode = dnsPolicyMode
+						}
 
-				// Apply the updated felix config.
-				err = cli.Update(context.TODO(), fc)
-				Expect(err).NotTo(HaveOccurred())
+						// Increment dnsCacheEpoch so that Felix discards any DNS mapping info that
+						// it learned in earlier test cases.  This ensures that DNS policy in this
+						// test case must be using DNS information that is collected within this
+						// test case.
+						dnsCacheEpoch := 0
+						if originalFC.Spec.DNSCacheEpoch != nil {
+							dnsCacheEpoch = *(originalFC.Spec.DNSCacheEpoch)
+						}
+						dnsCacheEpoch += 1
+						logrus.Infof("Changing dnsCacheEpoch to %v...", dnsCacheEpoch)
+						spec.DNSCacheEpoch = &dnsCacheEpoch
+					})
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 				DeferCleanup(func() {
-					ctx := context.TODO()
-					// Restore FelixConfiguration.
-					fc := v3.NewFelixConfiguration()
-					err := cli.Get(ctx, types.NamespacedName{Name: "default"}, fc)
-					Expect(err).NotTo(HaveOccurred())
+					Eventually(func() error {
+						return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+							// Restore DNSTrustedServers.
+							spec.DNSTrustedServers = oldDNSTrustedServers
 
-					// Restore DNSTrustedServers.
-					fc.Spec.DNSTrustedServers = oldDNSTrustedServers
-
-					if dnsPolicyMode != nil {
-						// Restore original DNSPolicyMode.
-						fc.Spec.DNSPolicyMode = oldDNSPolicyMode
-					}
-
-					err = cli.Update(ctx, fc)
-					Expect(err).NotTo(HaveOccurred())
+							if dnsPolicyMode != nil {
+								// Restore original DNSPolicyMode.
+								spec.DNSPolicyMode = oldDNSPolicyMode
+							}
+						})
+					}, 10*time.Second, 1*time.Second).Should(Succeed())
 				})
 			})
 
@@ -446,8 +462,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=DelayDeniedPacket", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeDelayDeniedPacket
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeDelayDeniedPacket)
 				})
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the GlobalNetworkPolicy", func() {
@@ -468,8 +483,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=DelayDNSResponse", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeDelayDNSResponse
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeDelayDNSResponse)
 				})
 
 				It("Test connectivity to specific allowed egress domains, where the domains are defined in the GlobalNetworkSet", func() {
@@ -491,8 +505,7 @@ var _ = describe.CalicoDescribe(
 
 			Context("with DNSPolicyMode=NoDelay", func() {
 				BeforeEach(func() {
-					mode := v3.DNSPolicyModeNoDelay
-					dnsPolicyMode = &mode
+					dnsPolicyMode = ptr.To(v3.DNSPolicyModeNoDelay)
 				})
 
 				It("Test the connectivity to wildcard allowed egress domains, where the domains are defined in the GlobalNetworkSet", func() {
@@ -517,12 +530,11 @@ var _ = describe.CalicoDescribe(
 // allowEgressToDomainsWorkloadNP returns a namespaced NetworkPolicy that allows
 // egress to the specified domains.
 func allowEgressToDomainsWorkloadNP(namespace string, domains []string) *v3.NetworkPolicy {
-	order := float64(1)
 	np := v3.NewNetworkPolicy()
 	np.Name = "allow-egress-to-domains"
 	np.Namespace = namespace
 	np.Spec = v3.NetworkPolicySpec{
-		Order:    &order,
+		Order:    ptr.To(float64(1)),
 		Selector: "all()",
 		Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 		Egress: []v3.Rule{
@@ -540,11 +552,10 @@ func allowEgressToDomainsWorkloadNP(namespace string, domains []string) *v3.Netw
 // allowEgressToDomainsHostGNP returns a GlobalNetworkPolicy that allows
 // egress to the specified domains for host endpoints.
 func allowEgressToDomainsHostGNP(domains []string) *v3.GlobalNetworkPolicy {
-	order := float64(1)
 	gnp := v3.NewGlobalNetworkPolicy()
 	gnp.Name = "allow-egress-to-domains"
 	gnp.Spec = v3.GlobalNetworkPolicySpec{
-		Order:    &order,
+		Order:    ptr.To(float64(1)),
 		Selector: "i-am-hep == 't'",
 		Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 		Egress: []v3.Rule{
@@ -570,13 +581,12 @@ func allowEgressToDomainsWorkloadNS(namespace string, domains []string) (*v3.Net
 		AllowedEgressDomains: domains,
 	}
 
-	order := float64(1)
 	np := v3.NewNetworkPolicy()
 	np.Name = "allow-egress-to-domains"
 	np.Namespace = namespace
 	np.Spec = v3.NetworkPolicySpec{
 		Selector: "all()",
-		Order:    &order,
+		Order:    ptr.To(float64(1)),
 		Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 		Egress: []v3.Rule{
 			{
@@ -600,12 +610,11 @@ func allowEgressToDomainsHostGNS(domains []string) (*v3.GlobalNetworkSet, *v3.Gl
 		AllowedEgressDomains: domains,
 	}
 
-	order := float64(1)
 	gnp := v3.NewGlobalNetworkPolicy()
 	gnp.Name = "allow-egress-to-domains"
 	gnp.Spec = v3.GlobalNetworkPolicySpec{
 		Selector: "i-am-hep == 't'",
-		Order:    &order,
+		Order:    ptr.To(float64(1)),
 		Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 		Egress: []v3.Rule{
 			{
@@ -622,7 +631,6 @@ func allowEgressToDomainsHostGNS(domains []string) (*v3.GlobalNetworkSet, *v3.Gl
 // denyAllEgressExceptDnsWorkloadNP returns a namespaced NetworkPolicy that denies
 // all egress except DNS lookups.
 func denyAllEgressExceptDnsWorkloadNP(namespace string, runOnWindows bool) *v3.NetworkPolicy {
-	udp := numorstring.ProtocolFromString("UDP")
 	ports := []numorstring.Port{
 		numorstring.SinglePort(53),
 	}
@@ -643,7 +651,7 @@ func denyAllEgressExceptDnsWorkloadNP(namespace string, runOnWindows bool) *v3.N
 		Egress: []v3.Rule{
 			{
 				Action:   v3.Allow,
-				Protocol: &udp,
+				Protocol: ptr.To(numorstring.ProtocolFromString("UDP")),
 				Destination: v3.EntityRule{
 					Ports: ports,
 				},
@@ -659,7 +667,6 @@ func denyAllEgressExceptDnsWorkloadNP(namespace string, runOnWindows bool) *v3.N
 // denyAllEgressExceptDnsHostGNP returns a GlobalNetworkPolicy that denies all
 // egress except DNS lookups for host endpoints.
 func denyAllEgressExceptDnsHostGNP(runOnWindows bool) *v3.GlobalNetworkPolicy {
-	udp := numorstring.ProtocolFromString("UDP")
 	ports := []numorstring.Port{
 		numorstring.SinglePort(53),
 	}
@@ -677,7 +684,7 @@ func denyAllEgressExceptDnsHostGNP(runOnWindows bool) *v3.GlobalNetworkPolicy {
 		Egress: []v3.Rule{
 			{
 				Action:   v3.Allow,
-				Protocol: &udp,
+				Protocol: ptr.To(numorstring.ProtocolFromString("UDP")),
 				Destination: v3.EntityRule{
 					Ports: ports,
 				},
@@ -693,20 +700,16 @@ func denyAllEgressExceptDnsHostGNP(runOnWindows bool) *v3.GlobalNetworkPolicy {
 // allowAPIServerGNP returns a GlobalNetworkPolicy that allows access to the
 // Kubernetes API server and kubelet through host endpoints.
 func allowAPIServerGNP() *v3.GlobalNetworkPolicy {
-	tcp := numorstring.ProtocolFromString("TCP")
-	udp := numorstring.ProtocolFromString("UDP")
-	order := float64(1)
-
 	gnp := v3.NewGlobalNetworkPolicy()
 	gnp.Name = "allow-api-server"
 	gnp.Spec = v3.GlobalNetworkPolicySpec{
 		Selector: "i-am-hep == 't'",
-		Order:    &order,
+		Order:    ptr.To(float64(1)),
 		Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
 		Ingress: []v3.Rule{
 			{
 				Action:   v3.Allow,
-				Protocol: &tcp,
+				Protocol: ptr.To(numorstring.ProtocolFromString("TCP")),
 				Destination: v3.EntityRule{
 					Ports: []numorstring.Port{
 						numorstring.SinglePort(10250),
@@ -717,7 +720,7 @@ func allowAPIServerGNP() *v3.GlobalNetworkPolicy {
 		Egress: []v3.Rule{
 			{
 				Action:   v3.Allow,
-				Protocol: &tcp,
+				Protocol: ptr.To(numorstring.ProtocolFromString("TCP")),
 				Destination: v3.EntityRule{
 					Ports: []numorstring.Port{
 						numorstring.SinglePort(443),
@@ -728,7 +731,7 @@ func allowAPIServerGNP() *v3.GlobalNetworkPolicy {
 			},
 			{
 				Action:   v3.Allow,
-				Protocol: &udp,
+				Protocol: ptr.To(numorstring.ProtocolFromString("UDP")),
 				Destination: v3.EntityRule{
 					Ports: []numorstring.Port{
 						numorstring.SinglePort(53),
