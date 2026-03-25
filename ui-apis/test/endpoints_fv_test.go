@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2026 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -402,14 +402,13 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 func createFakeQueryServer(response *querycacheclient.QueryEndpointsResp, test func(requestBody *querycacheclient.QueryEndpointsReqBody)) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "" {
-			w.WriteHeader(http.StatusForbidden)
-		}
 		if r.Header.Get("Accept") != "application/json" {
-			w.WriteHeader(http.StatusBadRequest)
+			http.Error(w, "bad accept header", http.StatusBadRequest)
+			return
 		}
 		if r.Method != "POST" {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 

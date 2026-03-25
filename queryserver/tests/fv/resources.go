@@ -1277,6 +1277,7 @@ var (
 			Namespace: "namespace-1",
 		},
 		Spec: apiv3.StagedKubernetesNetworkPolicySpec{
+			StagedAction: apiv3.StagedActionSet,
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{"rack": "001", "server": "1"},
 			},

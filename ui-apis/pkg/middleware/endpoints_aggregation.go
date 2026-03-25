@@ -234,7 +234,7 @@ func endpoints(r *http.Request, qsConfig *queryserverclient.QueryServerConfig, p
 	logrus.Debugf("[Endpoints] Done fetching endpoints from Query Server. duration=%s", time.Since(start))
 	if err != nil {
 		logrus.WithError(err).Error("call to endpoints failed.")
-		if strings.ContainsAny(strings.ToLower(err.Error()), "not authorized") {
+		if strings.Contains(strings.ToLower(err.Error()), "not authorized") {
 			return qsEndpointsResp, &httputils.HttpStatusError{
 				Status: http.StatusForbidden,
 				Msg:    "failed authorization to queryserver/endpoints",
