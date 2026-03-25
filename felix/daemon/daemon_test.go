@@ -469,6 +469,18 @@ var _ = Describe("applyBPFOverrides", func() {
 		Expect(configParams.BPFRedirectToPeer).To(Equal("Disabled"))
 	})
 
+	It("should override BPFRedirectToPeer from L2Only to Enabled", func() {
+		_, err := configParams.UpdateFrom(map[string]string{
+			"BPFEnabled":        "true",
+			"BPFRedirectToPeer": "L2Only",
+		}, config.EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+
+		applyBPFOverrides(configParams, bpfSupported)
+
+		Expect(configParams.BPFRedirectToPeer).To(Equal("Disabled"))
+	})
+
 	It("should force IPForwarding to Enabled when Disabled with RPF enabled", func() {
 		_, err := configParams.UpdateFrom(map[string]string{
 			"BPFEnabled":    "true",
