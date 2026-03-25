@@ -1715,17 +1715,11 @@ func applyBPFOverrides(configParams *config.Config, supportsBPF func() error) {
 	// With the conntrack map type changed to lru_hash, BPFConntrackModeBPFProgram isn't
 	// useful. Hence this option will be deprecated in the near future. If BPFConntrackCleanupMode
 	// is set to BPFConntrackModeBPFProgram, its reset to BPFConntrackModeUserspace.
-	log.Warn("BPF conntrack mode Auto,BPFProgram is not supported and will be deprecated soon. Falling back to userspace cleaner.")
-	_, err := configParams.OverrideParam("BPFConntrackCleanupMode", string(apiv3.BPFConntrackModeUserspace))
-	if err != nil {
-		log.WithError(err).Panic("Bug: failed to override config parameter BPFConntrackCleanupMode")
-	}
-
-	if configParams.BPFRedirectToPeer == "L2Only" {
-		log.Warn("BPFRedirectToPeer 'L2Only' is deprecated and equals 'Enabled' now.")
-		_, err := configParams.OverrideParam("BPFRedirectToPeer", "Enabled")
+	if configParams.BPFConntrackCleanupMode != string(apiv3.BPFConntrackModeUserspace) {
+		log.Warn("BPF conntrack mode Auto,BPFProgram is not supported and will be deprecated soon. Falling back to userspace cleaner.")
+		_, err := configParams.OverrideParam("BPFConntrackCleanupMode", string(apiv3.BPFConntrackModeUserspace))
 		if err != nil {
-			log.WithError(err).Panic("Bug: failed to override config parameter BPFRedirectToPeer")
+			log.WithError(err).Panic("Bug: failed to override config parameter BPFConntrackCleanupMode")
 		}
 	}
 
