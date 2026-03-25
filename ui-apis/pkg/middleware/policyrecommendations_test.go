@@ -36,7 +36,7 @@ var _ = Describe("getStageNetworkPoliciesPage", func() {
 
 		mockLmaK8sClientSet = &lmak8s.MockClientSet{}
 
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
 	})
 
 	Context("when the clientset returns valid data", func() {
@@ -165,8 +165,8 @@ var _ = Describe("PagedRecommendationsHandler", func() {
 
 		mockLmaK8sClientFactory.On("NewClientSetForUser", mock.Anything, clusterID).Return(&mockLmaK8sClientSet, nil)
 
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
-		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1())
 	})
 
 	Context("when the clientset returns valid data", func() {
@@ -205,7 +205,11 @@ var _ = Describe("PagedRecommendationsHandler", func() {
 				if len(body) > 0 {
 					err = json.Unmarshal(body, &actual)
 					Expect(err).To(BeNil())
-					Expect(actual).To(Equal(expected))
+					Expect(actual.Count).To(Equal(expected.Count))
+					Expect(actual.StagedNetworkPolicies).To(HaveLen(len(expected.StagedNetworkPolicies)))
+					for i := range actual.StagedNetworkPolicies {
+						Expect(compareSnps(&actual.StagedNetworkPolicies[i], &expected.StagedNetworkPolicies[i])).To(BeTrue())
+					}
 				}
 			},
 			Entry("Learn,maxItems:5,page:0",

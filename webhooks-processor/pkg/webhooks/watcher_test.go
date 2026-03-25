@@ -76,7 +76,7 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 	mockCtrl := NewMockCtrl()
 	mockWebhooksClient := &testutils.FakeSecurityEventWebhook{DontCloseWatchOnCtxCancellation: true}
 	watcherUpdater := webhooks.NewWebhookWatcherUpdater().
-		WithK8sClient(fake.NewSimpleClientset()).
+		WithK8sClient(fake.NewClientset()).
 		WithWebhooksClient(mockWebhooksClient).
 		WithController(mockCtrl)
 

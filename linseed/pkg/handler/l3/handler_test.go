@@ -5,6 +5,7 @@ package l3
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
@@ -144,6 +144,19 @@ func TestFlowLogs_Bulk(t *testing.T) {
 			backendResponse: bulkResponsePartialSuccess,
 			reqBody:         testutils.MarshalBulkParams[v1.FlowLog](flowLogs),
 			want:            testResult{false, 200, ""},
+		},
+
+		// All lines malformed
+		{
+			name:            "all lines malformed",
+			backendFlowLogs: noFlowLogs,
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         "BAD1\nBAD2\nBAD3\n",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
 		},
 	}
 	for _, tt := range tests {

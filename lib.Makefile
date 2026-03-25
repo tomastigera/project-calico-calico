@@ -84,7 +84,7 @@ endif
 .PHONY: register
 register:
 ifneq ($(BUILDARCH),$(ARCH))
-	docker run --privileged --rm calico/binfmt:qemu-v10.1.3 --install all || true
+	docker run --privileged --rm calico/binfmt:qemu-v10.1.4 --install all || true
 endif
 
 # If this is a release, also tag and push additional images.
@@ -1030,14 +1030,14 @@ gen-mocks:
 	# The generated files need import reordering to pass static-checks
 	$(MAKE) fix-changed
 
-# Run mockery for each path in MOCKERY_FILE_PATHS. The the generated mocks are
-# created in package and in test files. Look here for more information https://github.com/vektra/mockery
+# Run mockery (v3) to generate mocks using .mockery.yaml config.
+# Look here for more information https://github.com/vektra/mockery
 mockery-run:
-	for FILE_PATH in $(MOCKERY_FILE_PATHS); do\
-		DIR=$$(dirname $$FILE_PATH); \
-		INTERFACE_NAME=$$(basename $$FILE_PATH); \
-		mockery --dir $$DIR --name $$INTERFACE_NAME --inpackage; \
-	done
+	if [ -f .mockery.yaml ] || [ -f .mockery.yml ]; then \
+		mockery; \
+	else \
+		echo "No .mockery.yaml found, skipping mock generation"; \
+	fi
 
 ###############################################################################
 # Docker helpers
@@ -1518,6 +1518,7 @@ run-k8s-apiserver: run-etcd
 			--max-requests-inflight=0 \
 			--enable-aggregator-routing \
 			--requestheader-client-ca-file=/home/user/certs/ca.pem \
+			--requestheader-allowed-names=kubernetes \
 			--requestheader-username-headers=X-Remote-User \
 			--requestheader-group-headers=X-Remote-Group \
 			--requestheader-extra-headers-prefix=X-Remote-Extra- \

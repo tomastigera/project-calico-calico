@@ -22,10 +22,10 @@ type K8sFakeClient struct {
 // NewK8sSimpleFakeClient returns a new aggregated fake client that satisfies
 // server.K8sClient interface to access both k8s and calico resources
 func NewK8sSimpleFakeClient(k8sObj []runtime.Object, calicoObj []runtime.Object) *K8sFakeClient {
-	calico := calicofake.NewSimpleClientset(calicoObj...)
+	calico := calicofake.NewClientset(calicoObj...)
 
 	fake := &K8sFakeClient{
-		k8sFake:        fake.NewSimpleClientset(k8sObj...),
+		k8sFake:        fake.NewClientset(k8sObj...),
 		calicoFake:     calico.ProjectcalicoV3(),
 		calicoFakeCtrl: &calico.Fake,
 	}

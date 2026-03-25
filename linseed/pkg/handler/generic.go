@@ -192,7 +192,7 @@ func (h createHandler[B]) Create() http.HandlerFunc {
 			logCtx = logCtx.WithField("body", body)
 		}
 
-		data, httpErr := DecodeAndValidateBulkParams[B](w, req)
+		decoded, httpErr := DecodeAndValidateBulkParams[B](w, req)
 		if httpErr != nil {
 			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
 			httputils.JSONError(w, httpErr, httpErr.Status)
@@ -208,7 +208,7 @@ func (h createHandler[B]) Create() http.HandlerFunc {
 		}
 
 		// Call the creation function.
-		response, err := h.CreateFn(ctx, clusterInfo, data)
+		response, err := h.CreateFn(ctx, clusterInfo, decoded.Items)
 		if err != nil {
 			logCtx.WithError(err).Error("Error performing bulk ingestion")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -217,6 +217,8 @@ func (h createHandler[B]) Create() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}
@@ -430,7 +432,7 @@ func (h deleteHandler[B]) Delete() http.HandlerFunc {
 			logCtx = logCtx.WithField("body", body)
 		}
 
-		data, httpErr := DecodeAndValidateBulkParams[B](w, req)
+		decoded, httpErr := DecodeAndValidateBulkParams[B](w, req)
 		if httpErr != nil {
 			logCtx.WithError(httpErr).Error("Failed to decode/validate request parameters")
 			httputils.JSONError(w, httpErr, httpErr.Status)
@@ -445,8 +447,8 @@ func (h deleteHandler[B]) Delete() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		// Call the creation function.
-		response, err := h.DeleteFn(ctx, clusterInfo, data)
+		// Call the delete function.
+		response, err := h.DeleteFn(ctx, clusterInfo, decoded.Items)
 		if err != nil {
 			logCtx.WithError(err).Error("Error performing bulk delete")
 			httputils.JSONError(w, &v1.HTTPError{
@@ -455,6 +457,8 @@ func (h deleteHandler[B]) Delete() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		response.Total += decoded.FailedCount
+		response.Failed += decoded.FailedCount
 		logCtx.WithField("response", response).Debugf("Completed request")
 		httputils.Encode(w, response)
 	}

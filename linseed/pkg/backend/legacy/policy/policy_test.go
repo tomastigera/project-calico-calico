@@ -75,6 +75,8 @@ func (m *mockLMAClient) SearchCompositeAggregations(
 	return buckets, errs
 }
 
+func int64Ptr(v int64) *int64 { return &v }
+
 func setupBackendWithHandler(t *testing.T, handlerFunc http.HandlerFunc) (*policyBackend, *httptest.Server) {
 	ts := httptest.NewServer(handlerFunc)
 
@@ -296,7 +298,7 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: 3},
+			{Kind: "NetworkPolicy", Namespace: "default", Name: "allow-dns", Generation: int64Ptr(3)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -316,10 +318,12 @@ func TestGetPolicyActivity_FullFlow(t *testing.T) {
 	// Verify rule parsing. Rules are sorted by direction then index.
 	assert.Equal(t, "egress", item.Rules[0].Direction)
 	assert.Equal(t, "1", item.Rules[0].Index)
+	assert.Equal(t, int64(3), item.Rules[0].Generation)
 	assert.Equal(t, earlier, item.Rules[0].LastEvaluated)
 
 	assert.Equal(t, "ingress", item.Rules[1].Direction)
 	assert.Equal(t, "0", item.Rules[1].Index)
+	assert.Equal(t, int64(3), item.Rules[1].Generation)
 	assert.Equal(t, now, item.Rules[1].LastEvaluated)
 }
 
@@ -346,7 +350,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenElasticsearchIsUnavailable(t *testing
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -383,8 +387,8 @@ func TestGetPolicyActivity_ReturnsResultsForMultiplePoliciesInRequestOrder(t *te
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "GlobalNetworkPolicy", Name: "gnp1", Generation: 2},
-			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
+			{Kind: "GlobalNetworkPolicy", Name: "gnp1", Generation: int64Ptr(2)},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -425,7 +429,7 @@ func TestGetPolicyActivity_SkipsDocsWithMalformedRuleStringAndReturnsValidOnes(t
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -448,7 +452,7 @@ func TestBuildPolicyActivityQuery_IncludesTimeRangeFilterWhenFromAndToAreSet(t *
 		From: &from,
 		To:   &to,
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -471,7 +475,7 @@ func TestBuildPolicyActivityQuery_IncludesClusterAndTenantFilters(t *testing.T) 
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 5},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: int64Ptr(5)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1", Tenant: "t1"}
@@ -572,8 +576,8 @@ func TestGetPolicyActivity_SearchAfterPagination(t *testing.T) {
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: 1},
-			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p2", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p1", Generation: int64Ptr(1)},
+			{Kind: "NetworkPolicy", Namespace: "ns1", Name: "p2", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -598,7 +602,7 @@ func TestGetPolicyActivity_ReturnsErrorWhenClusterIDIsEmpty(t *testing.T) {
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: ""} // Invalid - empty cluster
@@ -634,7 +638,7 @@ func TestGetPolicyActivity_TranslatesSpecialRuleIndices(t *testing.T) {
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}
@@ -682,7 +686,7 @@ func TestGetPolicyActivity_DeduplicatesRulesKeepingLatestTimestamp(t *testing.T)
 
 	req := &v1.PolicyActivityParams{
 		Policies: []v1.PolicyActivityQueryPolicy{
-			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: 1},
+			{Kind: "NetworkPolicy", Namespace: "ns", Name: "p1", Generation: int64Ptr(1)},
 		},
 	}
 	info := bapi.ClusterInfo{Cluster: "c1"}

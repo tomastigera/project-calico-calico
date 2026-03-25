@@ -268,13 +268,13 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 
 func (cbs *describeCmd) print(output OutputList) {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%v:\n", output.Description))
+	fmt.Fprintf(&buf, "%v:\n", output.Description)
 	for _, ep := range output.Endpoints {
-		buf.WriteString(fmt.Sprintf("\n%v\n", ep.PrintNameWithoutNode()))
-		buf.WriteString(fmt.Sprintln("  Policies:"))
+		fmt.Fprintf(&buf, "\n%v\n", ep.PrintNameWithoutNode())
+		fmt.Fprintln(&buf, "  Policies:")
 		for _, pol := range ep.Policies {
 			if pol.TierOrder == "missing" {
-				buf.WriteString(fmt.Sprintf("    WARNING: tier %#v metadata missing; packets will skip tier\n", pol.TierName))
+				fmt.Fprintf(&buf, "    WARNING: tier %#v metadata missing; packets will skip tier\n", pol.TierName)
 			}
 
 			tierText := ""
@@ -283,16 +283,16 @@ func (cbs *describeCmd) print(output OutputList) {
 			}
 
 			if cbs.hideSelectors {
-				buf.WriteString(fmt.Sprintf("    %sPolicy %#v (order %v)%v\n", tierText, pol.Name, pol.Order, pol.UntrackedSuffix))
+				fmt.Fprintf(&buf, "    %sPolicy %#v (order %v)%v\n", tierText, pol.Name, pol.Order, pol.UntrackedSuffix)
 			} else {
-				buf.WriteString(fmt.Sprintf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Name, pol.Order, pol.Selector, pol.UntrackedSuffix))
+				fmt.Fprintf(&buf, "    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Name, pol.Order, pol.Selector, pol.UntrackedSuffix)
 			}
 		}
 
 		if len(ep.Profiles) > 0 {
 			buf.WriteString("  Profiles:\n")
 			for _, prof := range ep.Profiles {
-				buf.WriteString(fmt.Sprintf("    Profile \"%v\"\n", prof.Name))
+				fmt.Fprintf(&buf, "    Profile \"%v\"\n", prof.Name)
 			}
 		}
 

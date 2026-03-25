@@ -77,10 +77,11 @@
     jobs:
       - name: Check language/Dockerfiles
         commands:
-          # Both of these are very quick grep checks so we combine them into one job.
+          # These are very quick grep checks so we combine them into one job.
           - make check-language || true # Enterprise hasn't been cleaned up yet
           - make check-dockerfiles
           - make check-gotchas
+          - make check-mockery-config
 - name: Check protobufs
   run:
     when: >-

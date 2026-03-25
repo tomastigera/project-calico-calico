@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -25,7 +26,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 type QueryService struct {

@@ -145,7 +145,7 @@ var _ = Describe("List", func() {
 
 		mockFactory.On("NewStore", mock.Anything).Return(mockStore, nil)
 
-		calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
+		calicoCli := fake.NewClientset(&reportTypeGettable, &reportTypeNotGettable)
 		mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
 
 		t := startTester(mockClientSetFactory, mockFactory, mockAuthenticator)

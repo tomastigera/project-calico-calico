@@ -5,7 +5,7 @@ package query
 
 import (
 	"context"
-	gojson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -22,10 +22,10 @@ import (
 // the extraction of an Event from all data types
 type JsonObject map[string]any
 
-func (obj JsonObject) Convert() (map[string]gojson.RawMessage, error) {
-	jsonMap := make(map[string]gojson.RawMessage)
+func (obj JsonObject) Convert() (map[string]json.RawMessage, error) {
+	jsonMap := make(map[string]json.RawMessage)
 	for k, v := range obj {
-		raw, err := gojson.Marshal(v)
+		raw, err := json.Marshal(v)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func (q QueryBuilder) BuildQuery(endTime time.Time) lsv1.Params {
 }
 
 // BuildAggregatedQuery will construct an aggregated query specific to Linseed based on the type of data specified in the alert
-func (q QueryBuilder) BuildAggregatedQuery(endTime time.Time, aggregations map[string]gojson.RawMessage) lsv1.Params {
+func (q QueryBuilder) BuildAggregatedQuery(endTime time.Time, aggregations map[string]json.RawMessage) lsv1.Params {
 	switch q.dataType {
 	case v3.GlobalAlertDataSetAudit:
 		return &lsv1.AuditLogAggregationParams{

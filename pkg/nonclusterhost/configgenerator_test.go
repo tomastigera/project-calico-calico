@@ -43,7 +43,7 @@ var _ = Describe("NonClusterHost Config Generator Tests", func() {
 		fakeDynamicClient = dyfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrListKind)
 		Expect(fakeDynamicClient).NotTo(BeNil())
 
-		fakeClientSet = fake.NewSimpleClientset()
+		fakeClientSet = fake.NewClientset()
 
 		opts = &ConfigGeneratorOptions{
 			Namespace:      "calico-system",

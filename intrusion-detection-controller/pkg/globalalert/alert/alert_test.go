@@ -50,7 +50,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			fakeClient := fake.NewSimpleClientset(globalAlert)
+			fakeClient := fake.NewClientset(globalAlert)
 			mockSvc := &query.MockService{}
 			a := &Alert{
 				alert:       globalAlert,
@@ -118,7 +118,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			fakeClient := fake.NewSimpleClientset(globalAlert)
+			fakeClient := fake.NewClientset(globalAlert)
 			mockSvc := &query.MockService{}
 
 			a := &Alert{

@@ -29,8 +29,8 @@ var _ = Describe("Managed Cluster Reconcile", func() {
 		mockLmaK8sClientSet := lmak8s.MockClientSet{}
 		mockLmaK8sClientFactory := &lmak8s.MockClientSetFactory{}
 		mockLmaK8sClientFactory.On("NewClientSetForApplication", mock.Anything).Return(&mockLmaK8sClientSet, nil)
-		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
-		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1())
 
 		mcr = managedClusterReconciler{
 			client:                          MockClientWithWatch{},

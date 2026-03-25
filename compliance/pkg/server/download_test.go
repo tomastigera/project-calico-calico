@@ -55,7 +55,7 @@ var _ = Describe("Download tests", func() {
 			mockStore.On("RetrieveArchivedReport", mock.Anything, mock.Anything).Return(reportGetTypeGet, nil)
 			mockFactory.On("NewStore", mock.Anything).Return(mockStore, nil)
 
-			calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
+			calicoCli := fake.NewClientset(&reportTypeGettable, &reportTypeNotGettable)
 			mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
 
 			By("Running a download query that should succeed")

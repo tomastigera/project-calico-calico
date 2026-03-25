@@ -28,7 +28,7 @@ var _ = Describe("Kibana", func() {
 		mockKibanaCli *kibana.MockClient
 	)
 	BeforeEach(func() {
-		fakeClientSet = datastore.NewClientSet(fake.NewSimpleClientset(), nil)
+		fakeClientSet = datastore.NewClientSet(fake.NewClientset(), nil)
 		mockKibanaCli = new(kibana.MockClient)
 	})
 

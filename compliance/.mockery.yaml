@@ -1,0 +1,12 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/compliance/pkg/api:
+    interfaces:
+      ReportEventFetcher:
+      ListDestination:
+      ComplianceStore:
+      StoreFactory:
+  github.com/projectcalico/calico/compliance/pkg/datastore:
+    interfaces:
+      ClusterCtxK8sClientFactory:

@@ -29,7 +29,7 @@ func (f *Duration) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (f *Duration) MarshalJSON() ([]byte, error) {
+func (f Duration) MarshalJSON() ([]byte, error) {
 	s := time.Duration(f.Duration).String()
 	return json.Marshal(&s)
 }
@@ -56,7 +56,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (t *Time) MarshalJSON() ([]byte, error) {
+func (t Time) MarshalJSON() ([]byte, error) {
 	s := time.Time(t.Time).Format(time.RFC3339)
 	return json.Marshal(&s)
 }

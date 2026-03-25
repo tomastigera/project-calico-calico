@@ -113,7 +113,7 @@ var _ = Describe("JWT authentication tests", func() {
 		saNamespace := "calico-system"
 		saName := "tigera-noncluster-host"
 
-		fakeK8sCli = fake.NewSimpleClientset()
+		fakeK8sCli = fake.NewClientset()
 		sa, err := fakeK8sCli.CoreV1().ServiceAccounts(saNamespace).Create(context.TODO(), &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      saName,

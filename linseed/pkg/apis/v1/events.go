@@ -2,10 +2,9 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 // EventParams define querying parameters to retrieve events
@@ -263,11 +262,7 @@ func (t *TimestampOrDate) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &t.intVal)
 }
 
-func (t *TimestampOrDate) MarshalJSON() ([]byte, error) {
-	if t == nil {
-		return nil, fmt.Errorf("cannot marshal nil value into JSON")
-	}
-
+func (t TimestampOrDate) MarshalJSON() ([]byte, error) {
 	if t.intVal != nil && t.timeVal != nil {
 		return nil, fmt.Errorf("time should either be as unix timestamp or ISO8601 time format")
 	}

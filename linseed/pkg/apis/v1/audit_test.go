@@ -233,10 +233,13 @@ func TestAuditLog_UnmarshalJSON(t *testing.T) {
 
 func TestAuditLog_NilPointerReceiver(t *testing.T) {
 	t.Run("Nil Pointer Receiver - MarshalJSON", func(t *testing.T) {
+		// MarshalJSON uses a value receiver, so encoding/json handles nil pointers
+		// by outputting "null" without calling the method. Verify that json.Marshal
+		// on a nil *AuditLog produces "null".
 		var c *AuditLog
-		data, err := c.MarshalJSON()
-		require.Error(t, err)
-		require.Empty(t, data)
+		data, err := json.Marshal(c)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(data))
 	})
 
 	t.Run("Nil Pointer Receiver - UnmarshalJSON", func(t *testing.T) {

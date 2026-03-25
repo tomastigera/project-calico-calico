@@ -3,11 +3,11 @@
 package templates
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
 

@@ -213,9 +213,9 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 		}))
 
-		// fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+		// fakeClientSet = datastore.NewClientSet(nil, fake.NewClientset().ProjectcalicoV3())
 		mockClientSet := &lmak8s.MockClientSet{}
-		mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(fake.NewClientset().ProjectcalicoV3()).Maybe()
 		fakeClientSet = mockClientSet
 
 		mockDoer = new(thirdpartymock.MockDoer)
@@ -852,7 +852,7 @@ var _ = Describe("SearchElasticHits", func() {
 
 			mockClientSetFactory := &lmak8s.MockClientSetFactory{}
 			mockClientSetFactory.On("NewClientSetForUser", mock.Anything, "cluster").Return(fakeClientSet, nil)
-			// mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3())
+			// mockClientSet.On("ProjectcalicoV3").Return(fake.NewClientset().ProjectcalicoV3())
 
 			rr := httptest.NewRecorder()
 			handler := SearchHandler(SearchTypeEvents, userAuthReview, mockClientSetFactory, client)

@@ -58,7 +58,7 @@ var _ = Describe("ElasticBasicUser", func() {
 	Context("dex enabled and Elasticsearch uses basic license", func() {
 		BeforeEach(func() {
 
-			fakeKube = fake.NewSimpleClientset(basicElasticLicenseCM, elasticUsersCM)
+			fakeKube = fake.NewClientset(basicElasticLicenseCM, elasticUsersCM)
 			mockClientSet = datastore.NewClientSet(fakeKube, nil)
 			ctx = context.Background()
 		})
@@ -172,7 +172,7 @@ var _ = Describe("ElasticBasicUser", func() {
 	})
 	Context("dex is not configured and Elasticsearch license is not basic", func() {
 		BeforeEach(func() {
-			fakeKube = fake.NewSimpleClientset()
+			fakeKube = fake.NewClientset()
 			mockClientSet = datastore.NewClientSet(fakeKube, nil)
 			ctx = context.Background()
 		})
@@ -200,7 +200,7 @@ var _ = Describe("ElasticBasicUser", func() {
 				},
 			}
 
-			fakeKube = fake.NewSimpleClientset(cmElasticLicense)
+			fakeKube = fake.NewClientset(cmElasticLicense)
 			mockClientSet = datastore.NewClientSet(fakeKube, nil)
 			ctx = context.Background()
 		})
@@ -218,7 +218,7 @@ var _ = Describe("ElasticBasicUser", func() {
 	})
 	Context("dex is configured and claim is not issued by dex", func() {
 		BeforeEach(func() {
-			fakeKube = fake.NewSimpleClientset(basicElasticLicenseCM, elasticUsersCM)
+			fakeKube = fake.NewClientset(basicElasticLicenseCM, elasticUsersCM)
 			mockClientSet = datastore.NewClientSet(fakeKube, nil)
 			ctx = context.Background()
 		})

@@ -3645,6 +3645,109 @@ var wireguardV4V6 = empty.withKVUpdates(
 	}...,
 )
 
+// Live migration states.  These test that LiveMigration resources correctly set the
+// live_migration_role field on proto.WorkloadEndpoint.
+
+var (
+	// LiveMigration resource keys.
+	liveMigrationKey1 = ResourceKey{
+		Kind:      internalapi.KindLiveMigration,
+		Name:      "lm-1",
+		Namespace: "default",
+	}
+
+	// A selector that matches localWlEp1's labels (has label "a").
+	liveMigrationTargetSelector = "has(a)"
+)
+
+// Case 1: Local WEP is a live migration source.
+var localEp1WithPolicyLMSource = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: liveMigrationKey1, Value: &internalapi.LiveMigration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      liveMigrationKey1.Name,
+			Namespace: liveMigrationKey1.Namespace,
+		},
+		Spec: internalapi.LiveMigrationSpec{
+			Source: &internalapi.LiveMigrationSource{
+				WorkloadEndpoint: &internalapi.WorkloadEndpointIdentifier{
+					Hostname:       localHostname,
+					OrchestratorID: "orch",
+					WorkloadID:     "wl1",
+					EndpointID:     "ep1",
+				},
+			},
+			Target: &internalapi.LiveMigrationTarget{
+				WorkloadEndpoint: &internalapi.WorkloadEndpointIdentifier{
+					Hostname:       "remote-host",
+					OrchestratorID: "orch",
+					WorkloadID:     "remote-wep",
+					EndpointID:     "ep1",
+				},
+			},
+		},
+	}},
+).withLiveMigrationRole(
+	localWlEp1Id, proto.LiveMigrationRole_SOURCE,
+).withName("ep1 local, policy, LM source")
+
+// Case 2: Local WEP is a live migration target (by direct name).
+var localEp1WithPolicyLMTargetByName = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: liveMigrationKey1, Value: &internalapi.LiveMigration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      liveMigrationKey1.Name,
+			Namespace: liveMigrationKey1.Namespace,
+		},
+		Spec: internalapi.LiveMigrationSpec{
+			Source: &internalapi.LiveMigrationSource{
+				WorkloadEndpoint: &internalapi.WorkloadEndpointIdentifier{
+					Hostname:       "remote-host",
+					OrchestratorID: "orch",
+					WorkloadID:     "remote-wep",
+					EndpointID:     "ep1",
+				},
+			},
+			Target: &internalapi.LiveMigrationTarget{
+				WorkloadEndpoint: &internalapi.WorkloadEndpointIdentifier{
+					Hostname:       localHostname,
+					OrchestratorID: "orch",
+					WorkloadID:     "wl1",
+					EndpointID:     "ep1",
+				},
+			},
+		},
+	}},
+).withLiveMigrationRole(
+	localWlEp1Id, proto.LiveMigrationRole_TARGET,
+).withName("ep1 local, policy, LM target by name")
+
+// Case 2b: Local WEP is a live migration source (workload-level, matches all endpoints).
+// This is the pattern used by KubeVirt, where a single LiveMigration covers all interfaces
+// of the migrating VM, and the target is identified by a selector.  The target selector
+// must not match the source WEP (in real KubeVirt usage, target pods have migration-specific
+// labels that the source pod does not have).
+var localEp1WithPolicyLMSourceWorkloadLevel = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: liveMigrationKey1, Value: &internalapi.LiveMigration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      liveMigrationKey1.Name,
+			Namespace: liveMigrationKey1.Namespace,
+		},
+		Spec: internalapi.LiveMigrationSpec{
+			Source: &internalapi.LiveMigrationSource{
+				Workload: &internalapi.WorkloadIdentifier{
+					Hostname:       localHostname,
+					OrchestratorID: "orch",
+					WorkloadID:     "wl1",
+				},
+			},
+			Target: &internalapi.LiveMigrationTarget{
+				Selector: stringPtr("has(migration-target)"),
+			},
+		},
+	}},
+).withLiveMigrationRole(
+	localWlEp1Id, proto.LiveMigrationRole_SOURCE,
+).withName("ep1 local, policy, LM source (workload-level)")
+
 type StateList []State
 
 func (l StateList) String() string {
@@ -3779,4 +3882,8 @@ func squashStates(baseTests StateList) (desc string, mappedTests []StateList) {
 	mappedTest = append(mappedTest, mappedState)
 	mappedTests = []StateList{mappedTest}
 	return
+}
+
+func stringPtr(s string) *string {
+	return &s
 }

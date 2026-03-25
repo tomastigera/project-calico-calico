@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -276,6 +277,12 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 	// the scroll API as it uses fewer cluster resources.
 	pitID, err := logtools.OpenPointInTime(ctx, b.esClient, b.index.Index(i))
 	if err != nil {
+		// On a fresh cluster the policy activity index does not exist yet
+		// (it is created on first write). Treat this as "no activity data".
+		if elastic.IsNotFound(err) {
+			log.Debug("Policy activity index does not exist yet, returning empty response")
+			return &v1.PolicyActivityResponse{Items: []v1.PolicyActivityResult{}}, nil
+		}
 		log.WithError(err).Error("Failed to open point in time for GetPolicyActivities")
 		return nil, fmt.Errorf("failed to open point in time: %w", err)
 	}
@@ -314,7 +321,9 @@ func (b *policyBackend) GetPolicyActivities(ctx context.Context, i bapi.ClusterI
 }
 
 // buildPolicyActivityQuery constructs an ES bool query that matches docs for
-// any of the requested policies, filtered by generation prefix on the rule field.
+// any of the requested policies. When a policy's Generation is non-zero, the
+// query is filtered to that generation via a prefix match on the rule field.
+// When Generation is nil, all generations are matched.
 func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.PolicyActivityParams) *elastic.BoolQuery {
 	shouldClauses := make([]elastic.Query, 0, len(req.Policies))
 	for _, p := range req.Policies {
@@ -322,8 +331,10 @@ func (b *policyBackend) buildPolicyActivityQuery(i bapi.ClusterInfo, req *v1.Pol
 			Filter(
 				elastic.NewTermQuery("policy.kind", p.Kind),
 				elastic.NewTermQuery("policy.name", p.Name),
-				elastic.NewPrefixQuery("rule", fmt.Sprintf("%d|", p.Generation)),
 			)
+		if p.Generation != nil {
+			policyQuery.Filter(elastic.NewPrefixQuery("rule", fmt.Sprintf("%d|", *p.Generation)))
+		}
 		if p.Namespace != "" {
 			policyQuery.Filter(elastic.NewTermQuery("policy.namespace", p.Namespace))
 		}
@@ -361,10 +372,11 @@ type policyKey struct {
 	Name      string
 }
 
-// ruleKey identifies a unique rule within a policy by direction and index.
+// ruleKey identifies a unique rule within a policy by generation, direction, and index.
 type ruleKey struct {
-	Direction string
-	Index     string
+	Generation int64
+	Direction  string
+	Index      string
 }
 
 // policyActivityEntry accumulates per-policy activity results during aggregation.
@@ -420,13 +432,15 @@ func aggregatePolicyActivity(log *logrus.Entry, req *v1.PolicyActivityParams, hi
 			entry.lastEvaluated = &t
 		}
 
+		gen, _ := strconv.ParseInt(parts[0], 10, 64)
 		ruleIdx := translateRuleIndex(parts[2])
-		rk := ruleKey{Direction: parts[1], Index: ruleIdx}
+		rk := ruleKey{Generation: gen, Direction: parts[1], Index: ruleIdx}
 		existing, exists := entry.rules[rk]
 		if !exists || doc.LastEvaluated.After(existing.LastEvaluated) {
 			entry.rules[rk] = v1.PolicyActivityRuleResult{
 				Direction:     parts[1],
 				Index:         ruleIdx,
+				Generation:    gen,
 				LastEvaluated: doc.LastEvaluated,
 			}
 		}

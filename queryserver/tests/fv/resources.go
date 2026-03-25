@@ -17,9 +17,25 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
+
+// noopPolicyActivityClient is a stub lsclient.PolicyActivityInterface that
+// returns empty results. Used in FV tests that don't exercise Linseed.
+type noopPolicyActivityClient struct{}
+
+var _ lsclient.PolicyActivityInterface = (*noopPolicyActivityClient)(nil)
+
+func (n *noopPolicyActivityClient) Create(_ context.Context, _ []lsv1.PolicyActivity) (*lsv1.BulkResponse, error) {
+	return &lsv1.BulkResponse{}, nil
+}
+
+func (n *noopPolicyActivityClient) GetPolicyActivities(_ context.Context, _ *lsv1.PolicyActivityParams) (*lsv1.PolicyActivityResponse, error) {
+	return &lsv1.PolicyActivityResponse{}, nil
+}
 
 /*
 This file defines a number of WEP, HEP, GNP, NP resources that can be used to test the EP<->Policy mappings.
@@ -1778,13 +1794,13 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		NumHostEndpoints:     numHEP,
 	}
 
-	createRulesFn := func(num int) []client.RuleDirection {
+	createRulesFn := func(num int) []client.RuleInfo {
 		if num == 0 {
 			return nil
 		}
-		rules := make([]client.RuleDirection, num)
+		rules := make([]client.RuleInfo, num)
 		for i := range num {
-			rules[i] = client.RuleDirection{
+			rules[i] = client.RuleInfo{
 				Source: client.RuleEntity{
 					NumWorkloadEndpoints: totWEP,
 					NumHostEndpoints:     totHEP,
@@ -1824,9 +1840,14 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 	case *apiv3.StagedKubernetesNetworkPolicy:
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
-		if er.Spec.StagedAction != "" {
-			p.StagedAction = &er.Spec.StagedAction
+		// The CRD schema has +kubebuilder:default=Set on StagedAction. The
+		// validator's validateCRD applies CRD schema defaults to the object
+		// before storing, so the server always returns "Set" when omitted.
+		stagedAction := er.Spec.StagedAction
+		if stagedAction == "" {
+			stagedAction = apiv3.StagedActionSet
 		}
+		p.StagedAction = &stagedAction
 		p.Selector = getStringPointer(conversion.K8sSelectorToCalico(&er.Spec.PodSelector, conversion.SelectorPod))
 		p.ServiceAccountSelector = nil
 	case *apiv3.StagedGlobalNetworkPolicy:

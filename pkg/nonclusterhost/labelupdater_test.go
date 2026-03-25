@@ -28,7 +28,7 @@ var _ = Describe("NonClusterHost Custom Resource Tests", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		fakeCalicoClient = fakecalico.NewSimpleClientset()
+		fakeCalicoClient = fakecalico.NewClientset()
 		Expect(fakeCalicoClient).NotTo(BeNil())
 
 		var err error

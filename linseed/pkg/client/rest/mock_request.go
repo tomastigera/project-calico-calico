@@ -2,9 +2,8 @@ package rest
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 // Produce a new mock request, used to mock request results from Linseed.

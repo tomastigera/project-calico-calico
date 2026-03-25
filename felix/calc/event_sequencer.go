@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ip"
@@ -524,6 +525,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, computedData []End
 		LocalBgpPeer:               localBGPPeer,
 		SkipRedir:                  skipRedir,
 		QosPolicies:                qosPolicies,
+		LiveMigrationVmiName:       vmiNameFromLabels(ep.Labels),
 	}
 
 	for _, cd := range computedData {
@@ -1688,4 +1690,18 @@ func appLayerToProtoAppLayer(al *model.ApplicationLayer) *proto.ApplicationLayer
 		Waf:          al.WAF,
 		WafConfigMap: al.WAFConfigMap,
 	}
+}
+
+// vmiNameFromLabels extracts the KubeVirt VMI name from a pod's labels.
+// Prefers "vmi.kubevirt.io/id" (KubeVirt >= 1.7, reliable) and falls back
+// to "vm.kubevirt.io/name" (all versions, less reliable: uses hostname,
+// truncates without hashing).
+func vmiNameFromLabels(labels uniquelabels.Map) string {
+	if val, ok := labels.GetString(kubevirtv1.VirtualMachineInstanceIDLabel); ok {
+		return val
+	}
+	if val, ok := labels.GetString(kubevirtv1.DeprecatedVirtualMachineNameLabel); ok {
+		return val
+	}
+	return ""
 }

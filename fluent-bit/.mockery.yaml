@@ -1,0 +1,6 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/http:
+    interfaces:
+      TokenProvider:

@@ -1597,7 +1597,7 @@ func (m *mockNATMap) String() string {
 	var out strings.Builder
 	out.WriteString("{")
 	for k, v := range m.m {
-		out.WriteString(fmt.Sprintf("\n\tkey: %v : value: %v", k, v))
+		fmt.Fprintf(&out, "\n\tkey: %v : value: %v", k, v)
 	}
 	out.WriteString("\n}")
 
@@ -1726,7 +1726,7 @@ func (m *mockNATBackendMap) String() string {
 	var out strings.Builder
 	out.WriteString("{")
 	for k, v := range m.m {
-		out.WriteString(fmt.Sprintf("\n\tkey: %v : value: %v", k, v))
+		fmt.Fprintf(&out, "\n\tkey: %v : value: %v", k, v)
 	}
 	out.WriteString("\n}")
 

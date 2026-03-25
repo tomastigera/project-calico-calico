@@ -67,7 +67,7 @@ func (l *TimestampedResourceList) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON implements the marshalling interface for JSON. We need to implement this explicitly because the default
 // implementation doesn't honor the "inline" directive when the parameter is an interface type.
-func (l *TimestampedResourceList) MarshalJSON() ([]byte, error) {
+func (l TimestampedResourceList) MarshalJSON() ([]byte, error) {
 	b, err := json.Marshal(l.ResourceList)
 	if err != nil {
 		return nil, err

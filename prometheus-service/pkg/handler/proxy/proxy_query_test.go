@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"net/url"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,7 +33,6 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		mAuth      *mockAuth
 		fakeK8sCli *fake.Clientset
 		jwt        = testing.NewFakeJWT(iss, name)
-		testUrl, _ = url.Parse("http://test-service:9090")
 		userInfo   = &user.DefaultInfo{Name: "default"}
 	)
 
@@ -53,9 +51,10 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		addAccessReviewsReactor(fakeK8sCli, true, userInfo)
 		var requestReceived *http.Request
 
-		mockRevProxy := httputil.NewSingleHostReverseProxy(testUrl)
-		mockRevProxy.Director = func(req *http.Request) {
-			requestReceived = req
+		mockRevProxy := &httputil.ReverseProxy{
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				requestReceived = pr.Out
+			},
 		}
 
 		proxy, err := handler.Proxy(mockRevProxy, authn)
@@ -71,9 +70,10 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 	It("blocks unauthenticated requests", func() {
 		var requestReceived *http.Request
 
-		mockRevProxy := httputil.NewSingleHostReverseProxy(testUrl)
-		mockRevProxy.Director = func(req *http.Request) {
-			requestReceived = req
+		mockRevProxy := &httputil.ReverseProxy{
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				requestReceived = pr.Out
+			},
 		}
 
 		proxy, err := handler.Proxy(mockRevProxy, authn)
@@ -93,9 +93,10 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		addAccessReviewsReactor(fakeK8sCli, false, userInfo)
 		var requestReceived *http.Request
 
-		mockRevProxy := httputil.NewSingleHostReverseProxy(testUrl)
-		mockRevProxy.Director = func(req *http.Request) {
-			requestReceived = req
+		mockRevProxy := &httputil.ReverseProxy{
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				requestReceived = pr.Out
+			},
 		}
 
 		proxy, err := handler.Proxy(mockRevProxy, authn)

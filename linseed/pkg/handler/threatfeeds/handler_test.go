@@ -4,6 +4,7 @@ package threatfeeds
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -257,6 +257,29 @@ func TestIPSetBulkDelete(t *testing.T) {
 			reqBody:         testutils.MarshalBulkParams[v1.IPSetThreatFeed](ipSets),
 			want:            testResult{false, 200, ""},
 		},
+
+		// Partial decode - mixed valid and malformed lines
+		{
+			name:            "partial decode - mixed valid and malformed lines",
+			backendIpSets:   ipSets,
+			backendError:    nil,
+			backendResponse: &v1.BulkResponse{Total: 2, Succeeded: 2, Failed: 0},
+			reqBody:         "BAD_LINE\n" + testutils.MarshalBulkParams[v1.IPSetThreatFeed](ipSets) + "ALSO_BAD\n",
+			want:            testResult{false, 200, ""},
+		},
+
+		// All lines malformed
+		{
+			name:            "all lines malformed",
+			backendIpSets:   noIpSet,
+			backendError:    nil,
+			backendResponse: nil,
+			reqBody:         "BAD1\nBAD2\n",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -342,6 +365,29 @@ func TestDomainSetBulkDelete(t *testing.T) {
 			backendResponse:   bulkResponsePartialSuccess,
 			reqBody:           testutils.MarshalBulkParams[v1.DomainNameSetThreatFeed](domainSets),
 			want:              testResult{false, 200, ""},
+		},
+
+		// Partial decode - mixed valid and malformed lines
+		{
+			name:              "partial decode - mixed valid and malformed lines",
+			backendDomainSets: domainSets,
+			backendError:      nil,
+			backendResponse:   &v1.BulkResponse{Total: 2, Succeeded: 2, Failed: 0},
+			reqBody:           "BAD_LINE\n" + testutils.MarshalBulkParams[v1.DomainNameSetThreatFeed](domainSets) + "ALSO_BAD\n",
+			want:              testResult{false, 200, ""},
+		},
+
+		// All lines malformed
+		{
+			name:              "all lines malformed",
+			backendDomainSets: noDomainSet,
+			backendError:      nil,
+			backendResponse:   nil,
+			reqBody:           "BAD1\nBAD2\n",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON", "Status":400}`,
+			},
 		},
 	}
 	for _, tt := range tests {

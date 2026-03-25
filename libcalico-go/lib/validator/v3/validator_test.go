@@ -961,7 +961,7 @@ func init() {
 			mustParsePortRange(14000, 15000), mustParsePortRange(16000, 17000),
 		}}, false),
 		Entry("should reject a named port KubeNodePortRanges value", api.FelixConfigurationSpec{KubeNodePortRanges: &[]numorstring.Port{
-			numorstring.NamedPort("testport"),
+			numorstring.Port{PortName: "testport"},
 		}}, false),
 		Entry("should accept a valid list of ExternalNodesCIDRList", api.FelixConfigurationSpec{ExternalNodesCIDRList: &[]string{"1.1.1.1", "1.1.1.2/32", "1.1.3.0/23"}},
 			true),
@@ -1123,6 +1123,11 @@ func init() {
 		Entry("should reject HealthTimeoutOverride -1", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "Valid", Timeout: v1.Duration{Duration: -1}}}}, false),
 		Entry("should reject HealthTimeoutOverride with bad name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "%", Timeout: v1.Duration{Duration: 10}}}}, false),
 		Entry("should reject HealthTimeoutOverride with no name", api.FelixConfigurationSpec{HealthTimeoutOverrides: []api.HealthTimeoutOverride{{Name: "", Timeout: v1.Duration{Duration: 10}}}}, false),
+		Entry("invalid route priority 0", api.FelixConfigurationSpec{IPv4ElevatedRoutePriority: intHelper(0)}, false),
+		Entry("valid route priority 1", api.FelixConfigurationSpec{IPv4ElevatedRoutePriority: intHelper(1)}, true),
+		Entry("valid route priority 10000", api.FelixConfigurationSpec{IPv4ElevatedRoutePriority: intHelper(10000)}, true),
+		Entry("valid route priority 2147483646", api.FelixConfigurationSpec{IPv4ElevatedRoutePriority: intHelper(2147483646)}, true),
+		Entry("invalid route priority 2147483647", api.FelixConfigurationSpec{IPv4ElevatedRoutePriority: intHelper(2147483647)}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
@@ -1752,7 +1757,7 @@ func init() {
 				Action:   "Allow",
 				Protocol: protocolFromInt(6),
 				Source: api.EntityRule{
-					Ports: []numorstring.Port{numorstring.NamedPort("foo")},
+					Ports: []numorstring.Port{numorstring.Port{PortName: "foo"}},
 				},
 			}, true),
 		Entry("should accept Rule with source named ports and protocol type tcp",
@@ -1760,7 +1765,7 @@ func init() {
 				Action:   "Allow",
 				Protocol: protocolFromString("TCP"),
 				Source: api.EntityRule{
-					Ports: []numorstring.Port{numorstring.NamedPort("foo")},
+					Ports: []numorstring.Port{numorstring.Port{PortName: "foo"}},
 				},
 			}, true),
 		Entry("should accept Rule with source named ports and protocol type udp",
@@ -1768,7 +1773,7 @@ func init() {
 				Action:   "Allow",
 				Protocol: protocolFromString("UDP"),
 				Source: api.EntityRule{
-					Ports: []numorstring.Port{numorstring.NamedPort("foo")},
+					Ports: []numorstring.Port{numorstring.Port{PortName: "foo"}},
 				},
 			}, true),
 		Entry("should accept Rule with empty source ports and protocol type 7",
@@ -1810,6 +1815,20 @@ func init() {
 					Ports: []numorstring.Port{numorstring.SinglePort(1)},
 				},
 			}, false),
+		Entry("should accept Rule with dest named ports and no protocol",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Ports: []numorstring.Port{numorstring.Port{PortName: "foo"}},
+				},
+			}, true),
+		Entry("should accept Rule with !source named ports and no protocol",
+			api.Rule{
+				Action: "Allow",
+				Source: api.EntityRule{
+					NotPorts: []numorstring.Port{numorstring.Port{PortName: "foo"}},
+				},
+			}, true),
 		Entry("should reject Rule with invalid port (port 0)",
 			api.Rule{
 				Action:   "Allow",
@@ -1835,7 +1854,7 @@ func init() {
 				Action:   "Allow",
 				Protocol: protocolFromString("unknown"),
 				Destination: api.EntityRule{
-					NotPorts: []numorstring.Port{numorstring.NamedPort("foo")},
+					NotPorts: []numorstring.Port{numorstring.Port{PortName: "foo"}},
 				},
 			}, false),
 		Entry("should accept Rule with empty dest ports and protocol type SCTP",
@@ -4914,7 +4933,7 @@ func init() {
 			Selector: "all()",
 			Filters: []api.PacketCaptureRule{
 				{
-					Ports: []numorstring.Port{numorstring.NamedPort("http")},
+					Ports: []numorstring.Port{numorstring.Port{PortName: "http"}},
 				},
 			},
 		}, false),

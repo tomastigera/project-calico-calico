@@ -1,8 +1,9 @@
-// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 package client
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -100,6 +101,10 @@ type QueryPoliciesReq struct {
 
 	// Authorization
 	Permissions auth.Permission
+
+	// Time range for policy activity enrichment (optional)
+	From *time.Time
+	To   *time.Time
 }
 
 type QueryPoliciesResp struct {
@@ -118,19 +123,40 @@ type Policy struct {
 	Annotations            map[string]string `json:"annotations,omitempty"`
 	NumHostEndpoints       int               `json:"numHostEndpoints,omitempty"`
 	NumWorkloadEndpoints   int               `json:"numWorkloadEndpoints,omitempty"`
-	IngressRules           []RuleDirection   `json:"ingressRules,omitempty"`
-	EgressRules            []RuleDirection   `json:"egressRules,omitempty"`
+	IngressRules           []RuleInfo        `json:"ingressRules,omitempty"`
+	EgressRules            []RuleInfo        `json:"egressRules,omitempty"`
 	Order                  *float64          `json:"order,omitempty"`
 	CreationTime           *v1.Time          `json:"creationTime,omitempty"`
 	StagedAction           *v3.StagedAction  `json:"stagedAction,omitempty" validate:"omitempty"`
 	Selector               *string           `json:"selector,omitempty" validate:"omitempty"`
 	NamespaceSelector      *string           `json:"namespaceSelector,omitempty" validate:"omitempty"`
 	ServiceAccountSelector *string           `json:"serviceAccountSelector,omitempty" validate:"omitempty"`
+	// LastEvaluated is the most recent time any rule in this policy was evaluated
+	// by the dataplane at the policy's current Generation. It is nil when the
+	// policy has not yet been evaluated at this generation, even if it was evaluated
+	// at a previous generation. Always serialized without omitempty so callers can
+	// distinguish "no activity at this generation" (null) from "field not requested".
+	LastEvaluated *time.Time `json:"lastEvaluated"`
+	// LastEvaluatedAnyGeneration is the most recent time any rule in this policy was
+	// evaluated by the dataplane, across all generations. It is nil only when the
+	// policy has never been evaluated. Always serialized without omitempty so callers
+	// can distinguish "never evaluated" (null) from "field not requested".
+	LastEvaluatedAnyGeneration *time.Time `json:"lastEvaluatedAnyGeneration"`
+	Generation                 int64      `json:"generation,omitempty"`
 }
 
-type RuleDirection struct {
-	Source      RuleEntity `json:"source"`
-	Destination RuleEntity `json:"destination"`
+type RuleInfo struct {
+	Source        RuleEntity `json:"source"`
+	Destination   RuleEntity `json:"destination"`
+	LastEvaluated *time.Time `json:"lastEvaluated"`
+	// ImplicitDenyLastEvaluated is the most recent time the implicit deny
+	// for this direction was evaluated at the current generation. This is
+	// populated from Linseed's "implicit_deny" sentinel rule index.
+	ImplicitDenyLastEvaluated *time.Time `json:"implicitDenyLastEvaluated"`
+	// UnknownLastEvaluated is the most recent time an unknown rule for this
+	// direction was evaluated at the current generation. This is populated
+	// from Linseed's "unknown" sentinel rule index.
+	UnknownLastEvaluated *time.Time `json:"unknownLastEvaluated"`
 }
 
 type RuleEntity struct {
@@ -235,4 +261,19 @@ type Page struct {
 type Sort struct {
 	SortBy  []string `json:"sortBy,omitempty" validate:"omitempty"`
 	Reverse bool     `json:"reverse,omitempty" validate:"omitempty"`
+}
+
+// policyActivityKey returns the map key for a policy identified by kind, namespace, and name.
+// Generation is not included because a single query never contains duplicate policies —
+// the key only needs to correlate request items with response items.
+func policyActivityKey(kind, namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", kind, namespace, name)
+}
+
+// ruleActivityKey returns the map key for a rule identified by direction and index.
+// The index is a string because Linseed may return non-integer sentinels such as
+// "implicit_deny" or "unknown". These are surfaced via the ImplicitDenyLastEvaluated
+// and UnknownLastEvaluated fields on RuleInfo.
+func ruleActivityKey(direction string, index string) string {
+	return direction + "/" + index
 }

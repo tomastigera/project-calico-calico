@@ -5,7 +5,7 @@ package flows_test
 import (
 	"context"
 	_ "embed"
-	gojson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -1875,8 +1874,8 @@ func TestMixedModernLegacyFlows(t *testing.T) {
 }
 
 func msg(got []v1.L3Flow, exp v1.L3Flow) string {
-	expJSON, _ := gojson.MarshalIndent(exp, "", "  ")
-	gotJSON, _ := gojson.MarshalIndent(got, "", "  ")
+	expJSON, _ := json.MarshalIndent(exp, "", "  ")
+	gotJSON, _ := json.MarshalIndent(got, "", "  ")
 	return fmt.Sprintf("expected flow:\n%s\ngot:\n%s\n\nFull Exp Structure:\n%#v\n\nFull Got Structure:\n%#v", expJSON, gotJSON, exp, got)
 }
 

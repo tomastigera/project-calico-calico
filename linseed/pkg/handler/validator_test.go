@@ -4,9 +4,11 @@ package handler_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/config"
@@ -156,12 +157,13 @@ func encode[T any](params []T, delim string) string {
 
 func TestValidateFlowLogBulkParams(t *testing.T) {
 	type testCase struct {
-		name       string
-		req        *http.Request
-		want       []v1.FlowLog
-		wantErr    bool
-		errorMsg   string
-		statusCode int
+		name            string
+		req             *http.Request
+		want            []v1.FlowLog
+		wantErr         bool
+		errorMsg        string
+		statusCode      int
+		wantFailedCount int
 	}
 
 	params := []v1.FlowLog{
@@ -197,56 +199,94 @@ func TestValidateFlowLogBulkParams(t *testing.T) {
 		{
 			"no body", reqNoBody(jsonNewlineContentType),
 			[]v1.FlowLog{},
-			true, "Received a request with an empty body", http.StatusBadRequest,
+			true, "Received a request with an empty body", http.StatusBadRequest, 0,
 		},
 		{
 			"empty body", req("", jsonNewlineContentType),
 			[]v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest, 0,
 		},
 		{
 			"malformed json", req("{#4FEF}", jsonNewlineContentType),
 			[]v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest, 0,
 		},
 		{
 			"other content-type", req(encode(params, "\n"), "application/xml"), params,
-			true, "Received a request with content-type (application/xml) that is not supported", http.StatusUnsupportedMediaType,
+			true, "Received a request with content-type (application/xml) that is not supported", http.StatusUnsupportedMediaType, 0,
 		},
 		{
 			"newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\n\"}", jsonNewlineContentType),
 			[]v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest, 0,
 		},
 		{
 			"new fields", req("{\"newfields\":\"any\"}", jsonNewlineContentType),
 			[]v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest, 0,
 		},
 
 		{
 			"escaped newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\\n\"}", jsonNewlineContentType),
 			[]v1.FlowLog{{DestNameAggr: "lorem lipsum\n"}},
-			false, "", http.StatusOK,
+			false, "", http.StatusOK, 0,
 		},
 
 		{
 			"bulk insert -  Linux", req(encode(params, "\n"), jsonNewlineContentType),
 			params, false, "",
-			200,
+			200, 0,
 		},
 
 		{
 			"bulk insert - Windows", req(encode(params, "\r\n"), jsonNewlineContentType),
 			params, false, "",
-			200,
+			200, 0,
+		},
+		{
+			name: "partial decode - mixed valid and malformed lines",
+			req:  req("MALFORMED_LINE\n"+encode(params, "\n")+"ALSO_BAD\n", jsonNewlineContentType),
+			want: params, wantErr: false, errorMsg: "",
+			statusCode: 200, wantFailedCount: 2,
+		},
+		{
+			name: "all lines malformed",
+			req:  req("BAD1\nBAD2\n", jsonNewlineContentType),
+			want: []v1.FlowLog{}, wantErr: true,
+			errorMsg: "Request body contains badly-formed JSON", statusCode: http.StatusBadRequest,
+		},
+		{
+			name: "large JSON line exceeding default 64KB scanner buffer",
+			req: func() *http.Request {
+				// Create a flow log with a field value larger than the default
+				// bufio.Scanner buffer (64KB) to verify the increased buffer works.
+				largeValue := strings.Repeat("a", 100*1024) // 100KB
+				fl := v1.FlowLog{DestNameAggr: largeValue}
+				return req(marshall(fl), jsonNewlineContentType)
+			}(),
+			want:    []v1.FlowLog{{DestNameAggr: strings.Repeat("a", 100*1024)}},
+			wantErr: false, errorMsg: "", statusCode: http.StatusOK, wantFailedCount: 0,
+		},
+		{
+			name: "multiple lines with one large JSON line",
+			req: func() *http.Request {
+				largeValue := strings.Repeat("b", 80*1024) // 80KB
+				lines := marshall(params[0]) + "\n" + marshall(v1.FlowLog{DestNameAggr: largeValue}) + "\n" + marshall(params[1]) + "\n"
+				return req(lines, jsonNewlineContentType)
+			}(),
+			want: []v1.FlowLog{
+				params[0],
+				{DestNameAggr: strings.Repeat("b", 80*1024)},
+				params[1],
+			},
+			wantErr: false, errorMsg: "", statusCode: http.StatusOK, wantFailedCount: 0,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer setupTest(t)()
 
-			got, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](httptest.NewRecorder(), tt.req)
+			result, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](httptest.NewRecorder(), tt.req)
 			if tt.wantErr {
 				require.NotNil(t, err)
 				assert.Equal(t, err.Error(), tt.errorMsg)
@@ -254,9 +294,10 @@ func TestValidateFlowLogBulkParams(t *testing.T) {
 				assert.Equal(t, err.Msg, tt.errorMsg)
 			} else {
 				require.Nil(t, err)
-				if !cmp.Equal(tt.want, got) {
-					t.Errorf("want=%#v got %#v", tt.want, got)
+				if !cmp.Equal(tt.want, result.Items) {
+					t.Errorf("want=%#v got %#v", tt.want, result.Items)
 				}
+				assert.Equal(t, tt.wantFailedCount, result.FailedCount)
 			}
 		})
 	}

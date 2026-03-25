@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	applyconfigv3 "github.com/tigera/api/pkg/client/applyconfiguration_generated/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -84,7 +85,7 @@ func (m *MockGlobalNetworkSetInterface) List(ctx context.Context, opts v1.ListOp
 func (m *MockGlobalNetworkSetInterface) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	if m.WatchError == nil {
 		if m.W == nil {
-			m.W = &MockWatch{make(chan watch.Event)}
+			m.W = &MockWatch{C: make(chan watch.Event)}
 		}
 		return m.W, nil
 	} else {
@@ -93,6 +94,10 @@ func (m *MockGlobalNetworkSetInterface) Watch(ctx context.Context, opts v1.ListO
 }
 
 func (m *MockGlobalNetworkSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options v1.PatchOptions, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
+	return nil, m.Error
+}
+
+func (m *MockGlobalNetworkSetInterface) Apply(ctx context.Context, globalNetworkSet *applyconfigv3.GlobalNetworkSetApplyConfiguration, opts v1.ApplyOptions) (*v3.GlobalNetworkSet, error) {
 	return nil, m.Error
 }
 

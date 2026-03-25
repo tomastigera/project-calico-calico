@@ -113,11 +113,11 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		var msg strings.Builder
 		msg.WriteString("Expected flow logs not found in event stream.\n\nExpected:\n\n")
 		for _, fl := range fls {
-			msg.WriteString(fmt.Sprintf("%+v\n", fl))
+			fmt.Fprintf(&msg, "%+v\n", fl)
 		}
 		msg.WriteString("\nFound:\n\n")
 		for _, flog := range flogs {
-			msg.WriteString(fmt.Sprintf("%+v\n", flog))
+			fmt.Fprintf(&msg, "%+v\n", flog)
 		}
 		Expect(count).Should(Equal(len(fls)), msg.String())
 	}

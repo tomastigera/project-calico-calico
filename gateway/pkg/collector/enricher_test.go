@@ -102,8 +102,8 @@ func TestEnricherEnrichLog(t *testing.T) {
 	}
 
 	// Create fake clients
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset(gateway, httpRoute)
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset(gateway, httpRoute)
 
 	// Create status indexer
 	logger := zap.NewNop()
@@ -277,8 +277,8 @@ func TestEnricherGatewayInference(t *testing.T) {
 		},
 	}
 
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset(gateway)
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset(gateway)
 
 	logger := zap.NewNop()
 	statusIndexer, err := indexer.NewStatusIndexer(logger, k8sClient, gatewayClient)
@@ -361,8 +361,8 @@ func TestEnricherWithDefaultGateway(t *testing.T) {
 		},
 	}
 
-	k8sClient := fake.NewSimpleClientset()
-	gatewayClient := gatewayfake.NewSimpleClientset(gateway)
+	k8sClient := fake.NewClientset()
+	gatewayClient := gatewayfake.NewClientset(gateway)
 
 	logger := zap.NewNop()
 	statusIndexer, err := indexer.NewStatusIndexer(logger, k8sClient, gatewayClient)

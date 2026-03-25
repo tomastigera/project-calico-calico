@@ -63,8 +63,9 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 			// Get server configuration variables meant for FVs.
 			servercfg := getDummyConfigFromEnvFv(addr, "", "")
+			servercfg.LinseedPolicyActivity = &noopPolicyActivityClient{}
 
-			fakeK8sClient := fake.NewSimpleClientset()
+			fakeK8sClient := fake.NewClientset()
 			mh := &mockHandler{}
 
 			authz := &mockAuthorizer{}
@@ -83,8 +84,8 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
 
-				// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
-				// verify these values.
+				// remove CreationTime, Order, UID, and Generation from
+				// QueryPoliciesResp as the tests are not built to verify these values.
 				switch tqd.response.(type) {
 				case *client.QueryPoliciesResp:
 					if tqd.response.(*client.QueryPoliciesResp).Items != nil {
@@ -92,6 +93,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 							tqd.response.(*client.QueryPoliciesResp).Items[i].CreationTime = nil
 							tqd.response.(*client.QueryPoliciesResp).Items[i].Order = nil
 							tqd.response.(*client.QueryPoliciesResp).Items[i].UID = ""
+							tqd.response.(*client.QueryPoliciesResp).Items[i].Generation = 0
 						}
 					}
 				}
@@ -161,14 +163,15 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 			return fmt.Errorf("unmarshal error: %v: %v: %v", reflect.TypeOf(ro), err, bodyString)
 		}
 
-		// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
-		// verify these values.
+		// remove CreationTime, Order, UID, and Generation from
+		// QueryPoliciesResp as the tests are not built to verify these values.
 		switch ro := ro.(type) {
 		case *client.QueryPoliciesResp:
 			for i := range ro.Items {
 				ro.Items[i].UID = ""
 				ro.Items[i].CreationTime = nil
 				ro.Items[i].Order = nil
+				ro.Items[i].Generation = 0
 			}
 		}
 

@@ -59,7 +59,7 @@ func renderRule(rule v3.PacketCaptureRule) string {
 	// write ports if defined as "(port 80 or portrange 80-100)"
 	var ports = strings.Join(renderPorts(rule.Ports), defaultPortAction)
 	if len(ports) != 0 {
-		buffer.WriteString(fmt.Sprintf("(%s)", ports))
+		fmt.Fprintf(&buffer, "(%s)", ports)
 	}
 
 	return buffer.String()

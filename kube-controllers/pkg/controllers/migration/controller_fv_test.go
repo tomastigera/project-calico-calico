@@ -169,7 +169,7 @@ func TestLifecycle_Mainline(t *testing.T) {
 		DynamicClient: fvDynamicClient,
 		APIRegClient:  fakeAPIReg.ApiregistrationV1(),
 		CRDClient:     fvCRDClient,
-		Migrators:     NewMigrators(bc, fvRTClient),
+		Migrators:     append(NewMigrators(bc, fvRTClient), NewEnterpriseMigrators(bc, fvRTClient)...),
 	})
 	go ctrl.Run(stop)
 
@@ -218,7 +218,8 @@ func TestLifecycle_Mainline(t *testing.T) {
 	// but only the seeded types (Tier, GNP) produce resources; the rest
 	// report zero.
 	g.Expect(dm.Status.Progress.Migrated).To(Equal(3), "2 tiers + 1 GNP = 3 migrated")
-	g.Expect(dm.Status.Progress.TypeDetails).To(HaveLen(len(NewMigrators(bc, fvRTClient))))
+	allMigrators := append(NewMigrators(bc, fvRTClient), NewEnterpriseMigrators(bc, fvRTClient)...)
+	g.Expect(dm.Status.Progress.TypeDetails).To(HaveLen(len(allMigrators)))
 
 	// v3 ClusterInformation should have DatastoreReady=true (unlocked after converging).
 	ci := &apiv3.ClusterInformation{}
@@ -415,12 +416,12 @@ func TestLifecycle_Rollback(t *testing.T) {
 	gate.release(DatastoreMigrationPhaseConverged)
 
 	// The CR should be fully deleted once the finalizer is removed.
-	// The abort path lists all v3 types for cleanup (slow with 22 types
+	// The abort path lists all v3 types for cleanup (slow with 39 types
 	// against envtest), so allow extra time.
 	g.Eventually(func(g Gomega) {
 		err := fvRTClient.Get(ctx, dmKey, &DatastoreMigration{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "CR should be deleted after abort, got: %v", err)
-	}, 30*time.Second, 200*time.Millisecond).Should(Succeed())
+	}, 60*time.Second, 200*time.Millisecond).Should(Succeed())
 
 	// Verify abort restored the APIService.
 	apiSvc, err := fakeAPIReg.ApiregistrationV1().APIServices().Get(ctx, apiServiceName, metav1.GetOptions{})

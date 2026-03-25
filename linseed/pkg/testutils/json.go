@@ -3,12 +3,11 @@
 package testutils
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 func MustUnmarshalToMap(t *testing.T, source string) map[string]any {

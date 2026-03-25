@@ -138,7 +138,7 @@ func startController(
 		DynamicClient:       fvDynamicClient,
 		APIRegClient:        fakeAPIReg.ApiregistrationV1(),
 		CRDClient:           fvCRDClient,
-		Migrators:           NewMigrators(bc, fvRTClient),
+		Migrators:           append(NewMigrators(bc, fvRTClient), NewEnterpriseMigrators(bc, fvRTClient)...),
 		WaitingPollInterval: 500 * time.Millisecond,
 	})
 

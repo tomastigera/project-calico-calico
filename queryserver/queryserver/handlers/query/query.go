@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2026 Tigera, Inc. All rights reserved.
 package query
 
 import (
@@ -309,6 +309,12 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		tiers = strings.Split(tiersString, ",")
 	}
 
+	from, to, err := parseTimeRange(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
 	q.runQuery(w, r, client.QueryPoliciesReq{
 		Tier:          tiers,
 		Labels:        getLabels(r),
@@ -319,6 +325,8 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		Sort:          q.getSort(r),
 		FieldSelector: fieldSelector,
 		Permissions:   permissions,
+		From:          from,
+		To:            to,
 	}, false)
 }
 
@@ -657,7 +665,7 @@ func getPolicyFieldSelector(r *http.Request) map[string]bool {
 }
 
 func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req any, exact bool) {
-	resp, err := q.qi.RunQuery(context.Background(), req)
+	resp, err := q.qi.RunQuery(r.Context(), req)
 	if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok && exact {
 		// This is an exact get and the resource does not exist. Return a 404 not found.
 		q.writeError(w, err, http.StatusNotFound)
@@ -742,6 +750,32 @@ func (q *query) getTimestamp(r *http.Request) (*time.Time, error) {
 		return nil, nil
 	}
 	return to, nil
+}
+
+// parseTimeRange parses optional "from" and "to" query parameters.
+// Accepts RFC3339 timestamps or relative formats like "now-15m".
+// Returns nil for each parameter that is absent. Returns an error if a
+// parameter is present but cannot be parsed, or if "to" is before "from".
+func parseTimeRange(r *http.Request) (from, to *time.Time, err error) {
+	now := time.Now()
+	if s := r.URL.Query().Get("from"); s != "" {
+		t, _, parseErr := timeutils.ParseTime(now, &s)
+		if parseErr != nil || t == nil {
+			return nil, nil, fmt.Errorf("invalid 'from' parameter: %v", parseErr)
+		}
+		from = t
+	}
+	if s := r.URL.Query().Get("to"); s != "" {
+		t, _, parseErr := timeutils.ParseTime(now, &s)
+		if parseErr != nil || t == nil {
+			return nil, nil, fmt.Errorf("invalid 'to' parameter: %v", parseErr)
+		}
+		to = t
+	}
+	if from != nil && to != nil && to.Before(*from) {
+		return nil, nil, fmt.Errorf("invalid time range: 'to' is before 'from'")
+	}
+	return
 }
 
 func (q *query) getToken(r *http.Request) string {

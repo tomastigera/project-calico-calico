@@ -4,11 +4,11 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/olivere/elastic/v7"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
@@ -84,7 +84,7 @@ func (f *dnsLogs) Create(ctx context.Context, dnsLogs []v1.DNSLog) (*v1.BulkResp
 		}
 
 		// Add each item.
-		out, err := json.Marshal(e)
+		out, err := json.Marshal(&e)
 		if err != nil {
 			return nil, err
 		}

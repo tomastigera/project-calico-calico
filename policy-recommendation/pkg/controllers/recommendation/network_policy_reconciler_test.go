@@ -49,8 +49,8 @@ var _ = Describe("NetworkPolicyReconciler", func() {
 		ctx := context.TODO()
 
 		mockClientSet := &lmak8s.MockClientSet{}
-		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3()).Maybe()
-		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1()).Maybe()
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewClientset().ProjectcalicoV3()).Maybe()
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewClientset().CoreV1()).Maybe()
 
 		_, err := mockClientSet.ProjectcalicoV3().ManagedClusters().Create(ctx, &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{

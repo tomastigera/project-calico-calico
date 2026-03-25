@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,28 +139,29 @@ var (
 	bpfCTLBRegex        = regexp.MustCompile("^(Disabled|Enabled|TCP)$")
 	bpfHostNatRegex     = regexp.MustCompile("^(Disabled|Enabled)$")
 
-	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
-	routeSource           = regexp.MustCompile("^(WorkloadIPs|CalicoIPAM)$")
-	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
-	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
-	dropRejectRegex       = regexp.MustCompile("^(Drop|Reject)$")
-	ipTypeRegex           = regexp.MustCompile("^(CalicoNodeIP|InternalIP|ExternalIP)$")
-	fileRegex             = regexp.MustCompile("^[^\x00]+$")
-	endpointFmt           = "https?://[^:]+:\\d+"
-	k8sEndpointRegex      = regexp.MustCompile("^" + endpointFmt + "$")
-	etcdEndpointsRegex    = regexp.MustCompile("^" + endpointFmt + "(," + endpointFmt + ")*$")
-	standardCommunity     = regexp.MustCompile(`^(\d+):(\d+)$`)
-	largeCommunity        = regexp.MustCompile(`^(\d+):(\d+):(\d+)$`)
-	number                = regexp.MustCompile(`(\d+)`)
-	IPv4PortFormat        = regexp.MustCompile(`^(\d+).(\d+).(\d+).(\d+):(\d+)$`)
-	IPv6PortFormat        = regexp.MustCompile(`^\[[0-9a-fA-F:.]+\]:(\d+)$`)
-	reasonString          = "Reason: "
-	poolUnstictCIDR       = "IP pool CIDR is not strictly masked"
-	overlapsV4LinkLocal   = "IP pool range overlaps with IPv4 Link Local range 169.254.0.0/16"
-	overlapsV6LinkLocal   = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
-	protocolPortsMsg      = "rules that specify ports must set protocol to TCP or UDP or SCTP"
-	protocolIcmpMsg       = "rules that specify ICMP fields must set protocol to ICMP"
-	protocolAndHTTPMsg    = "rules that specify HTTP fields must set protocol to TCP or empty"
+	datastoreType                 = regexp.MustCompile("^(etcdv3|kubernetes)$")
+	routeSource                   = regexp.MustCompile("^(WorkloadIPs|CalicoIPAM)$")
+	dropAcceptReturnRegex         = regexp.MustCompile("^(Drop|Accept|Return)$")
+	acceptReturnRegex             = regexp.MustCompile("^(Accept|Return)$")
+	dropRejectRegex               = regexp.MustCompile("^(Drop|Reject)$")
+	ipTypeRegex                   = regexp.MustCompile("^(CalicoNodeIP|InternalIP|ExternalIP)$")
+	fileRegex                     = regexp.MustCompile("^[^\x00]+$")
+	endpointFmt                   = "https?://[^:]+:\\d+"
+	k8sEndpointRegex              = regexp.MustCompile("^" + endpointFmt + "$")
+	etcdEndpointsRegex            = regexp.MustCompile("^" + endpointFmt + "(," + endpointFmt + ")*$")
+	standardCommunity             = regexp.MustCompile(`^(\d+):(\d+)$`)
+	largeCommunity                = regexp.MustCompile(`^(\d+):(\d+):(\d+)$`)
+	number                        = regexp.MustCompile(`(\d+)`)
+	IPv4PortFormat                = regexp.MustCompile(`^(\d+).(\d+).(\d+).(\d+):(\d+)$`)
+	IPv6PortFormat                = regexp.MustCompile(`^\[[0-9a-fA-F:.]+\]:(\d+)$`)
+	reasonString                  = "Reason: "
+	poolUnstictCIDR               = "IP pool CIDR is not strictly masked"
+	overlapsV4LinkLocal           = "IP pool range overlaps with IPv4 Link Local range 169.254.0.0/16"
+	overlapsV6LinkLocal           = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
+	protocolPortsMsg              = "rules that specify ports must set protocol to TCP or UDP or SCTP"
+	protocolSingleOrRangePortsMsg = "rules with numeric port or port range must set protocol to TCP or UDP or SCTP"
+	protocolIcmpMsg               = "rules that specify ICMP fields must set protocol to ICMP"
+	protocolAndHTTPMsg            = "rules that specify HTTP fields must set protocol to TCP or empty"
 
 	awsSubnetRE        = regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
 	invalidAWSSubnetID = "AWS subnet ID is invalid; should be 'subnet-' followed by 8 or 17 lower-case hex digits"
@@ -218,8 +219,11 @@ var (
 	uiSettingsRegexp = regexp.MustCompile(`[a-zA-Z0-9_]{1,64}$`)
 )
 
-// Validate is used to validate the supplied structure according to the
-// registered field and structure validators.
+// Validate validates the supplied structure according to registered field and
+// structure validators, plus CRD schema constraints (OpenAPI + CEL). For
+// runtime.Object values, CRD schema defaults are applied in-place before
+// validation so that omitted fields with CRD defaults are populated the same
+// way the Kubernetes API server would on admission.
 func Validate(current any) error {
 	var verr errors.ErrorValidation
 
@@ -229,11 +233,12 @@ func Validate(current any) error {
 		verr = convertError(err)
 	}
 
-	// Run CRD validation rules (OpenAPI schema constraints + CEL
-	// x-kubernetes-validations). In Kubernetes datastore mode, the API server
-	// enforces these. In etcd mode there is no API server, so we enforce them here.
+	// Apply CRD schema defaults and then run CRD validation rules (OpenAPI
+	// schema constraints + CEL x-kubernetes-validations). In Kubernetes
+	// datastore mode, the API server handles both defaulting and validation
+	// on admission. In etcd mode there is no API server, so we do both here.
 	if rObj, ok := current.(runtime.Object); ok {
-		if crdErrs := validateCRD(context.Background(), rObj, nil); len(crdErrs) > 0 {
+		if crdErrs := defaultAndValidateCRD(context.Background(), rObj, nil); len(crdErrs) > 0 {
 			for _, e := range crdErrs {
 				name := e.Field
 				if name == "" || name == "<nil>" {
@@ -1806,23 +1811,42 @@ func validateRule(structLevel validator.StructLevel) {
 
 	// If the protocol does not support ports check that the port values have not
 	// been specified.
-	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
-		if len(rule.Source.Ports) > 0 {
+	if rule.Protocol == nil {
+		if !numorstring.AllPortsAreNamed(rule.Source.Ports) {
 			structLevel.ReportError(reflect.ValueOf(rule.Source.Ports),
-				"Source.Ports", "", reason(protocolPortsMsg), "")
+				"Source.Ports", "", reason(protocolSingleOrRangePortsMsg), "")
 		}
-		if len(rule.Source.NotPorts) > 0 {
+		if !numorstring.AllPortsAreNamed(rule.Source.NotPorts) {
 			structLevel.ReportError(reflect.ValueOf(rule.Source.NotPorts),
-				"Source.NotPorts", "", reason(protocolPortsMsg), "")
+				"Source.NotPorts", "", reason(protocolSingleOrRangePortsMsg), "")
 		}
-
-		if len(rule.Destination.Ports) > 0 {
+		if !numorstring.AllPortsAreNamed(rule.Destination.Ports) {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.Ports),
-				"Destination.Ports", "", reason(protocolPortsMsg), "")
+				"Destination.Ports", "", reason(protocolSingleOrRangePortsMsg), "")
 		}
-		if len(rule.Destination.NotPorts) > 0 {
+		if !numorstring.AllPortsAreNamed(rule.Destination.NotPorts) {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts),
-				"Destination.NotPorts", "", reason(protocolPortsMsg), "")
+				"Destination.NotPorts", "", reason(protocolSingleOrRangePortsMsg), "")
+		}
+	} else { // Protocol != nil
+		if !rule.Protocol.SupportsPorts() {
+			if len(rule.Source.Ports) > 0 {
+				structLevel.ReportError(reflect.ValueOf(rule.Source.Ports),
+					"Source.Ports", "", reason(protocolPortsMsg), "")
+			}
+			if len(rule.Source.NotPorts) > 0 {
+				structLevel.ReportError(reflect.ValueOf(rule.Source.NotPorts),
+					"Source.NotPorts", "", reason(protocolPortsMsg), "")
+			}
+
+			if len(rule.Destination.Ports) > 0 {
+				structLevel.ReportError(reflect.ValueOf(rule.Destination.Ports),
+					"Destination.Ports", "", reason(protocolPortsMsg), "")
+			}
+			if len(rule.Destination.NotPorts) > 0 {
+				structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts),
+					"Destination.NotPorts", "", reason(protocolPortsMsg), "")
+			}
 		}
 	}
 

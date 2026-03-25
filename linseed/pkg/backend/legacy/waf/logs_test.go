@@ -4,7 +4,7 @@ package waf_test
 
 import (
 	"context"
-	gojson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -310,7 +309,7 @@ func TestAggregations(t *testing.T) {
 			require.NoError(t, err)
 			bytes, err := json.Marshal(src)
 			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"ips": bytes}
+			params.Aggregations = map[string]json.RawMessage{"ips": bytes}
 
 			// Use the backend to perform a query.
 			aggs, err := b.Aggregations(ctx, clusterInfo, &params)
@@ -411,7 +410,7 @@ func TestAggregations(t *testing.T) {
 			require.NoError(t, err)
 			bytes, err := json.Marshal(src)
 			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"ips": bytes}
+			params.Aggregations = map[string]json.RawMessage{"ips": bytes}
 
 			// Use the backend to perform a stats query.
 			result, err := b.Aggregations(ctx, clusterInfo, &params)

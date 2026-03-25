@@ -3,6 +3,7 @@ package authhandler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -21,12 +22,27 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 	authhandler "github.com/projectcalico/calico/queryserver/queryserver/handlers/auth"
 	"github.com/projectcalico/calico/queryserver/queryserver/handlers/query"
 )
+
+// noopPolicyActivityClient is a stub for tests that don't exercise Linseed.
+type noopPolicyActivityClient struct{}
+
+var _ lsclient.PolicyActivityInterface = (*noopPolicyActivityClient)(nil)
+
+func (n *noopPolicyActivityClient) Create(_ context.Context, _ []lsv1.PolicyActivity) (*lsv1.BulkResponse, error) {
+	return &lsv1.BulkResponse{}, nil
+}
+
+func (n *noopPolicyActivityClient) GetPolicyActivities(_ context.Context, _ *lsv1.PolicyActivityParams) (*lsv1.PolicyActivityResponse, error) {
+	return &lsv1.PolicyActivityResponse{}, nil
+}
 
 var _ = Describe("Queryserver query auth test", func() {
 	const (
@@ -60,7 +76,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		stopCh := make(chan struct{})
-		qh = query.NewQuery(client.NewQueryInterface(fakeK8sCli, c, stopCh), nil, nil)
+		qh = query.NewQuery(client.NewQueryInterface(fakeK8sCli, c, stopCh, &noopPolicyActivityClient{}), nil, nil)
 	})
 
 	It("returns a valid handler", func() {

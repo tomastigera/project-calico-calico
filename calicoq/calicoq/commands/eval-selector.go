@@ -40,9 +40,9 @@ func EvalSelector(configFile, sel string, outputFormat string) (err error) {
 
 func EvalSelectorPrint(output OutputList) {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%v:\n", output.Description))
+	fmt.Fprintf(&buf, "%v:\n", output.Description)
 	for _, endpoint := range output.Endpoints {
-		buf.WriteString(fmt.Sprintf("  %v\n", endpoint.PrintName()))
+		fmt.Fprintf(&buf, "  %v\n", endpoint.PrintName())
 	}
 	if _, err := buf.WriteTo(os.Stdout); err != nil {
 		log.Errorf("Failed to write to Stdout: %v", err)

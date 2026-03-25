@@ -3,7 +3,9 @@
 package handler
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/goldmane/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -64,16 +65,23 @@ type BulkRequestParams interface {
 		v1.PolicyActivity
 }
 
+// BulkDecodeResult holds the result of decoding a bulk NDJSON request body.
+type BulkDecodeResult[T BulkRequestParams] struct {
+	Items       []T
+	FailedCount int
+}
+
 // DecodeAndValidateBulkParams will decode and validate input parameters
-// passed on the HTTP body of a bulk request. In case the input parameters
-// are invalid or cannot be decoded, an HTTPStatusError will be returned
-func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req *http.Request) ([]T, *v1.HTTPError) {
-	var bulkParams []T
+// passed on the HTTP body of a bulk request. Malformed JSON lines are
+// skipped and counted as failures. If no valid items can be decoded,
+// an HTTPStatusError will be returned.
+func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req *http.Request) (BulkDecodeResult[T], *v1.HTTPError) {
+	var result BulkDecodeResult[T]
 
 	// Check content-type
 	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
 	if content != newlineJsonContent {
-		return bulkParams, &v1.HTTPError{
+		return result, &v1.HTTPError{
 			Status: http.StatusUnsupportedMediaType,
 			Msg:    fmt.Sprintf("Received a request with content-type (%s) that is not supported", content),
 		}
@@ -81,7 +89,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 
 	// Check body
 	if req.Body == nil {
-		return bulkParams, &v1.HTTPError{
+		return result, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    "Received a request with an empty body",
 		}
@@ -91,7 +99,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	req.Body = http.MaxBytesReader(w, req.Body, maxBulkBytes)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return bulkParams, &v1.HTTPError{
+		return result, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    err.Error(),
 		}
@@ -99,32 +107,43 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	trimBody := bytes.Trim(body, "\r\n")
-	d := json.NewDecoder(bytes.NewReader(trimBody))
-	d.DisallowUnknownFields()
-	for {
-		var input T
-		err := d.Decode(&input)
-		if err != nil {
-			if err != io.EOF {
-				logrus.WithError(err).Errorf("Failed to decode message for %s", trimBody)
-				return bulkParams, &v1.HTTPError{
-					Status: http.StatusBadRequest,
-					Msg:    "Request body contains badly-formed JSON",
-				}
-			}
-			break
+	scanner := bufio.NewScanner(bytes.NewReader(trimBody))
+	// Increase scanner buffer to handle large JSON lines (e.g., compliance snapshots
+	// containing entire resource lists). The default 64KB is too small.
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), maxBulkBytes)
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Bytes()
+		if len(bytes.TrimSpace(line)) == 0 {
+			continue
 		}
-		bulkParams = append(bulkParams, input)
+		var input T
+		d := json.NewDecoder(bytes.NewReader(line))
+		d.DisallowUnknownFields()
+		if err := d.Decode(&input); err != nil {
+			logrus.WithError(err).Warnf("Failed to decode message on line %d, skipping", lineNum)
+			result.FailedCount++
+			continue
+		}
+		result.Items = append(result.Items, input)
 	}
 
-	if len(bulkParams) == 0 {
-		return bulkParams, &v1.HTTPError{
+	if err := scanner.Err(); err != nil {
+		return result, &v1.HTTPError{
+			Status: http.StatusBadRequest,
+			Msg:    fmt.Sprintf("Error reading request body: %s", err.Error()),
+		}
+	}
+
+	if len(result.Items) == 0 {
+		return result, &v1.HTTPError{
 			Status: http.StatusBadRequest,
 			Msg:    "Request body contains badly-formed JSON",
 		}
 	}
 
-	return bulkParams, nil
+	return result, nil
 }
 
 // Timeout gets the user-provided timeout from the request, or default timeout
