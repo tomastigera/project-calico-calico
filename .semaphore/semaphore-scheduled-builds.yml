@@ -780,7 +780,7 @@ blocks:
             minutes: 60
           commands:
             # We need to prune the pre-loaded images to ensure we have enough /var/lib/docker disk space to run the e2e tests.
-            - sudo docker system prune -af
+            - docker system prune -af
             - .semaphore/run-and-monitor e2e-test.log make e2e-test
           env_vars:
             - name: CLUSTER_ROUTING
@@ -820,6 +820,8 @@ blocks:
           execution_time_limit:
             minutes: 60
           commands:
+            # We need to prune the pre-loaded images to ensure we have enough /var/lib/docker disk space to run the e2e tests.
+            - docker system prune -af
             - .semaphore/run-and-monitor e2e-test-felix-routing.log make e2e-test
           env_vars:
             - name: CLUSTER_ROUTING
