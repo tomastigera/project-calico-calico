@@ -129,7 +129,7 @@ static CALI_BPF_INLINE void *dns_load_bytes(struct cali_tc_ctx *ctx, struct dns_
 	return NULL;
 }
 
-static CALI_BPF_INLINE int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
+static CALI_BPF_NOINLINE int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
 {
 	int size = ctx->skb->len - off;
 
@@ -166,7 +166,7 @@ static CALI_BPF_INLINE int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scr
 	return i; /* returns how many bytes were skipped */
 }
 
-static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
+static CALI_BPF_NOINLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
 {
 	int size = ctx->skb->len - off;
 
@@ -334,7 +334,7 @@ failed:
 	return 1;
 }
 
-static CALI_BPF_INLINE void dns_get_lpm_key(struct dns_scratch *scratch)
+static CALI_BPF_NOINLINE void dns_get_lpm_key(struct dns_scratch *scratch)
 {
 	unsigned char *name = scratch->name;
 	unsigned char *key = scratch->lpm_key.rev_name;
