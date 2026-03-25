@@ -396,7 +396,7 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 		return nil
 	}, 120*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
-	Expect(len(flowLogs) > 0).To(BeTrue())
+	Expect(flowLogs).NotTo(BeEmpty())
 	for _, fl := range flowLogs {
 		policies := fl.Policies.EnforcedPolicies
 

@@ -35,10 +35,11 @@ var _ = describe.CalicoDescribe(
 	describe.WithTeam(describe.EV),
 	describe.WithFeature("DNS-Policy"),
 	describe.WithCategory(describe.Policy),
+	describe.WithSerial(),
 	"DNS policy",
 	func() {
 		var (
-			from, namespace                 string
+			namespace                       string
 			blockedService, externalService string
 			runOnWindows                    bool
 		)
@@ -91,7 +92,7 @@ var _ = describe.CalicoDescribe(
 			JustBeforeEach(func() {
 				runOnWindows = windows.ClusterIsWindows()
 
-				from = "workload"
+				By("From workload")
 				namespace = f.Namespace.Name
 				var err error
 				cli, err = cclient.New(f.ClientConfig())
@@ -130,17 +131,12 @@ var _ = describe.CalicoDescribe(
 				err = cli.Update(context.TODO(), fc)
 				Expect(err).NotTo(HaveOccurred())
 
-				if runOnWindows {
-					// Wait for calico-node-windows pods to be Ready, in case a
-					// prior test triggered a Felix restart that is still in progress.
-					// Sleep first to allow any in-flight restart to begin.
-					By("Waiting for calico-node-windows pods to be ready")
-					time.Sleep(10 * time.Second)
-					e2ekubectl.RunKubectlOrDie("calico-system", "wait",
-						"--for=condition=Ready",
-						"pod", "-l", "k8s-app=calico-node-windows",
-						"--timeout=120s")
-				}
+				ctx := context.Background()
+				var originalFC *v3.FelixConfiguration
+				Eventually(func() error {
+					originalFC = v3.NewFelixConfiguration()
+					return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 				DeferCleanup(func() {
 					if CurrentSpecReport().Failed() && runOnWindows {
@@ -167,18 +163,27 @@ var _ = describe.CalicoDescribe(
 					np := v3.NewNetworkPolicy()
 					np.Name = "allow-egress-to-domains"
 					np.Namespace = namespace
-					Expect(cli.Delete(ctx, np)).NotTo(HaveOccurred())
+					err = cli.Delete(ctx, np)
+					if err != nil {
+						logrus.WithError(err).Warnf("Error deleting allow egress network policy")
+					}
 
 					// Possibly deleting a non-existent NetworkSet, as it is not created in every test.
 					ns := v3.NewNetworkSet()
 					ns.Name = "allow-egress-to-domains"
 					ns.Namespace = namespace
-					_ = cli.Delete(ctx, ns)
+					err = cli.Delete(ctx, ns)
+					if err != nil {
+						logrus.WithError(err).Warnf("Error deleting allow egress NetworkSet")
+					}
 
 					denyNP := v3.NewNetworkPolicy()
 					denyNP.Name = "deny-all-egress-except-dns"
 					denyNP.Namespace = namespace
-					Expect(cli.Delete(ctx, denyNP)).NotTo(HaveOccurred())
+					err = cli.Delete(ctx, denyNP)
+					if err != nil {
+						logrus.WithError(err).Warnf("Error deleting deny egress network policy")
+					}
 				})
 			})
 
@@ -199,7 +204,6 @@ var _ = describe.CalicoDescribe(
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
-					time.Sleep(3 * time.Second)
 
 					allowPolicy := allowEgressToDomainsWorkloadNP(namespace, allowedDomains)
 					testDNSPolicy(cli, []ctrlclient.Object{allowPolicy}, externalService, blockedService, nil)
@@ -224,7 +228,6 @@ var _ = describe.CalicoDescribe(
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
-					time.Sleep(3 * time.Second)
 
 					allowPolicy := allowEgressToDomainsWorkloadNP(namespace, allowedDomains)
 					testDNSPolicy(cli, []ctrlclient.Object{allowPolicy}, externalService, blockedService, nil)
@@ -249,7 +252,6 @@ var _ = describe.CalicoDescribe(
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
-					time.Sleep(3 * time.Second)
 
 					netSet, allowPolicy := allowEgressToDomainsWorkloadNS(namespace, allowedDomains)
 					testDNSPolicy(cli, []ctrlclient.Object{netSet, allowPolicy}, externalService, blockedService, nil)
@@ -274,7 +276,6 @@ var _ = describe.CalicoDescribe(
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
-					time.Sleep(3 * time.Second)
 
 					netSet, allowPolicy := allowEgressToDomainsWorkloadNS(namespace, allowedDomains)
 					testDNSPolicy(cli, []ctrlclient.Object{netSet, allowPolicy}, externalService, blockedService, nil)
@@ -293,7 +294,7 @@ var _ = describe.CalicoDescribe(
 					// windows node does not support host endpoints and host networked pod.
 					Skip("Test is not possible with windows nodes")
 				}
-				from = "host"
+				By("From host")
 				namespace = f.Namespace.Name
 				var err error
 				cli, err = cclient.New(f.ClientConfig())
@@ -511,11 +512,6 @@ var _ = describe.CalicoDescribe(
 				})
 			})
 		})
-
-		// Suppress unused variable warnings for 'from'. It is used to document
-		// the test context (workload vs host) even though the Go structs don't
-		// reference it directly.
-		_ = from
 	})
 
 // allowEgressToDomainsWorkloadNP returns a namespaced NetworkPolicy that allows

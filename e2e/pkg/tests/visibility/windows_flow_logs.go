@@ -41,13 +41,14 @@ var _ = describe.CalicoDescribe(
 	"windows flow logs",
 	func() {
 		var (
-			f         = utils.NewDefaultFramework("windows-flowlogs")
-			cli       client.Client
-			esclient  *elastic.Client
-			checker   conncheck.ConnectionTester
-			clientPod *conncheck.Client
-			server    *conncheck.Server
-			pf        *esutil.PortForwardInfo
+			f          = utils.NewDefaultFramework("windows-flowlogs")
+			cli        client.Client
+			esclient   *elastic.Client
+			checker    conncheck.ConnectionTester
+			clientPod  *conncheck.Client
+			server     *conncheck.Server
+			pf         *esutil.PortForwardInfo
+			originalFC *v3.FelixConfiguration
 		)
 
 		BeforeEach(func() {
@@ -68,7 +69,6 @@ var _ = describe.CalicoDescribe(
 			// Save original Felix config and apply test-specific settings.
 			// Use Eventually to retry on conflict (the felixconfig may be modified
 			// by other controllers between our Get and Update).
-			var originalFC *v3.FelixConfiguration
 			Eventually(func() error {
 				originalFC = v3.NewFelixConfiguration()
 				return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
@@ -153,10 +153,10 @@ var _ = describe.CalicoDescribe(
 
 				By("checking flow log file on client node")
 				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
-					clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(Succeed())
 				By("checking flow log file on server node")
 				Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
-					server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+					server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(Succeed())
 
 				By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 					validateFlowLogs(esclient,
@@ -219,7 +219,7 @@ var _ = describe.CalicoDescribe(
 
 					By("checking flow log file on client node")
 					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
-						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(Succeed())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
@@ -274,10 +274,10 @@ var _ = describe.CalicoDescribe(
 
 					By("checking flow log file on client node")
 					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
-						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+						clientPod.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(Succeed())
 					By("checking flow log file on server node")
 					Eventually(testFlowLogsPresent, 120*time.Second, 10*time.Second).WithArguments(
-						server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(BeTrue())
+						server.Pod().Spec.NodeName, f.Namespace.Name, clientPod.Pod().Status.PodIP, server.Pod().Status.PodIP).Should(Succeed())
 
 					By("validating flow logs pushed to elasticsearch where reporter=src", func() {
 						validateFlowLogs(esclient,
@@ -320,7 +320,7 @@ func windowsFlowLogQuery(namespace, clientBaseName, serverBaseName string, targe
 // and searchStr2 exist in the flows.log file on the given node. Reads only the tail of the file
 // to avoid transferring the entire flows.log (which can be 8MB+). Splits on "start_time" to
 // handle multi-line flow log entries where source and dest IPs may be on different lines.
-func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) bool {
+func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) error {
 	// Find the calico-node-windows pod on this node.
 	getPodArgs := []string{
 		"get", "pod",
@@ -332,8 +332,7 @@ func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) boo
 		WithTimeout(time.After(10 * time.Second)).
 		Exec()
 	if err != nil {
-		logrus.WithError(err).Warnf("Failed to find calico-node-windows pod on %s", nodeName)
-		return false
+		return fmt.Errorf("Failed to find calico-node-windows pod on %s: %w", nodeName, err)
 	}
 
 	// Read only the last 500 lines to avoid transferring the full file.
@@ -346,8 +345,7 @@ func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) boo
 		WithTimeout(time.After(30 * time.Second)).
 		Exec()
 	if err != nil {
-		logrus.WithError(err).Warnf("Failed to get flow logs from node %s", nodeName)
-		return false
+		return fmt.Errorf("Failed to get flow logs from node %s: %w", nodeName, err)
 	}
 
 	// Split on "start_time" to get per-entry chunks, since flow log entries may
@@ -355,8 +353,8 @@ func testFlowLogsPresent(nodeName, namespace, searchStr1, searchStr2 string) boo
 	for _, entry := range strings.Split(output, "start_time") {
 		if strings.Contains(entry, namespace) && strings.Contains(entry, searchStr1) && strings.Contains(entry, searchStr2) {
 			logrus.Infof("Found flow log entry on %s containing %q, %q and %q", nodeName, namespace, searchStr1, searchStr2)
-			return true
+			return nil
 		}
 	}
-	return false
+	return fmt.Errorf("no flow log entry on %s matching namespace=%q, src=%q, dst=%q", nodeName, namespace, searchStr1, searchStr2)
 }
