@@ -4,7 +4,6 @@ package policy
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -15,16 +14,15 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
 	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/e2e/pkg/describe"
 	"github.com/projectcalico/calico/e2e/pkg/utils"
 	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
-	"github.com/projectcalico/calico/e2e/pkg/utils/images"
+	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
 	"github.com/projectcalico/calico/e2e/pkg/utils/windows"
 )
 
@@ -43,6 +41,8 @@ var _ = describe.CalicoDescribe(
 			namespace                       string
 			blockedService, externalService string
 			runOnWindows                    bool
+			checker                         conncheck.ConnectionTester
+			testClient                      *conncheck.Client
 		)
 
 		f := utils.NewDefaultFramework("calico-policy")
@@ -52,7 +52,9 @@ var _ = describe.CalicoDescribe(
 			ctx := context.TODO()
 
 			By("Checking... Cannot reach external service")
-			Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
+			checker.ExpectFailure(testClient, conncheck.NewDomainTarget(external))
+			checker.Execute()
+			checker.ResetExpectations()
 
 			By("Allowing egress to external service domains")
 			for _, obj := range allowObjs {
@@ -71,18 +73,21 @@ var _ = describe.CalicoDescribe(
 				// intercept the DNS response (it may miss the first one if it hasn't
 				// finished processing the dnsCacheEpoch or policy updates yet).
 				Eventually(func() error {
-					e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
-						"ipconfig", "/flushdns")
-					e2ekubectl.RunKubectl(namespace, "exec", "test-client", "--",
-						"nslookup", external)
-					return curlServiceFromNamespace(external, namespace, runOnWindows)()
+					conncheck.ExecInPod(testClient.Pod(), "powershell.exe", "-Command", "ipconfig /flushdns")
+					conncheck.ExecInPod(testClient.Pod(), "powershell.exe", "-Command", "nslookup "+external)
+					_, err := checker.Connect(testClient, conncheck.NewDomainTarget(external))
+					return err
 				}, "30s", "3s").ShouldNot(HaveOccurred())
 			} else {
-				Eventually(curlServiceFromNamespace(external, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+				checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(external))
+				checker.Execute()
+				checker.ResetExpectations()
 			}
 
 			By("Checking... Cannot reach blocked service")
-			Eventually(curlServiceFromNamespace(blocked, namespace, runOnWindows), "30s", "3s").Should(HaveOccurred())
+			checker.ExpectFailure(testClient, conncheck.NewDomainTarget(blocked))
+			checker.Execute()
+			checker.ResetExpectations()
 		}
 
 		Context("[RunsOnWindows] Test DNS policy of a workload. ", func() {
@@ -101,11 +106,11 @@ var _ = describe.CalicoDescribe(
 				cli, err = cclient.New(f.ClientConfig())
 				Expect(err).NotTo(HaveOccurred())
 
-				By("Starting a client pod that can curl")
-				startCurlPod(namespace, runOnWindows)
-
-				By("Waiting until service is ready")
-				waitForClient(namespace, runOnWindows)
+				By("Starting a client pod")
+				checker = conncheck.NewConnectionTester(f)
+				testClient = conncheck.NewClient("test-client", f.Namespace)
+				checker.AddClient(testClient)
+				checker.Deploy()
 
 				By("Making any needed FelixConfiguration updates")
 				ctx := context.TODO()
@@ -210,7 +215,9 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"example.com", "www.example.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+					checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(externalService))
+					checker.Execute()
+					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -233,7 +240,9 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"*.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+					checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(externalService))
+					checker.Execute()
+					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -256,7 +265,9 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"example.com", "www.example.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+					checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(externalService))
+					checker.Execute()
+					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -279,7 +290,9 @@ var _ = describe.CalicoDescribe(
 					allowedDomains := []string{"*.com"}
 
 					By("Checking... Initially, connectivity to external service succeeds")
-					Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+					checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(externalService))
+					checker.Execute()
+					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
 					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
@@ -309,11 +322,15 @@ var _ = describe.CalicoDescribe(
 				cli, err = cclient.New(f.ClientConfig())
 				Expect(err).NotTo(HaveOccurred())
 
-				By("Starting a client pod that can curl")
-				startCurlPodHost(namespace)
-
-				By("Waiting until service is ready")
-				waitForClient(namespace, runOnWindows)
+				By("Starting a host-networked client pod")
+				checker = conncheck.NewConnectionTester(f)
+				testClient = conncheck.NewClient("test-client", f.Namespace,
+					conncheck.WithClientCustomizer(func(pod *v1.Pod) {
+						pod.Spec.HostNetwork = true
+					}),
+				)
+				checker.AddClient(testClient)
+				checker.Deploy()
 
 				By("Setting trusted servers")
 				fc := v3.NewFelixConfiguration()
@@ -339,12 +356,8 @@ var _ = describe.CalicoDescribe(
 					logrus.Infof("Old DNS trusted servers are %v", *oldDNSTrustedServers)
 					newDNSTrustedServers = append(newDNSTrustedServers, (*oldDNSTrustedServers)...)
 				}
-				resolvConf := e2ekubectl.RunKubectlOrDie(namespace, "exec",
-					"test-client",
-					"--",
-					"cat",
-					"/etc/resolv.conf",
-				)
+				resolvConf, err := conncheck.ExecInPod(testClient.Pod(), "sh", "-c", "cat /etc/resolv.conf")
+				Expect(err).NotTo(HaveOccurred())
 				for _, line := range strings.Split(resolvConf, "\n") {
 					if strings.HasPrefix(line, "nameserver") {
 						nameserver := strings.TrimSpace(strings.TrimPrefix(line, "nameserver"))
@@ -397,7 +410,9 @@ var _ = describe.CalicoDescribe(
 				ctx := context.TODO()
 
 				By("Checking... Initially, connectivity to external service succeeds")
-				Eventually(curlServiceFromNamespace(externalService, namespace, runOnWindows), "30s", "3s").ShouldNot(HaveOccurred())
+				checker.ExpectSuccess(testClient, conncheck.NewDomainTarget(externalService))
+				checker.Execute()
+				checker.ResetExpectations()
 
 				// First configure allow policy to ensure that host endpoints do not
 				// block access to and from the Kubernetes API.
@@ -421,14 +436,8 @@ var _ = describe.CalicoDescribe(
 					Expect(cli.Delete(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
 				})
 
-				// Get the pod to find out its nodeName, as that information isn't available until
-				// it is running.
-				podCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				DeferCleanup(cancel)
-				pod, err := f.ClientSet.CoreV1().Pods(namespace).Get(podCtx, "test-client", metav1.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-
 				// Now create the host endpoint.
+				pod := testClient.Pod()
 				time.Sleep(2 * time.Second)
 				hep := newHostEndpoint(pod.Spec.NodeName, pod.Status.HostIP)
 				logrus.Infof("Creating HEP: %s", hep.Name)
@@ -757,91 +766,3 @@ func newHostEndpoint(nodeName, ip string) *v3.HostEndpoint {
 	return hep
 }
 
-func curlServiceFromNamespace(service, namespace string, runOnWindows bool) func() error {
-	return func() error {
-		if runOnWindows {
-			out, err := e2ekubectl.RunKubectl(namespace, "exec",
-				"test-client",
-				"--",
-				"powershell.exe",
-				"-Command",
-				"curl",
-				"-TimeoutSec 3",
-				"-UseBasicParsing",
-				service)
-			logrus.Infof("curl output:\n%v", out)
-			return err
-		}
-		out, stderr, err := e2ekubectl.RunKubectlWithFullOutput(namespace, "exec",
-			"test-client",
-			"--",
-			"curl",
-			"--connect-timeout", "3",
-			"-i",
-			"-L",
-			"-v",
-			service)
-		logrus.Infof("curl output:\n%v", out)
-		logrus.Infof("stderr: %q", stderr)
-		return err
-	}
-}
-
-func waitForClient(namespace string, runOnWindows bool) {
-	e2ekubectl.RunKubectlOrDie(namespace, "wait",
-		"--for=condition=ready",
-		"pod/test-client",
-		"--timeout=3m")
-	if !runOnWindows {
-		// Check that we can really exec into the client pod.  (Experience in other Linux
-		// testing setups indicates there is a window after a pod is reported as ready where
-		// it still isn't possible to successfully exec into it.)
-		//
-		// I don't know if the same problem exists on Windows.  If it does, we can add a
-		// similar test here for the `runOnWindows` case.
-		//
-		// The 200s timeout here is huge - but on AKS we see the first `kubectl exec`
-		// attempt, after a pod is reportedly ready, taking 130s before failing with a
-		// connect timeout!  Assuming that a second attempt would then work, we need a
-		// timeout that is clearly larger than 130s.
-		By("Check that we can exec into the client pod")
-		Eventually(func() error {
-			stdout, stderr, err := e2ekubectl.RunKubectlWithFullOutput(namespace, "exec",
-				"test-client",
-				"--",
-				"cat",
-				"/etc/resolv.conf",
-			)
-			logrus.Infof("stdout: %q", stdout)
-			logrus.Infof("stderr: %q", stderr)
-			return err
-		}, "200s", "3s").ShouldNot(HaveOccurred())
-	}
-}
-
-func startCurlPod(namespace string, runOnWindows bool) {
-	if runOnWindows {
-		imageURL := images.WindowsClientImage()
-		e2ekubectl.RunKubectlOrDie(namespace, "run",
-			"test-client",
-			"--image="+imageURL,
-			`--overrides={"spec": {"nodeSelector": {"kubernetes.io/os": "windows"}}}`,
-			"--",
-			"powershell.exe",
-			"-Command",
-			"Start-Sleep",
-			"9999")
-		return
-	}
-	e2ekubectl.RunKubectlOrDie(namespace, "run",
-		"test-client",
-		"--image=laurenceman/alpine",
-		`--overrides={"spec": {"nodeSelector": {"kubernetes.io/os": "linux"}}}`)
-}
-
-func startCurlPodHost(namespace string) {
-	e2ekubectl.RunKubectlOrDie(namespace, "run",
-		"test-client",
-		"--image=laurenceman/alpine",
-		fmt.Sprintf(`--overrides={"apiVersion": "v1", "spec": {"hostNetwork": true}}`))
-}
