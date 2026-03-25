@@ -162,8 +162,8 @@ func TestLinseedCollectionClientDNS(t *testing.T) {
 		require.Equal(t, result.QueryResult{
 			Hits: 22,
 			Documents: []result.QueryResultDocument{
-				{Content: dnsLogDocument{ClientIP: "0.0.0.0", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
-				{Content: dnsLogDocument{ClientIP: "1.2.3.4", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
+				{Content: &dnsLogDocument{ClientIP: "0.0.0.0", DNSLog: dnsLogs[0]}, Timestamp: time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)},
+				{Content: &dnsLogDocument{ClientIP: "1.2.3.4", DNSLog: dnsLogs[1]}, Timestamp: time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)},
 			},
 		}, queryResult)
 	})

@@ -430,10 +430,11 @@ blocks:
       jobs:
         - name: Check language/Dockerfiles
           commands:
-            # Both of these are very quick grep checks so we combine them into one job.
+            # These are very quick grep checks so we combine them into one job.
             - make check-language || true # Enterprise hasn't been cleaned up yet
             - make check-dockerfiles
             - make check-gotchas
+            - make check-mockery-config
   - name: Check protobufs
     run:
       when: >-
@@ -779,7 +780,7 @@ blocks:
             minutes: 60
           commands:
             # We need to prune the pre-loaded images to ensure we have enough /var/lib/docker disk space to run the e2e tests.
-            - sudo docker system prune -af
+            - docker system prune -af
             - .semaphore/run-and-monitor e2e-test.log make e2e-test
           env_vars:
             - name: CLUSTER_ROUTING
@@ -819,6 +820,8 @@ blocks:
           execution_time_limit:
             minutes: 60
           commands:
+            # We need to prune the pre-loaded images to ensure we have enough /var/lib/docker disk space to run the e2e tests.
+            - docker system prune -af
             - .semaphore/run-and-monitor e2e-test-felix-routing.log make e2e-test
           env_vars:
             - name: CLUSTER_ROUTING

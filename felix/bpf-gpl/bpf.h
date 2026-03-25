@@ -19,6 +19,7 @@
  * assume it exists!
  */
 #define CALI_BPF_INLINE inline __attribute__((always_inline))
+#define CALI_BPF_NOINLINE __attribute__((noinline))
 
 #include "globals.h"
 

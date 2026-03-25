@@ -1,0 +1,23 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index:
+    interfaces:
+      Helper:
+  github.com/projectcalico/calico/linseed/pkg/backend/api:
+    interfaces:
+      FlowBackend:
+      FlowLogBackend:
+      L7FlowBackend:
+      L7LogBackend:
+      DNSFlowBackend:
+      DNSLogBackend:
+      EventsBackend:
+      AuditBackend:
+      BGPBackend:
+      ProcessBackend:
+      WAFBackend:
+      RuntimeBackend:
+      BenchmarksBackend:
+      ReportsBackend:
+      SnapshotsBackend:

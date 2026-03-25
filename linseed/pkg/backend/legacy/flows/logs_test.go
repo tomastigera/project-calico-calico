@@ -4,7 +4,7 @@ package flows_test
 
 import (
 	"context"
-	gojson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"testing"
@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -1076,7 +1075,7 @@ func TestAggregations(t *testing.T) {
 					require.NoError(t, err)
 					bytes, err := json.Marshal(src)
 					require.NoError(t, err)
-					params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+					params.Aggregations = map[string]json.RawMessage{"count": bytes}
 
 					// Use the backend to perform a query.
 					aggs, err := flb.Aggregations(ctx, clusterInfo, &params)
@@ -1154,7 +1153,7 @@ func TestAggregations(t *testing.T) {
 			require.NoError(t, err)
 			bytes, err := json.Marshal(src)
 			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+			params.Aggregations = map[string]json.RawMessage{"count": bytes}
 
 			// Use the backend to perform a stats query.
 			result, err := flb.Aggregations(ctx, clusterInfo, &params)

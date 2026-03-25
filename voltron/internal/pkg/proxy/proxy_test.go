@@ -73,7 +73,10 @@ var _ = Describe("Proxy", func() {
 			p.ServeHTTP(w, r)
 
 			res := w.Result()
-			Expect(res.StatusCode).To(Equal(301))
+			// Go changed ServeMux trailing-slash redirects from 301 to 307,
+			// gated by the go directive in go.mod. Our bump from go 1.25 to
+			// go 1.26 activated this behavior.
+			Expect(res.StatusCode).To(Equal(http.StatusTemporaryRedirect))
 			Expect(res.Header.Get("Location")).To(Equal("/path/"))
 		})
 

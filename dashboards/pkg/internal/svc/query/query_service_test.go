@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -29,7 +30,6 @@ import (
 	"github.com/projectcalico/calico/dashboards/pkg/internal/repository/linseed"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/security"
 	"github.com/projectcalico/calico/dashboards/pkg/internal/svc/managedclusters"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"

@@ -3,7 +3,7 @@
 package v1
 
 import (
-	gojson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/apis/audit"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 type Kind string
@@ -98,8 +96,8 @@ func (a *AuditLogParams) GetSortBy() []SearchRequestSortBy {
 type AuditLogAggregationParams struct {
 	// Inherit all the normal audit log selection parameters.
 	AuditLogParams `json:",inline"`
-	Aggregations   map[string]gojson.RawMessage `json:"aggregations"`
-	NumBuckets     int                          `json:"num_buckets"`
+	Aggregations   map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets     int                        `json:"num_buckets"`
 }
 
 // ObjectReference is the set of fields we support in query requests
@@ -180,11 +178,7 @@ type internalObjectReference struct {
 	Subresource     string    `json:"subresource,omitempty"`
 }
 
-func (auditLog *AuditLog) MarshalJSON() ([]byte, error) {
-	if auditLog == nil {
-		return []byte{}, fmt.Errorf("cannot marshal nil value into JSON")
-	}
-
+func (auditLog AuditLog) MarshalJSON() ([]byte, error) {
 	// Create an internal representation of the K8S event
 	// We are doing this because K8S Audit event is currently
 	// stored in ES with camel case for fields instead of

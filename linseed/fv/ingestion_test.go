@@ -4,6 +4,7 @@ package fv_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/goldmane/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
@@ -181,7 +181,7 @@ func TestFV_DNSIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &log)
-			logStr, err := json.Marshal(log)
+			logStr, err := json.Marshal(&log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
 		}

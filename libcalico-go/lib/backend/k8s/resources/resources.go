@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"encoding/json"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -25,7 +26,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 const (

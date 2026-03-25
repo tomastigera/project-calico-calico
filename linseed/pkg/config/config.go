@@ -3,13 +3,12 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 const (

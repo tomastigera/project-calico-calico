@@ -217,7 +217,7 @@ func EvalPolicySelectorsPrint(output OutputList) {
 		tierPrefix = "Tier \"" + output.Tier + "\" "
 	}
 
-	buf.WriteString(fmt.Sprintf("%vPolicy \"%v\" applies to these endpoints:\n", tierPrefix, output.InputName))
+	fmt.Fprintf(&buf, "%vPolicy \"%v\" applies to these endpoints:\n", tierPrefix, output.InputName)
 	for _, epp := range output.ApplyToEndpoints {
 		appliesToEndpointString := fmt.Sprintf("  Workload endpoint %v/%v/%v/%v\n", epp.Node, epp.Orchestrator, epp.Workload, epp.Name)
 		if epp.Selector != "" {
@@ -227,7 +227,7 @@ func EvalPolicySelectorsPrint(output OutputList) {
 	}
 
 	if len(output.MatchingEndpoints) > 0 {
-		buf.WriteString(fmt.Sprintf("\nEndpoints matching %vPolicy \"%v\" rules:\n", tierPrefix, output.InputName))
+		fmt.Fprintf(&buf, "\nEndpoints matching %vPolicy \"%v\" rules:\n", tierPrefix, output.InputName)
 		for _, epp := range output.MatchingEndpoints {
 			cluster := ""
 			if epp.Cluster != "" {
@@ -239,7 +239,7 @@ func EvalPolicySelectorsPrint(output OutputList) {
 				if rp.Selector != "" {
 					sel = fmt.Sprintf("%v rule %v %v match; selector \"%v\"", rp.Direction, rp.Order, rp.SelectorType, rp.Selector)
 				}
-				buf.WriteString(fmt.Sprintf("%v    %v\n", endpointPrefix, sel))
+				fmt.Fprintf(&buf, "%v    %v\n", endpointPrefix, sel)
 				endpointPrefix = ""
 			}
 		}

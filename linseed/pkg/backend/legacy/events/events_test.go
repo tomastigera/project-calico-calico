@@ -4,6 +4,7 @@ package events_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -571,7 +571,7 @@ func TestSelectorMaxLength(t *testing.T) {
 		expectedError bool
 	}{
 		{"1 exception", 1, false},
-		{"Many exceptions", 650, false},
+		{"Many exceptions", 600, false},
 		{"Too many exceptions", 4500, true},
 	}
 

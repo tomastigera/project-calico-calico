@@ -52,13 +52,15 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		mockPrometheusServiceMux := http.NewServeMux()
 		mockPrometheusServiceMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			requestParam := struct {
-				Host   string
-				Method string
-				Path   string
+				Host           string
+				Method         string
+				Path           string
+				XForwardedHost string
 			}{
 				r.Host,
 				r.Method,
 				r.URL.Path,
+				r.Header.Get("X-Forwarded-Host"),
 			}
 
 			err := json.NewEncoder(w).Encode(requestParam)
@@ -114,7 +116,9 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(data["Method"]).To(Equal(req.Method))
 		Expect(data["Path"]).To(Equal(req.URL.Path))
-		// arrived from the proxy
-		Expect(data["Host"]).To(Equal(proxyServicesUrl))
+		// SetURL sets the Host header to the upstream target
+		Expect(data["Host"]).To(Equal(mockPrometheuServicesUrl))
+		// The original proxy host is preserved in X-Forwarded-Host
+		Expect(data["XForwardedHost"]).To(Equal(proxyServicesUrl))
 	})
 })

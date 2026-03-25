@@ -136,9 +136,9 @@ func (s *GraphSelectorConstructor) selectorString(nested bool) string {
 		writeKey(s.key)
 		sb.WriteString(string(s.operator))
 		if _, ok := s.value.(string); ok {
-			sb.WriteString(fmt.Sprintf("\"%s\"", s.value))
+			fmt.Fprintf(&sb, "\"%s\"", s.value)
 		} else {
-			sb.WriteString(fmt.Sprintf("%v", s.value))
+			fmt.Fprintf(&sb, "%v", s.value)
 		}
 	case v1.OpIn:
 		if nested {

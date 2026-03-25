@@ -5,7 +5,7 @@ package v1
 import (
 	"bytes"
 	"encoding/base64"
-	gojson "encoding/json"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -20,7 +20,6 @@ import (
 	"golang.org/x/net/idna"
 
 	"github.com/projectcalico/calico/lib/std/uniquelabels"
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
 
 // DNSLogParams define querying parameters to retrieve DNS logs
@@ -51,8 +50,8 @@ type DomainMatch struct {
 type DNSAggregationParams struct {
 	// Inherit all the normal DNS log selection parameters.
 	DNSLogParams `json:",inline"`
-	Aggregations map[string]gojson.RawMessage `json:"aggregations"`
-	NumBuckets   int                          `json:"num_buckets"`
+	Aggregations map[string]json.RawMessage `json:"aggregations"`
+	NumBuckets   int                        `json:"num_buckets"`
 }
 
 type DNSLog struct {
@@ -176,15 +175,12 @@ func (d *DNSResponseCode) String() string {
 	return fmt.Sprintf("#%d", *d)
 }
 
-func (d *DNSResponseCode) MarshalJSON() ([]byte, error) {
-	if d == nil {
-		return []byte{}, errors.New("cannot marshal nil value into JSON")
-	}
-	if res, ok := dnsResponseCodeTable[*d]; ok {
+func (d DNSResponseCode) MarshalJSON() ([]byte, error) {
+	if res, ok := dnsResponseCodeTable[d]; ok {
 		return json.Marshal(&res)
 	}
 
-	return json.Marshal(fmt.Sprintf("#%d", *d))
+	return json.Marshal(fmt.Sprintf("#%d", d))
 }
 
 func (d *DNSResponseCode) UnmarshalJSON(data []byte) error {
@@ -289,13 +285,9 @@ func (d *DNSClass) String() string {
 	return fmt.Sprintf("#%d", *d)
 }
 
-func (d *DNSClass) MarshalJSON() ([]byte, error) {
-	if d != nil {
-		s := d.String()
-		return json.Marshal(&s)
-	}
-
-	return []byte{}, errors.New("cannot marshal nil value into JSON")
+func (d DNSClass) MarshalJSON() ([]byte, error) {
+	s := d.String()
+	return json.Marshal(&s)
 }
 
 func (d *DNSClass) UnmarshalJSON(data []byte) error {
@@ -362,13 +354,9 @@ func (d *DNSType) String() string {
 	return fmt.Sprintf("#%d", *d)
 }
 
-func (d *DNSType) MarshalJSON() ([]byte, error) {
-	if d != nil {
-		s := d.String()
-		return json.Marshal(&s)
-	}
-
-	return []byte{}, errors.New("cannot marshal nil value into JSON")
+func (d DNSType) MarshalJSON() ([]byte, error) {
+	s := d.String()
+	return json.Marshal(&s)
 }
 
 func (d *DNSType) UnmarshalJSON(data []byte) error {
@@ -500,12 +488,12 @@ type dnsRRSetsEncoded struct {
 	RData DNSRDatas `json:"rdata"`
 }
 
-func (d *DNSRRSets) MarshalJSON() ([]byte, error) {
+func (d DNSRRSets) MarshalJSON() ([]byte, error) {
 	if d == nil {
-		return []byte{}, errors.New("cannot marshal nil value into JSON")
+		return []byte("null"), nil
 	}
 	var r []dnsRRSetsEncoded
-	for name, rdatas := range *d {
+	for name, rdatas := range d {
 		r = append(r, dnsRRSetsEncoded{name.encodeDNSName(), rdatas})
 	}
 
@@ -640,16 +628,12 @@ func (d *DNSRData) IDNAString() string {
 	}
 }
 
-func (d *DNSRData) MarshalJSON() ([]byte, error) {
-	if d != nil {
-		if d.Decoded == nil {
-			return []byte{}, nil
-		}
-
-		return json.Marshal(d.IDNAString())
+func (d DNSRData) MarshalJSON() ([]byte, error) {
+	if d.Decoded == nil {
+		return []byte(`""`), nil
 	}
 
-	return []byte{}, errors.New("cannot marshal nil value into JSON")
+	return json.Marshal(d.IDNAString())
 }
 
 func (d *DNSRData) UnmarshalJSON(data []byte) error {
@@ -878,11 +862,7 @@ type dnsServerEncoded struct {
 	Labels *uniquelabels.Map `json:"labels,omitempty"`
 }
 
-func (d *DNSServer) MarshalJSON() ([]byte, error) {
-	if d == nil {
-		return []byte{}, errors.New("cannot marshal nil value into JSON")
-	}
-
+func (d DNSServer) MarshalJSON() ([]byte, error) {
 	ip := d.IP.String()
 	if ip == "<nil>" {
 		ip = ""

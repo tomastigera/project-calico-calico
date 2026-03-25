@@ -1,0 +1,10 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/packetcapture/pkg/cache:
+    interfaces:
+      ClientCache:
+  github.com/projectcalico/calico/packetcapture/pkg/capture:
+    interfaces:
+      FileCommands:
+      K8sCommands:

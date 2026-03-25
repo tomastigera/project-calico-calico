@@ -1,0 +1,6 @@
+inpackage: True
+filename: "mock_{{.InterfaceName}}.go"
+packages:
+  github.com/projectcalico/calico/queryserver/pkg/querycache/client:
+    interfaces:
+      QueryInterface:

@@ -3,7 +3,7 @@
 package fv_test
 
 import (
-	goJson "encoding/json"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -237,7 +237,7 @@ func TestFV_Events(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check that we get 2 values for type
-		formattedJson, e := goJson.MarshalIndent(resp, "", "  ")
+		formattedJson, e := json.MarshalIndent(resp, "", "  ")
 		require.NoError(t, e)
 
 		require.Equal(t, fmt.Sprintf(`{
