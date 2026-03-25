@@ -32,7 +32,7 @@ import (
 // DESCRIPTION: Test Calico Enterprise flow logs on Windows.
 // DOCS_URL: https://docs.tigera.io/calico-enterprise/latest/visibility/elastic/flow/
 // PRECONDITIONS: Runs only on Windows clusters. The client and server docker images should have been present on the Windows nodes.
-var _ = describe.CalicoDescribe(
+var _ = describe.EnterpriseDescribe(
 	describe.WithTeam(describe.Core),
 	describe.WithFeature("Flow-Logs"),
 	describe.WithCategory(describe.Visibility),

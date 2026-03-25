@@ -31,18 +31,20 @@ import (
 // DESCRIPTION: Test Calico Enterprise flow logs.
 // DOCS_URL: https://docs.tigera.io/calico-enterprise/latest/visibility/elastic/flow/
 // PRECONDITIONS: No specific preconditions.
-var _ = describe.CalicoDescribe(
+var _ = describe.EnterpriseDescribe(
 	describe.WithTeam(describe.EV),
 	describe.WithFeature("Flow-Logs"),
 	describe.WithCategory(describe.Visibility),
+	describe.WithSerial(),
 	"flow logs",
 	func() {
 		var (
-			f        = utils.NewDefaultFramework("cnx-flowlogs-es")
-			cli      client.Client
-			esclient *elastic.Client
-			checker  conncheck.ConnectionTester
-			pf       *esutil.PortForwardInfo
+			f          = utils.NewDefaultFramework("cnx-flowlogs-es")
+			cli        client.Client
+			esclient   *elastic.Client
+			checker    conncheck.ConnectionTester
+			pf         *esutil.PortForwardInfo
+			originalFC *v3.FelixConfiguration
 		)
 
 		BeforeEach(func() {
@@ -53,26 +55,27 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred())
 
 			// Configure Felix for flow log testing.
-			originalFC := v3.NewFelixConfiguration()
-			err = cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				originalFC = v3.NewFelixConfiguration()
+				return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
+			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
-			testFC := originalFC.DeepCopy()
-			testFC.Spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 15 * time.Second}
-			testFC.Spec.FlowLogsCollectProcessInfo = ptr.To(true)
-			testFC.Spec.FlowLogsCollectTcpStats = ptr.To(false)
-			err = cli.Update(ctx, testFC)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+					spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 15 * time.Second}
+					spec.FlowLogsCollectProcessInfo = ptr.To(true)
+					spec.FlowLogsCollectTcpStats = ptr.To(false)
+				})
+			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 			DeferCleanup(func() {
-				fc := v3.NewFelixConfiguration()
-				err := cli.Get(context.Background(), types.NamespacedName{Name: "default"}, fc)
-				Expect(err).NotTo(HaveOccurred())
-				fc.Spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
-				fc.Spec.FlowLogsCollectProcessInfo = originalFC.Spec.FlowLogsCollectProcessInfo
-				fc.Spec.FlowLogsCollectTcpStats = originalFC.Spec.FlowLogsCollectTcpStats
-				err = cli.Update(context.Background(), fc)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
+						spec.FlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
+						spec.FlowLogsCollectProcessInfo = originalFC.Spec.FlowLogsCollectProcessInfo
+						spec.FlowLogsCollectTcpStats = originalFC.Spec.FlowLogsCollectTcpStats
+					})
+				}, 10*time.Second, 1*time.Second).Should(Succeed())
 			})
 
 			// Initialize connection tester.
@@ -323,8 +326,9 @@ var _ = describe.CalicoDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:  "allow",
+							policy:  "pro:kns." + f.Namespace.Name + "|allow",
+							process: "wget",
 						})
 				})
 
@@ -332,8 +336,9 @@ var _ = describe.CalicoDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:  "allow",
+							policy:  "pro:kns." + f.Namespace.Name + "|allow",
+							process: "test-webserver",
 						})
 				})
 			})

@@ -30,7 +30,7 @@ import (
 // DESCRIPTION: DNS policy test cases.
 // DOCS_URL:
 // PRECONDITIONS: Calico Enterprise.
-var _ = describe.CalicoDescribe(
+var _ = describe.EnterpriseDescribe(
 	describe.WithTeam(describe.EV),
 	describe.WithFeature("DNS-Policy"),
 	describe.WithCategory(describe.Policy),
@@ -161,26 +161,12 @@ var _ = describe.CalicoDescribe(
 					}
 
 					ctx := context.TODO()
-					if !runOnWindows {
-						// Restore FelixConfiguration.
-						fc := v3.NewFelixConfiguration()
-						err := cli.Get(ctx, types.NamespacedName{Name: "default"}, fc)
-						Expect(err).NotTo(HaveOccurred())
-
-						if dnsPolicyMode != nil {
-							// Restore original DNSPolicyMode.
-							fc.Spec.DNSPolicyMode = oldDNSPolicyMode
-						}
-
-						err = cli.Update(ctx, fc)
-						Expect(err).NotTo(HaveOccurred())
-					}
 
 					// Clean up policies created during the test.
 					np := v3.NewNetworkPolicy()
 					np.Name = "allow-egress-to-domains"
 					np.Namespace = namespace
-					err = cli.Delete(ctx, np)
+					err := cli.Delete(ctx, np)
 					if err != nil {
 						logrus.WithError(err).Warnf("Error deleting allow egress network policy")
 					}
@@ -220,7 +206,7 @@ var _ = describe.CalicoDescribe(
 					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
-					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
+					denyPolicy := denyAllEgressExceptDNSWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
 
@@ -245,7 +231,7 @@ var _ = describe.CalicoDescribe(
 					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
-					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
+					denyPolicy := denyAllEgressExceptDNSWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
 
@@ -270,7 +256,7 @@ var _ = describe.CalicoDescribe(
 					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
-					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
+					denyPolicy := denyAllEgressExceptDNSWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
 
@@ -295,7 +281,7 @@ var _ = describe.CalicoDescribe(
 					checker.ResetExpectations()
 
 					By("Denying all pod egress except for DNS lookups")
-					denyPolicy := denyAllEgressExceptDnsWorkloadNP(namespace, runOnWindows)
+					denyPolicy := denyAllEgressExceptDNSWorkloadNP(namespace, runOnWindows)
 					logrus.Infof("Creating deny policy: %s", denyPolicy.Name)
 					Expect(cli.Create(context.TODO(), denyPolicy)).NotTo(HaveOccurred())
 
@@ -637,9 +623,9 @@ func allowEgressToDomainsHostGNS(domains []string) (*v3.GlobalNetworkSet, *v3.Gl
 	return gns, gnp
 }
 
-// denyAllEgressExceptDnsWorkloadNP returns a namespaced NetworkPolicy that denies
+// denyAllEgressExceptDNSWorkloadNP returns a namespaced NetworkPolicy that denies
 // all egress except DNS lookups.
-func denyAllEgressExceptDnsWorkloadNP(namespace string, runOnWindows bool) *v3.NetworkPolicy {
+func denyAllEgressExceptDNSWorkloadNP(namespace string, runOnWindows bool) *v3.NetworkPolicy {
 	ports := []numorstring.Port{
 		numorstring.SinglePort(53),
 	}
@@ -765,4 +751,3 @@ func newHostEndpoint(nodeName, ip string) *v3.HostEndpoint {
 	}
 	return hep
 }
-
