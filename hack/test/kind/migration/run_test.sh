@@ -161,8 +161,7 @@ subjects:
 RBAC
 echo "  Migration RBAC configured"
 
-# Scale up the operator if it was scaled down (deploy_resources.sh scales it to 0).
-# We need kube-controllers running for the migration controller.
+# Ensure kube-controllers is running for the migration controller.
 echo "  Ensuring kube-controllers is running..."
 ${kubectl} scale deployment -n calico-system calico-kube-controllers --replicas=1 2>/dev/null || true
 ${kubectl} wait --for=condition=Available --timeout=120s deployment/calico-kube-controllers -n calico-system

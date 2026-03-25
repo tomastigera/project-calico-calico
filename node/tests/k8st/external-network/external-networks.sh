@@ -119,12 +119,31 @@ EOF
     # Label and annotate nodes.
     ${kubectl} label node kind-worker egress=true --overwrite
 
-    # This is necessary for the correct node ip to be used on the node-node mesh.
-    ${kubectl} set env daemonset/calico-node -n calico-system IP_AUTODETECTION_METHOD=interface=eth0
-    ${kubectl} set env daemonset/calico-node -n calico-system IP6_AUTODETECTION_METHOD=interface=eth0
+    # Set IP autodetection to use eth0 so the correct node IP is used on
+    # the node-node mesh.  Configure via Installation CR so the operator
+    # reconciles the change into the calico-node DaemonSet.
+    ${kubectl} patch installation default --type=json -p '[
+      {"op":"replace","path":"/spec/calicoNetwork/nodeAddressAutodetectionV4","value":{"interface":"eth0"}},
+      {"op":"replace","path":"/spec/calicoNetwork/nodeAddressAutodetectionV6","value":{"interface":"eth0"}}
+    ]'
 
-    # Restart the calico-node daemonset to apply the changes.
-    ${kubectl} rollout restart daemonset/calico-node -n calico-system
+    # Wait for the operator to update the DaemonSet template before checking
+    # rollout status.  Without this, "rollout status" can return immediately
+    # because the operator hasn't reconciled the change yet.
+    echo "Waiting for operator to set IP_AUTODETECTION_METHOD on calico-node DaemonSet..."
+    for i in $(seq 1 30); do
+        val=$(${kubectl} get ds calico-node -n calico-system -o jsonpath='{.spec.template.spec.containers[?(@.name=="calico-node")].env[?(@.name=="IP_AUTODETECTION_METHOD")].value}' 2>/dev/null)
+        if [ "$val" = "interface=eth0" ]; then
+            echo "IP_AUTODETECTION_METHOD set after ${i}s"
+            break
+        fi
+        if [ "$i" -eq 30 ]; then
+            echo "ERROR: operator did not update calico-node DaemonSet within 30s"
+            exit 1
+        fi
+        sleep 1
+    done
+    ${kubectl} rollout status daemonset/calico-node -n calico-system --timeout=5m
 }
 
 function do_setup {
@@ -420,14 +439,16 @@ EOF
 }
 
 function do_cleanup {
-    # Remove calico resources
+    # Clean up calico resources and network topology created by do_setup/do_infra_setup.
     ${kubectl} delete bgppeer peer-a1 peer-a1-v6 peer-b1 peer-b1-v6 peer-b2 peer-b2-v6 peer-c1 peer-c1-v6 peer-d1 peer-d1-v6 || true
 
     # Revert node label and annotations
     ${kubectl} label node kind-worker egress- --overwrite || true
     ${kubectl} label node kind-worker3 egress- --overwrite || true
-    ${kubectl} set env daemonset/calico-node -n calico-system IP_AUTODETECTION_METHOD=first-found || true
-    ${kubectl} set env daemonset/calico-node -n calico-system IP6_AUTODETECTION_METHOD=first-found || true
+
+    # Revert IP autodetection to the default (first-found) via the Installation CR.
+    ${kubectl} patch installation default --type=json -p '[{"op":"remove","path":"/spec/calicoNetwork/nodeAddressAutodetectionV4"},{"op":"remove","path":"/spec/calicoNetwork/nodeAddressAutodetectionV6"}]' || true
+    ${kubectl} rollout status daemonset/calico-node -n calico-system --timeout=5m || true
 
     # Remove bootstrap routes from kind-worker
     docker exec kind-worker ip route del 172.31.51.0/24 via 172.31.41.1 || true

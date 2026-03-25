@@ -23,7 +23,6 @@ import subprocess
 import time
 import traceback
 
-from kubernetes import client, config
 
 _log = logging.getLogger(__name__)
 
@@ -332,62 +331,75 @@ def calico_node_pod_name(nodename):
     name = kubectl("get po -n calico-system -l k8s-app=calico-node --field-selector spec.nodeName=%s -o jsonpath='{.items[0].metadata.name}'" % nodename)
     return name
 
-def update_ds_env(ds, ns, env_vars):
-        config.load_kube_config(os.environ.get('KUBECONFIG'))
-        api = client.AppsV1Api(client.ApiClient())
+def get_felix_config_field(field):
+    """Read a field from the default FelixConfiguration spec.
 
-        def _do_update():
-            node_ds = api.read_namespaced_daemon_set(ds, ns)
-            for container in node_ds.spec.template.spec.containers:
-                if container.name == ds:
-                    for k, v in env_vars.items():
-                        _log.info("Set %s=%s", k, v)
-                        env_present = False
-                        for env in container.env:
-                            if env.name == k:
-                                if env.value == v:
-                                    env_present = True
-                                else:
-                                    container.env.remove(env)
+    Returns the field value, or None if not set.
+    """
+    out = kubectl("get felixconfiguration default -o json")
+    fc = json.loads(out)
+    return fc.get("spec", {}).get(field)
 
-                        if not env_present:
-                            v1_ev = client.V1EnvVar(name=k, value=v, value_from=None)
-                            container.env.append(v1_ev)
-            api.replace_namespaced_daemon_set(ds, ns, node_ds)
 
-        retry_until_success(_do_update, retries=4, wait_time=1)
+def update_felix_config(config_values):
+    """Patch FelixConfiguration with the given values.
 
-        # Delete the calico-node pods so that they will be restarted more
-        # quickly with the new configuration.  This won't do a rolling restart,
-        # but it cuts minutes off each test.
-        kubectl("delete pod -l k8s-app=calico-node -n calico-system")
+    Felix picks up FelixConfiguration changes immediately (either hot-reload
+    or in-container restart), so no explicit wait is needed.  Callers should
+    use retry_until_success on their assertions.
 
-        # Wait until the DaemonSet reports that all nodes have been updated.
-        # In the past we've seen that the calico-node on kind-control-plane can
-        # hang, in a not Ready state, for about 15 minutes.  Here we want to
-        # detect in case that happens again, and fail the test case if so.  We
-        # do that by querying the number of nodes that have been updated, every
-        # 10s, and failing the test if that number does not change for 12 cycles
-        # i.e. for 120s.
-        last_number = 0
-        iterations_with_no_change = 0
-        while True:
-            time.sleep(10)
-            node_ds = api.read_namespaced_daemon_set_status("calico-node", "calico-system")
-            _log.info("%s/%s nodes updated",
-                      node_ds.status.updated_number_scheduled,
-                      node_ds.status.desired_number_scheduled)
-            if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
-                break
-            if node_ds.status.updated_number_scheduled == last_number:
-                iterations_with_no_change += 1
-                if iterations_with_no_change == 12:
-                    run("docker exec kind-control-plane conntrack -L", allow_fail=True)
-                    raise Exception("calico-node DaemonSet update failed to make progress for 120s")
-            else:
-                last_number = node_ds.status.updated_number_scheduled
-                iterations_with_no_change = 0
-        wait_for_calico_node_pods_ready()
+    config_values is a dict of FelixConfiguration spec field names to values,
+    e.g. {"egressIPSupport": "EnabledPerNamespaceOrPerPod"}.
+    """
+    _log.info("Patching FelixConfiguration: %s", config_values)
+    patch = json.dumps({"spec": config_values})
+    kubectl("patch felixconfiguration default --type=merge -p '%s'" % patch)
+
+
+def set_encapsulation(encap):
+    """Set the cluster's encapsulation mode via the Installation resource.
+
+    Patches the Installation CR so the operator reconciles the IPPool.
+    Skips the change if the pool is already in the desired mode.
+    """
+    encap_to_modes = {
+        "IPIP": ("Always", "Never"),
+        "VXLAN": ("Never", "Always"),
+        "None": ("Never", "Never"),
+    }
+    if encap not in encap_to_modes:
+        allowed = ", ".join(sorted(encap_to_modes.keys()))
+        raise ValueError(
+            "Invalid encapsulation mode %r. Allowed modes are: %s"
+            % (encap, allowed)
+        )
+    ipip_mode, vxlan_mode = encap_to_modes[encap]
+
+    pool = json.loads(calicoctl("get ippool default-ipv4-ippool -o json"))
+    if pool["spec"]["ipipMode"] == ipip_mode and pool["spec"]["vxlanMode"] == vxlan_mode:
+        _log.info("Encapsulation already set to %s, skipping", encap)
+        return
+
+    _log.info("Setting encapsulation to %s via Installation", encap)
+    patch_payload = json.dumps([{
+        "op": "add",
+        "path": "/spec/calicoNetwork/ipPools/0/encapsulation",
+        "value": encap,
+    }])
+    kubectl("patch installation default --type=json -p '%s'" % patch_payload)
+
+    # Wait for the operator to reconcile the IPPool before restarting pods.
+    def pool_reconciled():
+        p = json.loads(calicoctl("get ippool default-ipv4-ippool -o json"))
+        if p["spec"]["ipipMode"] != ipip_mode or p["spec"]["vxlanMode"] != vxlan_mode:
+            raise Exception("IPPool not yet reconciled: ipipMode=%s vxlanMode=%s" %
+                            (p["spec"]["ipipMode"], p["spec"]["vxlanMode"]))
+    retry_until_success(pool_reconciled, retries=30, wait_time=2)
+
+    # Restart calico-node to cleanly apply the new encapsulation.
+    kubectl("delete po -n calico-system -l k8s-app=calico-node")
+    kubectl("wait --timeout=2m --for=condition=ready"
+            " pods -l k8s-app=calico-node -n calico-system")
 
 def wait_for_calico_node_pods_ready():
     """
