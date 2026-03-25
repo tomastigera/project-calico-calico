@@ -110,7 +110,7 @@ var _ = Describe("Secret", func() {
 
 var _ = Describe("LicenseKey", func() {
 	It("Creates the LicenseKey when it doesn't exist", func() {
-		cli := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
+		cli := tigeraapifake.NewSimpleClientset()
 		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",
@@ -126,7 +126,7 @@ var _ = Describe("LicenseKey", func() {
 	})
 
 	It("Updates the LicenseKey when it exists", func() {
-		cli := tigeraapifake.NewSimpleClientset() //nolint:staticcheck // TODO: switch to NewClientset() once k8s.io TestOnlyStaticRESTMapper correctly pluralizes "LicenseKey" to "licensekeys" instead of "licensekeies"
+		cli := tigeraapifake.NewSimpleClientset()
 		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",
