@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
@@ -396,37 +395,37 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 		return nil
 	}, 120*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
-	Expect(flowLogs).NotTo(BeEmpty())
+	Expect(flowLogs).NotTo(BeEmpty(), "expected flow logs from ES query but got none")
 	for _, fl := range flowLogs {
 		policies := fl.Policies.EnforcedPolicies
 
 		// Flowlog entries should only have a single policy string.
-		Expect(policies).To(HaveLen(1))
+		Expect(policies).To(HaveLen(1), "expected exactly 1 enforced policy, got %d: %v", len(policies), policies)
 
 		// Flowlogs check if the expected policy is applied.
 		policyString := policies[0]
-		Expect(strings.Contains(policyString, expectation.policy)).To(BeTrue())
-		Expect(fl.Action).To(Equal(expectation.action))
+		Expect(policyString).To(ContainSubstring(expectation.policy), "enforced policy %q does not contain expected %q", policyString, expectation.policy)
+		Expect(fl.Action).To(Equal(expectation.action), "flow log action was %q, expected %q", fl.Action, expectation.action)
 
 		// If process name is given in the expectation, verify process information.
 		// In some cases, like reporter=dst with action=deny, packets do not reach the destination
 		// process, so destination process information is not populated in flowlogs.
 		if expectation.process != "" {
-			Expect(fl.ProcessName).To(ContainSubstring(expectation.process))
-			Expect(fl.NumProcessNames).To(Equal(1))
+			Expect(fl.ProcessName).To(ContainSubstring(expectation.process), "process name %q does not contain %q", fl.ProcessName, expectation.process)
+			Expect(fl.NumProcessNames).To(Equal(1), "expected 1 process name, got %d", fl.NumProcessNames)
 			if fl.NumProcessIDs > 1 {
-				Expect(fl.ProcessID).To(Equal("*"))
+				Expect(fl.ProcessID).To(Equal("*"), "expected aggregated process ID '*' when NumProcessIDs=%d, got %q", fl.NumProcessIDs, fl.ProcessID)
 			} else {
-				Expect(fl.ProcessID).NotTo(Equal("*"))
+				Expect(fl.ProcessID).NotTo(Equal("*"), "expected specific process ID when NumProcessIDs=1, got '*'")
 			}
 		}
 
 		// Check if the flow log has the expected labels.
 		for _, label := range expectation.sourceLabels {
-			Expect(fl.SourceLabels.Labels).To(ContainElement(label))
+			Expect(fl.SourceLabels.Labels).To(ContainElement(label), "source labels %v missing expected label %q", fl.SourceLabels.Labels, label)
 		}
 		for _, label := range expectation.destLabels {
-			Expect(fl.DestLabels.Labels).To(ContainElement(label))
+			Expect(fl.DestLabels.Labels).To(ContainElement(label), "dest labels %v missing expected label %q", fl.DestLabels.Labels, label)
 		}
 	}
 }
