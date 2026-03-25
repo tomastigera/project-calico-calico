@@ -126,6 +126,11 @@ func run() {
 
 	esClient := backend.MustGetElasticClient(*cfg.ElasticClientConfig, cfg.LogLevel, "")
 
+	// Configure whether tenant ID is included in multi-index index names.
+	// When false, tenant ID is omitted for backward compatibility with internal
+	// ES environments where indices were created without tenant ID in the name.
+	index.SetMultiIndexTenantSuffixEnabled(cfg.ElasticMultiIndexTenantSuffixEnabled)
+
 	var auditInitializer api.IndexInitializer
 	var bgpInitializer api.IndexInitializer
 	var defaultInitializer api.IndexInitializer

@@ -5,6 +5,7 @@ package index
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
@@ -26,6 +27,39 @@ var (
 	FlowLogMultiIndex             bapi.Index = multiIndex{baseName: "tigera_secure_ee_flows", dataType: bapi.FlowLogs, hasLifeCycleEnabled: true}
 	RuntimeReportMultiIndex       bapi.Index = multiIndex{baseName: "tigera_secure_ee_runtime", dataType: bapi.RuntimeReports, hasLifeCycleEnabled: true}
 )
+
+// includeTenantSuffix controls whether tenant ID is included in multi-index index names.
+// Default is true, which is correct for most environments. Set via SetMultiIndexTenantSuffixEnabled.
+var (
+	includeTenantSuffix  = true
+	includeTenantSuffixM sync.Mutex
+)
+
+// SetMultiIndexTenantSuffixEnabled controls whether tenant ID is included in multi-index
+// index names when a tenant is present in ClusterInfo. It is safe to call from multiple
+// goroutines.
+//
+// Background: the new shared single index (calico_policy_activity) requires TENANT_ID
+// to be passed to Linseed in all tenant environments for application-level isolation
+// via the x-tenant-id header. Previously, TENANT_ID was only passed when using external
+// Elasticsearch. Now the operator always passes TENANT_ID when a tenant exists, but
+// multi-index backends with internal ES must not include tenant ID in index names
+// because those indices were created without it. This pattern applies to any future
+// shared single indices that rely on TENANT_ID for query-level isolation.
+//
+// Environment behavior:
+//   - Enterprise (no tenant): No effect — tenant is empty so suffix logic is a no-op.
+//   - Single-tenant with external ES: true — existing indices already include tenant ID in names.
+//   - Multi-tenant with external ES: true — existing indices already include tenant ID in names.
+//   - Multi-tenant with internal ES: false — existing indices were created without tenant ID
+//     in names. Tenant isolation is enforced at the query/document level instead.
+//
+// Controlled by the ELASTIC_MULTI_INDEX_TENANT_SUFFIX_ENABLED env var (default "true").
+func SetMultiIndexTenantSuffixEnabled(enabled bool) {
+	includeTenantSuffixM.Lock()
+	defer includeTenantSuffixM.Unlock()
+	includeTenantSuffix = enabled
+}
 
 // Single index - these all use a single index for all clusters and tenants.
 
@@ -302,11 +336,11 @@ func (i multiIndex) DataType() bapi.DataType {
 }
 
 func (i multiIndex) Name(info bapi.ClusterInfo) string {
-	if info.Tenant == "" {
-		return fmt.Sprintf("%s-%s", strings.ToLower(string(i.dataType)), info.Cluster)
+	if info.Tenant != "" && includeTenantSuffix {
+		return fmt.Sprintf("%s-%s-%s", strings.ToLower(string(i.dataType)), info.Cluster, info.Tenant)
 	}
 
-	return fmt.Sprintf("%s-%s-%s", strings.ToLower(string(i.dataType)), info.Cluster, info.Tenant)
+	return fmt.Sprintf("%s-%s", strings.ToLower(string(i.dataType)), info.Cluster)
 }
 
 func (i multiIndex) BootstrapIndexName(info bapi.ClusterInfo) string {
@@ -314,17 +348,17 @@ func (i multiIndex) BootstrapIndexName(info bapi.ClusterInfo) string {
 	if !ok {
 		panic("bootstrap index name for log type not implemented")
 	}
-	if info.Tenant == "" {
-		return fmt.Sprintf(template, info.Cluster)
+	if info.Tenant != "" && includeTenantSuffix {
+		return fmt.Sprintf(template, fmt.Sprintf("%s.%s", info.Tenant, info.Cluster))
 	}
 
-	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", info.Tenant, info.Cluster))
+	return fmt.Sprintf(template, info.Cluster)
 }
 
 func (i multiIndex) Index(info bapi.ClusterInfo) string {
 	if info.IsQueryMultipleClusters() {
 		// drop the cluster suffix, cluster filtering is handled at the query level
-		if info.Tenant != "" {
+		if info.Tenant != "" && includeTenantSuffix {
 			// If a tenant is provided, then we must include it in the index.
 			return fmt.Sprintf("%s.%s.*", i.baseName, info.Tenant)
 		} else {
@@ -332,7 +366,7 @@ func (i multiIndex) Index(info bapi.ClusterInfo) string {
 		}
 	}
 
-	if info.Tenant != "" {
+	if info.Tenant != "" && includeTenantSuffix {
 		// If a tenant is provided, then we must include it in the index.
 		return fmt.Sprintf("%s.%s.%s.*", i.baseName, info.Tenant, info.Cluster)
 	}
@@ -341,10 +375,10 @@ func (i multiIndex) Index(info bapi.ClusterInfo) string {
 }
 
 func (i multiIndex) Alias(info bapi.ClusterInfo) string {
-	if info.Tenant == "" {
-		return fmt.Sprintf("%s.%s.", i.baseName, info.Cluster)
+	if info.Tenant != "" && includeTenantSuffix {
+		return fmt.Sprintf("%s.%s.%s.", i.baseName, info.Tenant, info.Cluster)
 	}
-	return fmt.Sprintf("%s.%s.%s.", i.baseName, info.Tenant, info.Cluster)
+	return fmt.Sprintf("%s.%s.", i.baseName, info.Cluster)
 }
 
 func (i multiIndex) IndexTemplateName(info bapi.ClusterInfo) string {
@@ -352,11 +386,11 @@ func (i multiIndex) IndexTemplateName(info bapi.ClusterInfo) string {
 	if !ok {
 		panic("template name for log type not implemented")
 	}
-	if info.Tenant == "" {
-		return fmt.Sprintf(template, info.Cluster)
+	if info.Tenant != "" && includeTenantSuffix {
+		return fmt.Sprintf(template, fmt.Sprintf("%s.%s", info.Tenant, info.Cluster))
 	}
 
-	return fmt.Sprintf(template, fmt.Sprintf("%s.%s", info.Tenant, info.Cluster))
+	return fmt.Sprintf(template, info.Cluster)
 }
 
 func (i multiIndex) IsSingleIndex() bool {
