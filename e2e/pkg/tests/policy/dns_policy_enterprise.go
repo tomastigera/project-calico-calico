@@ -634,7 +634,9 @@ func denyAllEgressExceptDNSWorkloadNP(namespace string, runOnWindows bool) *v3.N
 		ports = append(ports, numorstring.SinglePort(5353))
 	} else {
 		// On OpenShift DNS is mapped to a named "dns" port, so allow that too.
-		ports = append(ports, numorstring.NamedPort("dns"))
+		dnsPort, err := numorstring.NamedPort("dns")
+		Expect(err).ToNot(HaveOccurred())
+		ports = append(ports, dnsPort)
 	}
 
 	np := v3.NewNetworkPolicy()
@@ -668,7 +670,9 @@ func denyAllEgressExceptDnsHostGNP(runOnWindows bool) *v3.GlobalNetworkPolicy {
 	if runOnWindows {
 		ports = append(ports, numorstring.SinglePort(5353))
 	} else {
-		ports = append(ports, numorstring.NamedPort("dns"))
+		dnsPort, err := numorstring.NamedPort("dns")
+		Expect(err).ToNot(HaveOccurred())
+		ports = append(ports, dnsPort)
 	}
 
 	gnp := v3.NewGlobalNetworkPolicy()
@@ -695,6 +699,9 @@ func denyAllEgressExceptDnsHostGNP(runOnWindows bool) *v3.GlobalNetworkPolicy {
 // allowAPIServerGNP returns a GlobalNetworkPolicy that allows access to the
 // Kubernetes API server and kubelet through host endpoints.
 func allowAPIServerGNP() *v3.GlobalNetworkPolicy {
+	dnsPort, err := numorstring.NamedPort("dns")
+	Expect(err).ToNot(HaveOccurred())
+
 	gnp := v3.NewGlobalNetworkPolicy()
 	gnp.Name = "allow-api-server"
 	gnp.Spec = v3.GlobalNetworkPolicySpec{
@@ -731,7 +738,7 @@ func allowAPIServerGNP() *v3.GlobalNetworkPolicy {
 					Ports: []numorstring.Port{
 						numorstring.SinglePort(53),
 						// On OpenShift DNS is mapped to a named "dns" port, so allow that too.
-						numorstring.NamedPort("dns"),
+						dnsPort,
 					},
 				},
 			},

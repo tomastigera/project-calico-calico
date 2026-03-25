@@ -151,6 +151,9 @@ var _ = describe.EnterpriseDescribe(
 			})
 
 			It("Captures HTTP traffic from a pod source to a service destination with deny egress (outgoing) policy on src applied", func() {
+				dnsPort, err := numorstring.NamedPort("dns")
+				Expect(err).ToNot(HaveOccurred())
+
 				// Apply deny egress policy on the client: allow DNS but deny everything else.
 				denyClientEgress := &v3.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
@@ -167,7 +170,7 @@ var _ = describe.EnterpriseDescribe(
 								Protocol: protocolUDP(),
 								Destination: v3.EntityRule{
 									Ports: []numorstring.Port{
-										numorstring.NamedPort("dns"),
+										dnsPort,
 										numorstring.SinglePort(5353),
 										numorstring.SinglePort(53),
 									},
@@ -176,7 +179,7 @@ var _ = describe.EnterpriseDescribe(
 						},
 					},
 				}
-				err := cli.Create(context.Background(), denyClientEgress)
+				err = cli.Create(context.Background(), denyClientEgress)
 				Expect(err).NotTo(HaveOccurred())
 				DeferCleanup(func() {
 					_ = cli.Delete(context.Background(), denyClientEgress)

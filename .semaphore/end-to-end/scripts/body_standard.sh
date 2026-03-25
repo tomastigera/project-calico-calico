@@ -88,6 +88,8 @@ else
       pushd "${HOME}/calico-private"
       make -C e2e build |& tee >(gzip --stdout > "${BZ_LOGS_DIR}/${TEST_TYPE}-tests.log.gz")
       GO_BUILD_VER=$(grep '^GO_BUILD_VER=' ./metadata.mk | cut -d= -f2)
+      # Disable shellcheck double quote validation for ${K8S_E2E_FLAGS} as this var can contain multiple args and should be word split
+      #shellcheck disable=SC2086
       docker run --rm --init --net=host \
         -e LOCAL_USER_ID="$(id -u)" \
         -e GOCACHE=/go-cache \
