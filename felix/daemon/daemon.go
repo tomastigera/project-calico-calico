@@ -412,35 +412,7 @@ configRetry:
 	}
 	doGoRuntimeSetup(configParams)
 
-	if configParams.BPFEnabled {
-		// Check for BPF dataplane support before we do anything that relies on the flag being set one way or another.
-		if err := dp.SupportsBPF(); err != nil {
-			log.WithError(err).Error("BPF dataplane mode enabled but not supported by the kernel.  Disabling BPF mode.")
-			_, err := configParams.OverrideParam("BPFEnabled", "false")
-			if err != nil {
-				log.WithError(err).Panic("Bug: failed to override config parameter")
-			}
-		} else {
-			// BPF is enabled and supported. Now check for the BPFConntrackCleanupMode.
-			// With the conntrack map type changed to lru_hash, BPFConntrackModeBPFProgram isn't
-			// useful. Hence this option will be deprecated in the near future. If BPFConntrackCleanupMode
-			// is set to BPFConntrackModeBPFProgram, its reset to BPFConntrackModeUserspace.
-			log.Warn("BPF conntrack mode Auto,BPFProgram is not supported and will be deprecated soon. Falling back to userspace cleaner.")
-			_, err := configParams.OverrideParam("BPFConntrackCleanupMode", string(apiv3.BPFConntrackModeUserspace))
-			if err != nil {
-				log.WithError(err).Panic("Bug: failed to override config parameter BPFConntrackCleanupMode")
-			}
-			if configParams.BPFRedirectToPeer == "L2Only" {
-				log.Warn("BPFRedirectToPeer 'L2Only' is deprecated and equals 'Enabled' now.")
-				_, err := configParams.OverrideParam("BPFRedirectToPeer", "Enabled")
-				if err != nil {
-					log.WithError(err).Panic("Bug: failed to override config parameter BPFRedirectToPeer")
-				}
-			}
-
-		}
-	}
-
+	applyBPFOverrides(configParams, dp.SupportsBPF)
 	if configParams.FlowLogsCollectProcessInfo {
 		if !environment.NewFeatureDetector(configParams.FeatureDetectOverride).GetFeatures().BPFKprobes {
 			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
@@ -468,18 +440,6 @@ configRetry:
 			if err != nil {
 				log.WithError(err).Panic("Bug: failed to override config parameter")
 			}
-		}
-	}
-
-	if configParams.BPFEnabled && configParams.IPForwarding == "Disabled" && configParams.BPFEnforceRPF != "Disabled" {
-		// BPF mode requires IP forwarding to be enabled because the BPF RPF
-		// check fails if it is disabled.  Seems to be an incorrect check in
-		// the kernel.  FIB lookups can only be done for interfaces that have
-		// forwarding enabled.
-		log.Warning("In BPF mode, either IPForwarding must be enabled or BPFEnforceRPF must be disabled. Forcing IPForwarding to 'Enabled'.")
-		_, err := configParams.OverrideParam("IPForwarding", "Enabled")
-		if err != nil {
-			log.WithError(err).Panic("Bug: failed to override config parameter")
 		}
 	}
 
@@ -1732,6 +1692,47 @@ func (fc *DataplaneConnector) handleConfigUpdate(msg *proto.ConfigUpdate) {
 func (fc *DataplaneConnector) ApplyNoRestartConfig(old, new *config.Config) {
 	if !reflect.DeepEqual(old.HealthTimeoutOverrides, new.HealthTimeoutOverrides) {
 		health.SetGlobalTimeoutOverrides(new.HealthTimeoutOverrides)
+	}
+}
+
+// applyBPFOverrides checks if BPF mode is enabled and supported, and applies
+// any necessary config overrides for BPF mode compatibility.
+func applyBPFOverrides(configParams *config.Config, supportsBPF func() error) {
+	if !configParams.BPFEnabled {
+		return
+	}
+
+	// Check for BPF dataplane support before we do anything that relies on the flag being set one way or another.
+	if err := supportsBPF(); err != nil {
+		log.WithError(err).Error("BPF dataplane mode enabled but not supported by the kernel.  Disabling BPF mode.")
+		_, err := configParams.OverrideParam("BPFEnabled", "false")
+		if err != nil {
+			log.WithError(err).Panic("Bug: failed to override config parameter")
+		}
+		return
+	}
+
+	// With the conntrack map type changed to lru_hash, BPFConntrackModeBPFProgram isn't
+	// useful. Hence this option will be deprecated in the near future. If BPFConntrackCleanupMode
+	// is set to BPFConntrackModeBPFProgram, its reset to BPFConntrackModeUserspace.
+	if configParams.BPFConntrackCleanupMode != string(apiv3.BPFConntrackModeUserspace) {
+		log.Warn("BPF conntrack mode Auto,BPFProgram is not supported and will be deprecated soon. Falling back to userspace cleaner.")
+		_, err := configParams.OverrideParam("BPFConntrackCleanupMode", string(apiv3.BPFConntrackModeUserspace))
+		if err != nil {
+			log.WithError(err).Panic("Bug: failed to override config parameter BPFConntrackCleanupMode")
+		}
+	}
+
+	// BPF mode requires IP forwarding to be enabled because the BPF RPF
+	// check fails if it is disabled.  Seems to be an incorrect check in
+	// the kernel.  FIB lookups can only be done for interfaces that have
+	// forwarding enabled.
+	if configParams.IPForwarding == "Disabled" && configParams.BPFEnforceRPF != "Disabled" {
+		log.Warning("In BPF mode, either IPForwarding must be enabled or BPFEnforceRPF must be disabled. Forcing IPForwarding to 'Enabled'.")
+		_, err := configParams.OverrideParam("IPForwarding", "Enabled")
+		if err != nil {
+			log.WithError(err).Panic("Bug: failed to override config parameter")
+		}
 	}
 }
 
