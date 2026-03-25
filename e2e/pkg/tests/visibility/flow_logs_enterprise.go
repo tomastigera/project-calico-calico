@@ -272,7 +272,10 @@ var _ = describe.EnterpriseDescribe(
 				err := cli.Create(context.Background(), allowServerIngress)
 				Expect(err).NotTo(HaveOccurred())
 				DeferCleanup(func() {
-					_ = cli.Delete(context.Background(), allowServerIngress)
+					err = cli.Delete(context.Background(), allowServerIngress)
+					if err != nil {
+						logrus.WithError(err).Warnf("Error deleting allow server ingress network policy")
+					}
 				})
 
 				checker.ExpectSuccess(clientPod, server.ClusterIPs()...)

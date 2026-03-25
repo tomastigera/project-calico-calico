@@ -424,7 +424,6 @@ var _ = describe.EnterpriseDescribe(
 
 				// Now create the host endpoint.
 				pod := testClient.Pod()
-				time.Sleep(2 * time.Second)
 				hep := newHostEndpoint(pod.Spec.NodeName, pod.Status.HostIP)
 				logrus.Infof("Creating HEP: %s", hep.Name)
 				Expect(cli.Create(ctx, hep)).NotTo(HaveOccurred())
