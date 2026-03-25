@@ -220,7 +220,7 @@ var _ = Describe("Constructor test", func() {
 			dpConfig.FeatureDetectOverrides = map[string]string{
 				"NFTablesSupported": "false",
 			}
-			dp := intdataplane.NewIntDataplaneDriver(dpConfig)
+			dp := intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 			Expect(dp).ToNot(BeNil())
 			Expect(requestedFamilies).NotTo(ContainElement(knftables.ARPFamily))
 		})
