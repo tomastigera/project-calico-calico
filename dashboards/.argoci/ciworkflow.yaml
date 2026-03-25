@@ -6,7 +6,7 @@ spec:
   entrypoint: main
   templateDefaults:
     script:
-      image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.84
+      image: gcr.io/tigera-cc-dev/ci-base/ubuntu-cloud-providers:v0.99
       imagePullPolicy: Always
       command: ["bash", "-e"]
       workingDir: "/src"
@@ -34,7 +34,7 @@ spec:
           mountPath: /go
     sidecars:
       - name: dind
-        image: docker:20.10.17-dind
+        image: docker:29.0.0-dind
         command:
           - dockerd-entrypoint.sh
           - --registry-mirror=http://argoci-registry.argoci.svc.cluster.local:5000
