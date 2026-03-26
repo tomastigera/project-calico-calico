@@ -162,8 +162,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						esQuery("src"),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 
@@ -171,8 +171,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						esQuery("dst"),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 			})
@@ -226,7 +226,7 @@ var _ = describe.EnterpriseDescribe(
 							esQuery("src"),
 							flowExpectation{
 								action: "deny",
-								policy: fmt.Sprintf("default|np:%s/default.deny-client-egress|deny", f.Namespace.Name),
+								policy: denyClientEgress,
 							})
 					})
 				})
@@ -283,8 +283,8 @@ var _ = describe.EnterpriseDescribe(
 						validateFlowLogs(esclient,
 							esQuery("src"),
 							flowExpectation{
-								action: "allow",
-								policy: "pro:kns." + f.Namespace.Name + "|allow",
+								action:    "allow",
+								profileNS: f.Namespace.Name,
 							})
 					})
 
@@ -293,7 +293,7 @@ var _ = describe.EnterpriseDescribe(
 							esQuery("dst"),
 							flowExpectation{
 								action: "deny",
-								policy: fmt.Sprintf("default|np:%s/default.deny-server-ingress|deny", f.Namespace.Name),
+								policy: denyServerIngress,
 							})
 					})
 				})

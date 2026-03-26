@@ -17,6 +17,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,7 @@ import (
 	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
 	esutil "github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
+	"github.com/projectcalico/calico/e2e/pkg/utils/flowlogs"
 )
 
 // DESCRIPTION: Test Calico Enterprise flow logs.
@@ -135,8 +137,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 
@@ -144,8 +146,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 			})
@@ -194,7 +196,7 @@ var _ = describe.EnterpriseDescribe(
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
 							action: "deny",
-							policy: fmt.Sprintf("default|np:%s/default.deny-client-egress|deny", f.Namespace.Name),
+							policy: denyClientEgress,
 						})
 				})
 			})
@@ -235,8 +237,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 
@@ -245,7 +247,7 @@ var _ = describe.EnterpriseDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "deny",
-							policy: fmt.Sprintf("default|np:%s/default.deny-server-ingress|deny", f.Namespace.Name),
+							policy: denyServerIngress,
 						})
 				})
 			})
@@ -286,8 +288,8 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
-							action: "allow",
-							policy: "pro:kns." + f.Namespace.Name + "|allow",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
 						})
 				})
 
@@ -296,7 +298,7 @@ var _ = describe.EnterpriseDescribe(
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
 							action: "allow",
-							policy: fmt.Sprintf("default|np:%s/default.allow-server-ingress|allow", f.Namespace.Name),
+							policy: allowServerIngress,
 						})
 				})
 			})
@@ -332,9 +334,9 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "src", "client", "server", ""),
 						flowExpectation{
-							action:  "allow",
-							policy:  "pro:kns." + f.Namespace.Name + "|allow",
-							process: "wget",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
+							process:   "wget",
 						})
 				})
 
@@ -342,9 +344,9 @@ var _ = describe.EnterpriseDescribe(
 					validateFlowLogs(esclient,
 						flowLogQuery(f.Namespace.Name, "dst", "client", "server", ""),
 						flowExpectation{
-							action:  "allow",
-							policy:  "pro:kns." + f.Namespace.Name + "|allow",
-							process: "test-webserver",
+							action:    "allow",
+							profileNS: f.Namespace.Name,
+							process:   "test-webserver",
 						})
 				})
 			})
@@ -382,7 +384,8 @@ func flowLogQuery(namespace, reporter, sourceName, destName, process string) *el
 
 type flowExpectation struct {
 	action       string
-	policy       string
+	policy       runtime.Object // expected policy object (mutually exclusive with profileNS)
+	profileNS    string         // expected profile namespace (mutually exclusive with policy)
 	process      string
 	sourceLabels []string
 	destLabels   []string
@@ -413,9 +416,12 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 		// Flowlog entries should only have a single policy string.
 		Expect(policies).To(HaveLen(1), "expected exactly 1 enforced policy, got %d: %v", len(policies), policies)
 
-		// Flowlogs check if the expected policy is applied.
-		policyString := policies[0]
-		Expect(policyString).To(ContainSubstring(expectation.policy), "enforced policy %q does not contain expected %q", policyString, expectation.policy)
+		// Validate the enforced policy using structured PolicyHit parsing.
+		if expectation.policy != nil {
+			flowlogs.ExpectPolicyInFlowLogs(policies, expectation.policy)
+		} else if expectation.profileNS != "" {
+			flowlogs.ExpectProfileInFlowLogs(policies, expectation.profileNS)
+		}
 		Expect(fl.Action).To(Equal(expectation.action), "flow log action was %q, expected %q", fl.Action, expectation.action)
 
 		// If process name is given in the expectation, verify process information.

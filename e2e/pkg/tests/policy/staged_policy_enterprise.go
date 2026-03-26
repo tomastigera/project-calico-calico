@@ -17,7 +17,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/ptr"
@@ -28,7 +27,7 @@ import (
 	"github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/conncheck"
 	"github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
-	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/e2e/pkg/utils/flowlogs"
 )
 
 // DESCRIPTION: This test verifies the staged network policy feature.
@@ -132,11 +131,11 @@ var _ = describe.EnterpriseDescribe(
 
 					// The PendingPolicies should include the first of the two staged policies defined above.
 					Expect(len(item.Policies.PendingPolicies)).To(Equal(1), "Expected 1 pending policies but got: %v", item.Policies.PendingPolicies)
-					ExpectPolicyInFlowLogs(item.Policies.PendingPolicies, sknpAllow)
+					flowlogs.ExpectPolicyInFlowLogs(item.Policies.PendingPolicies, sknpAllow)
 
 					// The EnforcedPolicies should include the __PROFILE__ only.
 					Expect(len(item.Policies.EnforcedPolicies)).To(Equal(1), "Expected 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
-					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, client1.Pod().Namespace)
+					flowlogs.ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 
 				AfterEach(func() {
@@ -182,12 +181,12 @@ var _ = describe.EnterpriseDescribe(
 					// Staged policies appear in PendingPolicies. The first policy is a Deny which
 					// terminates staged evaluation, so only 1 pending policy is recorded.
 					Expect(len(item.Policies.PendingPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 pending policy but got: %v", item.Policies.PendingPolicies)
-					hit1 := FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
+					hit1 := flowlogs.FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
 					Expect(string(hit1.Action())).To(Equal("deny"))
 
 					// EnforcedPolicies should include just the __PROFILE__.
 					Expect(len(item.Policies.EnforcedPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
-					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
+					flowlogs.ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
 				})
 
 				AfterEach(func() {
@@ -234,12 +233,12 @@ var _ = describe.EnterpriseDescribe(
 					// Staged policies appear in PendingPolicies. The first policy is a Deny which
 					// terminates staged evaluation, so only 1 pending policy is recorded.
 					Expect(len(item.Policies.PendingPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 pending policy but got: %v", item.Policies.PendingPolicies)
-					hit1 := FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
+					hit1 := flowlogs.FindPolicyInFlowLogs(item.Policies.PendingPolicies, policy1)
 					Expect(string(hit1.Action())).To(Equal("deny"))
 
 					// EnforcedPolicies should include just the __PROFILE__.
 					Expect(len(item.Policies.EnforcedPolicies)).To(BeNumerically(">=", 1), "Expected at least 1 enforced policy but got: %v", item.Policies.EnforcedPolicies)
-					ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
+					flowlogs.ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
 				})
 
 				AfterEach(func() {
@@ -441,12 +440,12 @@ var _ = describe.EnterpriseDescribe(
 					// PendingPolicies should include the staged policy defined above.
 					msg := fmt.Sprintf("Expected 1 pending policies but got %d: %v", len(flog.Policies.PendingPolicies), flog.Policies.PendingPolicies)
 					Expect(len(flog.Policies.PendingPolicies)).To(Equal(1), msg)
-					ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, stagedPolicy)
+					flowlogs.ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, stagedPolicy)
 
 					// EnforcedPolicies should have a single entry: the __PROFILE__
 					msg = fmt.Sprintf("Expected 1 enforced policy but got %d: %v", len(flog.Policies.EnforcedPolicies), flog.Policies.EnforcedPolicies)
 					Expect(len(flog.Policies.EnforcedPolicies)).To(Equal(1), msg)
-					ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
+					flowlogs.ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 			})
 
@@ -498,12 +497,12 @@ var _ = describe.EnterpriseDescribe(
 					// PendingPolicies should include the staged policy defined above.
 					msg := fmt.Sprintf("Expected 1 pending policies but got %d: %v", len(flog.Policies.PendingPolicies), flog.Policies.PendingPolicies)
 					Expect(len(flog.Policies.PendingPolicies)).To(Equal(1), msg)
-					ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, policy)
+					flowlogs.ExpectPolicyInFlowLogs(flog.Policies.PendingPolicies, policy)
 
 					// EnforcedPolicies should have a single entry: the __PROFILE__
 					msg = fmt.Sprintf("Expected 1 enforced policy but got %d: %v", len(flog.Policies.EnforcedPolicies), flog.Policies.EnforcedPolicies)
 					Expect(len(flog.Policies.EnforcedPolicies)).To(Equal(1), msg)
-					ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
+					flowlogs.ExpectProfileInFlowLogs(flog.Policies.EnforcedPolicies, client1.Pod().Namespace)
 				})
 			})
 		})
@@ -611,67 +610,4 @@ func CreateStagedKubernetesNetworkPolicyAllow(
 	}
 
 	return policy
-}
-
-// kindFromObject derives the Calico API kind from the Go struct type. This is needed because
-// controller-runtime clears TypeMeta GVK after Create(), making GetObjectKind().GroupVersionKind().Kind
-// return "" on in-memory objects.
-func kindFromObject(obj runtime.Object) string {
-	switch obj.(type) {
-	case *v3.StagedNetworkPolicy:
-		return v3.KindStagedNetworkPolicy
-	case *v3.StagedGlobalNetworkPolicy:
-		return v3.KindStagedGlobalNetworkPolicy
-	case *v3.StagedKubernetesNetworkPolicy:
-		return v3.KindStagedKubernetesNetworkPolicy
-	default:
-		return ""
-	}
-}
-
-// FindPolicyInFlowLogs parses each flow log policy string and returns the PolicyHit that matches
-// the expected policy object by name, namespace, and kind. Fails the test if no match is found.
-func FindPolicyInFlowLogs(policyStrings []string, expected runtime.Object) api.PolicyHit {
-	ns := expected.(metav1.Object).GetNamespace()
-	name := expected.(metav1.Object).GetName()
-	kind := kindFromObject(expected)
-
-	for _, s := range policyStrings {
-		hit, err := api.PolicyHitFromFlowLogPolicyString(s)
-		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
-		if hit.Name() == name && hit.Namespace() == ns && (kind == "" || hit.Kind() == kind) {
-			return hit
-		}
-	}
-
-	msg := fmt.Sprintf(
-		"Expected to find policy %s/%s (kind %s) in flow logs but did not. Got policies: %v",
-		ns, name, kind, policyStrings,
-	)
-	ExpectWithOffset(1, false).To(BeTrue(), msg)
-	return nil
-}
-
-// ExpectPolicyInFlowLogs asserts that the given policy object appears in the flow log policy strings.
-func ExpectPolicyInFlowLogs(policyStrings []string, expected runtime.Object) {
-	FindPolicyInFlowLogs(policyStrings, expected)
-}
-
-// ExpectProfileInFlowLogs asserts that a profile for the given namespace appears in the flow log
-// policy strings. Kubernetes namespace profiles are named "kns.<namespace>" in the flow log.
-func ExpectProfileInFlowLogs(policyStrings []string, namespace string) {
-	expectedName := "kns." + namespace
-	for _, s := range policyStrings {
-		hit, err := api.PolicyHitFromFlowLogPolicyString(s)
-		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
-		if hit.Name() == expectedName && hit.Kind() == "Profile" {
-			return
-		}
-	}
-
-	msg := fmt.Sprintf(
-		"Expected to find profile for namespace %s (kns.%s) in flow logs but did not. Got policies: %v",
-		namespace, namespace, policyStrings,
-	)
-	ExpectWithOffset(1, false).To(BeTrue(), msg)
 }
