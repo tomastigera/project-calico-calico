@@ -1,6 +1,6 @@
 version: v1.0
 
-name: banzai-calico Windows
+name: banzai-calient Windows
 
 agent:
   machine:
