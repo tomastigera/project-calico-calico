@@ -42,7 +42,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	dashclient "github.com/projectcalico/calico/dashboards/pkg/client"
-	"github.com/projectcalico/calico/e2e/pkg/config"
 	"github.com/projectcalico/calico/e2e/pkg/describe"
 	"github.com/projectcalico/calico/e2e/pkg/utils"
 	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
@@ -69,7 +68,7 @@ var _ = describe.CalicoDescribe(
 
 			gatewayAPIName string
 			clusterIP      string
-			cancelForward  func()
+			pf             *elasticsearch.PortForwardInfo
 			backendNS      *corev1.Namespace
 		)
 
@@ -90,7 +89,7 @@ var _ = describe.CalicoDescribe(
 			gatewayAPIName = "tigera-secure"
 
 			// Set up port-forwarding to manager.
-			cancelForward = elasticsearch.PortForward()
+			pf = elasticsearch.PortForward()
 
 			// HTTP client with proper TLS CA verification
 			caCert := utils.GetTigeraCACert(ctx, f)
@@ -100,7 +99,7 @@ var _ = describe.CalicoDescribe(
 
 			// Ensure the port-forward is ready before proceeding.
 			kubectl := utils.Kubectl{}
-			kubectl.WaitForPortForward(httpClient, config.ManagerURL())
+			kubectl.WaitForPortForward(httpClient, pf.ManagerURL)
 
 			// Create network-admin service account and get token for dashboard API access.
 			// The utility creates the SA/CRB and registers DeferCleanup automatically.
@@ -112,8 +111,8 @@ var _ = describe.CalicoDescribe(
 
 			DeferCleanup(func() {
 				// Stop port-forwarding
-				if cancelForward != nil {
-					cancelForward()
+				if pf != nil {
+					pf.Stop()
 				}
 
 				// Cleanup Gateway API resources
@@ -263,7 +262,7 @@ var _ = describe.CalicoDescribe(
 
 				var resp dashclient.QueryResponse
 				Eventually(func() error {
-					resp = queryDashboardsAPI(httpClient, config.ManagerURL(), token, queryReq)
+					resp = queryDashboardsAPI(httpClient, pf.ManagerURL, token, queryReq)
 					if len(resp.GroupValues) == 0 {
 						return fmt.Errorf("no group values returned")
 					}
@@ -302,7 +301,7 @@ var _ = describe.CalicoDescribe(
 
 				var resp dashclient.QueryResponse
 				Eventually(func() error {
-					resp = queryDashboardsAPI(httpClient, config.ManagerURL(), token, queryReq)
+					resp = queryDashboardsAPI(httpClient, pf.ManagerURL, token, queryReq)
 					if len(resp.GroupValues) == 0 {
 						return fmt.Errorf("no group values returned")
 					}
@@ -338,7 +337,7 @@ var _ = describe.CalicoDescribe(
 
 				var resp dashclient.QueryResponse
 				Eventually(func() error {
-					resp = queryDashboardsAPI(httpClient, config.ManagerURL(), token, queryReq)
+					resp = queryDashboardsAPI(httpClient, pf.ManagerURL, token, queryReq)
 					if len(resp.GroupValues) == 0 {
 						return fmt.Errorf("no group values returned")
 					}
@@ -376,7 +375,7 @@ var _ = describe.CalicoDescribe(
 
 				var resp dashclient.QueryResponse
 				Eventually(func() error {
-					resp = queryDashboardsAPI(httpClient, config.ManagerURL(), token, queryReq)
+					resp = queryDashboardsAPI(httpClient, pf.ManagerURL, token, queryReq)
 					if len(resp.GroupValues) == 0 {
 						return fmt.Errorf("no group values returned")
 					}

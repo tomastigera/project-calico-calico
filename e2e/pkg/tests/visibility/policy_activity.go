@@ -33,6 +33,7 @@ import (
 	"github.com/projectcalico/calico/e2e/pkg/utils"
 	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
+	esutil "github.com/projectcalico/calico/e2e/pkg/utils/elasticsearch"
 )
 
 // policiesResponse mirrors the queryserver QueryPoliciesResp for JSON unmarshalling.
@@ -67,10 +68,10 @@ var _ = describe.CalicoDescribe(
 	"policy activity enrichment",
 	func() {
 		var (
-			f             = utils.NewDefaultFramework("policy-activity")
-			httpClient    *http.Client
-			token         string
-			cancelForward func()
+			f          = utils.NewDefaultFramework("policy-activity")
+			httpClient *http.Client
+			token      string
+			pf         *esutil.PortForwardInfo
 		)
 
 		BeforeEach(func() {
@@ -92,7 +93,7 @@ var _ = describe.CalicoDescribe(
 			}
 
 			// Port-forward to manager (voltron proxies to queryserver).
-			cancelForward = elasticsearch.PortForward()
+			pf = elasticsearch.PortForward()
 
 			// HTTP client with TLS CA from the cluster.
 			caCert := utils.GetTigeraCACert(ctx, f)
@@ -105,8 +106,8 @@ var _ = describe.CalicoDescribe(
 			Expect(err).NotTo(HaveOccurred())
 
 			DeferCleanup(func() {
-				if cancelForward != nil {
-					cancelForward()
+				if pf != nil {
+					pf.Stop()
 				}
 			})
 		})

@@ -3,6 +3,8 @@
 package windataplane
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	fc "github.com/projectcalico/calico/felix/config"
@@ -88,16 +90,23 @@ func (r *domainInfoReader) Stop() {
 }
 
 func (r *domainInfoReader) loop() {
+	startupTimer := time.NewTimer(30 * time.Second)
+	receivedPacket := false
 	for {
-		r.loopIteration()
-	}
-}
-
-func (r *domainInfoReader) loopIteration() {
-	pktEvent := <-r.msgChannel
-	// Forward to domainInfoStore.
-	r.storeMsgChannel <- dns.DataWithTimestamp{
-		Timestamp: pktEvent.NanoSeconds(),
-		Data:      pktEvent.Payload(),
+		select {
+		case pktEvent := <-r.msgChannel:
+			receivedPacket = true
+			// Forward to domainInfoStore.
+			r.storeMsgChannel <- dns.DataWithTimestamp{
+				Timestamp: pktEvent.NanoSeconds(),
+				Data:      pktEvent.Payload(),
+			}
+		case <-startupTimer.C:
+			if !receivedPacket {
+				log.Warning("No DNS packets received from ETW/pktmon after 30s. " +
+					"DNS domain-based policies may not work. " +
+					"Check for 'failed to subscribe to provider' errors above.")
+			}
+		}
 	}
 }
