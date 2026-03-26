@@ -159,6 +159,12 @@ type FlowResponse struct {
 
 	// DstPolicyReport contains the policies that were applied and reported by the destination of the flow.
 	DstPolicyReport *PolicyReport `json:"dstPolicyReport"`
+
+	// SrcPendingPolicyReport contains the pending (staged) policies that would be applied at the source if enforced.
+	SrcPendingPolicyReport *PolicyReport `json:"srcPendingPolicyReport,omitempty"`
+
+	// DstPendingPolicyReport contains the pending (staged) policies that would be applied at the destination if enforced.
+	DstPendingPolicyReport *PolicyReport `json:"dstPendingPolicyReport,omitempty"`
 }
 
 // MergeDestLabels merges in the given destination labels.
@@ -465,6 +471,38 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 				}
 			}
 		}
+
+		// Build up pending policy report from staged policies.
+		pendingPolicyReport, err := newPendingPolicyReportFromFlow(item, flowHelper)
+		if err != nil {
+			logrus.WithError(err).Error("failed to read pending policy report for flow")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if pendingPolicyReport != nil {
+			if item.Key.Reporter == "src" {
+				if response.SrcPendingPolicyReport == nil {
+					response.SrcPendingPolicyReport = &PolicyReport{}
+				}
+				switch item.Key.Action {
+				case "allow":
+					response.SrcPendingPolicyReport.AllowedFlowPolicies = pendingPolicyReport.AllowedFlowPolicies
+				case "deny":
+					response.SrcPendingPolicyReport.DeniedFlowPolicies = pendingPolicyReport.DeniedFlowPolicies
+				}
+			} else {
+				if response.DstPendingPolicyReport == nil {
+					response.DstPendingPolicyReport = &PolicyReport{}
+				}
+				switch item.Key.Action {
+				case "allow":
+					response.DstPendingPolicyReport.AllowedFlowPolicies = pendingPolicyReport.AllowedFlowPolicies
+				case "deny":
+					response.DstPendingPolicyReport.DeniedFlowPolicies = pendingPolicyReport.DeniedFlowPolicies
+				}
+			}
+		}
 	}
 
 	response.Count = totalHits
@@ -479,18 +517,31 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 }
 
 func newPolicyReportFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
-	policyReport := &PolicyReport{}
+	return newPolicyReport(flow.Key.Action, flow.Policies, flowHelper)
+}
 
-	allPolicies, err := getPoliciesFromFlow(flow, flowHelper)
+func newPendingPolicyReportFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
+	return newPolicyReport(flow.Key.Action, flow.PendingPolicies, flowHelper)
+}
+
+// newPolicyReport builds a PolicyReport from the given policies, splitting them into allowed/denied
+// based on the flow action. Returns nil if the policy slice is empty or all policies are filtered by RBAC.
+func newPolicyReport(action v1.FlowAction, policies []v1.Policy, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
+	if len(policies) == 0 {
+		return nil, nil
+	}
+
+	parsed, err := getPoliciesFromFlow(policies, flowHelper)
 	if err != nil {
 		return nil, err
 	}
 
-	switch flow.Key.Action {
+	policyReport := &PolicyReport{}
+	switch action {
 	case "allow":
-		policyReport.AllowedFlowPolicies = allPolicies
+		policyReport.AllowedFlowPolicies = parsed
 	case "deny":
-		policyReport.DeniedFlowPolicies = allPolicies
+		policyReport.DeniedFlowPolicies = parsed
 	}
 
 	// Don't return a policy report if there are neither allowed nor denied policies, since this means a policy report
@@ -505,7 +556,7 @@ func newPolicyReportFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) (*Polic
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy
 // that can be sent back in the response. The given flowHelper helps to obfuscate the policy response if the user is not
 // authorized to view certain, or all, policies.
-func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowResponsePolicy, error) {
+func getPoliciesFromFlow(flowPolicies []v1.Policy, flowHelper rbac.FlowHelper) ([]*FlowResponsePolicy, error) {
 	var policies []*FlowResponsePolicy
 	var obfuscatedPolicy *FlowResponsePolicy
 	var policyIdx int
@@ -514,7 +565,7 @@ func getPoliciesFromFlow(flow v1.L3Flow, flowHelper rbac.FlowHelper) ([]*FlowRes
 	// permissions to see. Convert the others to the proper response format expected by the UI.
 	// TODO: It would be nice to change the response format expected by the UI to match Linseed's API, so we don't need
 	// to maintain multiple structures representing a policy hit.
-	for _, p := range flow.Policies {
+	for _, p := range flowPolicies {
 		// Create a PolicyHit object to help with RBAC decisions.
 		policyHit, err := api.NewPolicyHit(api.Action(p.Action), policyIdx, p.Name, p.Namespace, p.Kind, p.Tier, p.RuleID)
 		if err != nil {
