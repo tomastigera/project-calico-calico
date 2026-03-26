@@ -160,10 +160,12 @@ type FlowResponse struct {
 	// DstPolicyReport contains the policies that were applied and reported by the destination of the flow.
 	DstPolicyReport *PolicyReport `json:"dstPolicyReport"`
 
-	// SrcPendingPolicyReport contains the pending (staged) policies that would be applied at the source if enforced.
+	// SrcPendingPolicyReport contains the expected policy trace at the source when including staged policies.
+	// This may contain enforced policies, staged policies, or a mix of both.
 	SrcPendingPolicyReport *PolicyReport `json:"srcPendingPolicyReport,omitempty"`
 
-	// DstPendingPolicyReport contains the pending (staged) policies that would be applied at the destination if enforced.
+	// DstPendingPolicyReport contains the expected policy trace at the destination when including staged policies.
+	// This may contain enforced policies, staged policies, or a mix of both.
 	DstPendingPolicyReport *PolicyReport `json:"dstPendingPolicyReport,omitempty"`
 }
 
@@ -437,7 +439,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 			response.MergeDestLabels(item.DestinationLabels)
 		}
 
-		// Build up a policy report.
+		// Build up enforced policy report.
 		policyReport, err := newPolicyReportFromFlow(item, flowHelper)
 		if err != nil {
 			logrus.WithError(err).Error("failed to read policy report for flow")
@@ -445,64 +447,17 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 			return
 		}
 		logrus.WithField("policies", policyReport).Debug("Policies parsed.")
+		mergePolicyReport(item.Key, policyReport, &response.SrcPolicyReport, &response.DstPolicyReport)
 
-		if policyReport != nil {
-			if item.Key.Reporter == "src" {
-				logrus.Debugf("Setting source policy report")
-				if response.SrcPolicyReport == nil {
-					response.SrcPolicyReport = &PolicyReport{}
-				}
-				switch item.Key.Action {
-				case "allow":
-					response.SrcPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
-				case "deny":
-					response.SrcPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
-				}
-			} else {
-				logrus.Debugf("Setting destination policy report")
-				if response.DstPolicyReport == nil {
-					response.DstPolicyReport = &PolicyReport{}
-				}
-				switch item.Key.Action {
-				case "allow":
-					response.DstPolicyReport.AllowedFlowPolicies = policyReport.AllowedFlowPolicies
-				case "deny":
-					response.DstPolicyReport.DeniedFlowPolicies = policyReport.DeniedFlowPolicies
-				}
-			}
-		}
-
-		// Build up pending policy report from staged policies.
+		// Build up pending policy report. The pending trace contains the full set of policies
+		// (enforced, staged, or a mix) that would apply when including staged policies.
 		pendingPolicyReport, err := newPendingPolicyReportFromFlow(item, flowHelper)
 		if err != nil {
 			logrus.WithError(err).Error("failed to read pending policy report for flow")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
-		if pendingPolicyReport != nil {
-			if item.Key.Reporter == "src" {
-				if response.SrcPendingPolicyReport == nil {
-					response.SrcPendingPolicyReport = &PolicyReport{}
-				}
-				switch item.Key.Action {
-				case "allow":
-					response.SrcPendingPolicyReport.AllowedFlowPolicies = pendingPolicyReport.AllowedFlowPolicies
-				case "deny":
-					response.SrcPendingPolicyReport.DeniedFlowPolicies = pendingPolicyReport.DeniedFlowPolicies
-				}
-			} else {
-				if response.DstPendingPolicyReport == nil {
-					response.DstPendingPolicyReport = &PolicyReport{}
-				}
-				switch item.Key.Action {
-				case "allow":
-					response.DstPendingPolicyReport.AllowedFlowPolicies = pendingPolicyReport.AllowedFlowPolicies
-				case "deny":
-					response.DstPendingPolicyReport.DeniedFlowPolicies = pendingPolicyReport.DeniedFlowPolicies
-				}
-			}
-		}
+		mergePolicyReport(item.Key, pendingPolicyReport, &response.SrcPendingPolicyReport, &response.DstPendingPolicyReport)
 	}
 
 	response.Count = totalHits
@@ -553,9 +508,30 @@ func newPolicyReport(action v1.FlowAction, policies []v1.Policy, flowHelper rbac
 	return policyReport, nil
 }
 
-// getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy
-// that can be sent back in the response. The given flowHelper helps to obfuscate the policy response if the user is not
-// authorized to view certain, or all, policies.
+// mergePolicyReport merges the given policy report into the appropriate src/dst report pointer based on the flow key's
+// reporter and action.
+func mergePolicyReport(key v1.L3FlowKey, report *PolicyReport, srcReport, dstReport **PolicyReport) {
+	if report == nil {
+		return
+	}
+	target := dstReport
+	if key.Reporter == "src" {
+		target = srcReport
+	}
+	if *target == nil {
+		*target = &PolicyReport{}
+	}
+	switch key.Action {
+	case "allow":
+		(*target).AllowedFlowPolicies = report.AllowedFlowPolicies
+	case "deny":
+		(*target).DeniedFlowPolicies = report.DeniedFlowPolicies
+	}
+}
+
+// getPoliciesFromFlow converts the provided slice of v1.Policy objects into FlowResponsePolicy entries that can be
+// returned in the API response. The given flowHelper is used to apply RBAC, obfuscating or omitting policies that the
+// user is not authorized to view.
 func getPoliciesFromFlow(flowPolicies []v1.Policy, flowHelper rbac.FlowHelper) ([]*FlowResponsePolicy, error) {
 	var policies []*FlowResponsePolicy
 	var obfuscatedPolicy *FlowResponsePolicy

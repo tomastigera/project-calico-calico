@@ -930,9 +930,9 @@ var _ = Describe("FlowLog middleware", func() {
 				Expect(flResponse.SrcPolicyReport).NotTo(BeNil())
 				Expect(flResponse.SrcPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
 
-				// Pending policy reports should be nil.
-				Expect(flResponse.SrcPendingPolicyReport).To(BeNil())
-				Expect(flResponse.DstPendingPolicyReport).To(BeNil())
+				// Pending policy report keys should not be present in the raw JSON (omitempty).
+				Expect(string(respBody)).NotTo(ContainSubstring("srcPendingPolicyReport"))
+				Expect(string(respBody)).NotTo(ContainSubstring("dstPendingPolicyReport"))
 			})
 
 			DescribeTable("obfuscating policies",
