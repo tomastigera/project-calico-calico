@@ -4,7 +4,6 @@ package flowlogs
 
 import (
 	"fmt"
-
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
