@@ -27,7 +27,7 @@ import (
 
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
-	bpfEvnt, err := events.New(events.SourcePerfEvents, 1<<20)
+	bpfEvnt, err := events.New(events.SourceRingBuffer, 1<<20)
 	Expect(err).NotTo(HaveOccurred())
 	kp := kprobe.New("debug", bpfEvnt)
 	Expect(kp).NotTo(BeNil())

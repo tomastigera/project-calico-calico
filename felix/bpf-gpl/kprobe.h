@@ -6,8 +6,10 @@
 #define __CALI_KPROBE_H__
 
 #include <linux/in.h>
+#include <asm/ptrace.h>
 
 #include "bpf.h"
+#include "ringbuf.h"
 #include <bpf_tracing.h>
 
 #define SEND_DATA_INTERVAL 10000000000
@@ -35,7 +37,7 @@ CALI_MAP(cali_kpstats, 2,
                 511000, 0)
 
 struct __attribute__((__packed__)) calico_exec_value {
-	struct perf_event_header hdr;
+	struct event_header hdr;
 	__u32 pid;
 	char filename[MAX_FILENAME_LENGTH];
 	char args[MAX_NUM_ARGS][MAX_ARG_LENGTH];
@@ -124,12 +126,12 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 		 */
 		exec_value = cali_epath_lookup_elem(&key.pid);
 		if (exec_value) {
-			int err = perf_commit_event(ctx, exec_value, sizeof(struct calico_exec_value));
+			int err = ringbuf_submit_event(exec_value, sizeof(struct calico_exec_value));
 			if (err) {
 				CALI_DEBUG("error sending process path: %d\n", err);
 			}
 		}
-		ret = event_bpf_stats(ctx, key.pid, key.saddr, key.sport, key.daddr,
+		ret = event_bpf_stats(key.pid, key.saddr, key.sport, key.daddr,
 					key.dport, value.bytes, proto, !tx);
 		if (ret == 0) {
 			/* Set the timestamp only if we managed to send the event.
@@ -142,7 +144,7 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	} else {
 		diff = ts - val->timestamp;
 		if (diff >= SEND_DATA_INTERVAL) {
-			ret = event_bpf_stats(ctx, key.pid, key.saddr, key.sport,
+			ret = event_bpf_stats(key.pid, key.saddr, key.sport,
 						key.daddr, key.dport, value.bytes, proto, !tx);
 			if (ret == 0) {
 				/* Update the timestamp only if we managed to send the

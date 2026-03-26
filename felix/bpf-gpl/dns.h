@@ -1,33 +1,64 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2026 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #ifndef __CALI_DNS_H__
 #define __CALI_DNS_H__
 
 #include "bpf.h"
-#include "perf.h"
+#include "ringbuf.h"
 #include "events.h"
 #include "sock.h"
 #include "sendrecv.h"
-#include <linux/bpf_perf_event.h>
+
+/* Maximum packet length we can copy into the ring buffer.
+ * Bounded for BPF verifier safety; covers jumbo frames.
+ */
+#define DNS_MAX_PLEN 9000
+
+struct dns_scratch_buf {
+	struct event_timestamp_header hdr;
+	char pkt[DNS_MAX_PLEN];
+};
+
+CALI_MAP_V1(cali_dns_scratch,
+		BPF_MAP_TYPE_PERCPU_ARRAY,
+		__u32, struct dns_scratch_buf,
+		1, 0)
 
 static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
 {
 	int plen = ctx->skb->len;
-	struct perf_event_timestamp_header hdr;
-	__builtin_memset(&hdr, 0, sizeof(hdr));
+	if (plen <= 0) {
+		return;
+	}
+	if (plen > DNS_MAX_PLEN) {
+		plen = DNS_MAX_PLEN;
+	}
+
+	__u32 zero = 0;
+	struct dns_scratch_buf *buf = cali_dns_scratch_lookup_elem(&zero);
+	if (!buf) {
+		return;
+	}
+
+	__builtin_memset(&buf->hdr, 0, sizeof(buf->hdr));
 	if (CALI_F_L3) {
-		hdr.h.type = EVENT_DNS_L3;
+		buf->hdr.h.type = EVENT_DNS_L3;
 	} else {
-		hdr.h.type = EVENT_DNS;
+		buf->hdr.h.type = EVENT_DNS;
 	}
-	hdr.h.len = sizeof(hdr) + plen;
-	hdr.timestamp_ns = bpf_ktime_get_ns();
-	int err = perf_commit_event_ctx(ctx->skb, plen, &hdr, sizeof(hdr));
+	__u64 total = sizeof(struct event_timestamp_header) + plen;
+	buf->hdr.h.len = total;
+	buf->hdr.timestamp_ns = bpf_ktime_get_ns();
+
+	int err = bpf_skb_load_bytes(ctx->skb, 0, buf->pkt, plen);
 	if (err) {
-		CALI_DEBUG("perf_commit_event_ctx error %d\n", err);
+		CALI_DEBUG("bpf_skb_load_bytes error %d\n", err);
+		return;
 	}
+
+	ringbuf_submit_event(buf, total);
 }
 
 static CALI_BPF_INLINE bool calico_check_for_dns(struct cali_tc_ctx *ctx)
