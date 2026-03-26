@@ -61,6 +61,7 @@ type PolicyRecommendationScopeSpec struct {
 }
 
 type PolicyRecommendationScopeStatus struct {
+	// +listType=atomic
 	Conditions []PolicyRecommendationScopeStatusCondition `json:"conditions,omitempty"`
 }
 
@@ -110,7 +111,7 @@ const (
 // PolicyRecommendationList contains a list of Monitor
 type PolicyRecommendationScopeList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Items           []PolicyRecommendationScope `json:"items"`
 }
 

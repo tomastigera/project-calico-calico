@@ -31,7 +31,7 @@ const (
 // BGPPeerList is a list of BGPPeer resources.
 type BGPPeerList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Items           []BGPPeer `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -171,6 +171,7 @@ type BGPPeerSpec struct {
 
 	// The ordered set of BGPFilters applied on this BGP peer.
 	// +optional
+	// +listType=atomic
 	Filters []string `json:"filters,omitempty" validate:"omitempty,dive,name"`
 
 	// Name of the external network to which this peer belongs.

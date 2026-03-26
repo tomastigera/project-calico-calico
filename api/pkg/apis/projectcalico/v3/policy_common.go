@@ -97,6 +97,7 @@ type HTTPMatch struct {
 	// HTTP Methods (e.g. GET, PUT, etc.)
 	// Multiple methods are OR'd together.
 	// +kubebuilder:validation:MaxItems=20
+	// +listType=atomic
 	Methods []string `json:"methods,omitempty" validate:"omitempty"`
 	// Paths is an optional field that restricts the rule to apply to HTTP requests that use one of the listed
 	// HTTP Paths.
@@ -106,18 +107,21 @@ type HTTPMatch struct {
 	// - prefix: /bar
 	// NOTE: Each entry may ONLY specify either a `exact` or a `prefix` match. The validator will check for it.
 	// +kubebuilder:validation:MaxItems=20
+	// +listType=atomic
 	Paths []HTTPPath `json:"paths,omitempty" validate:"omitempty"`
 	// Headers is an optional field that restricts the rule to apply to HTTP headers.
 	// Multiple headers criteria are AND'd together.
 	// Criteria within a single headers rule ar OR'd together.
+	// +listType=atomic
 	Headers []HTTPHeaderCriteria `json:"headers,omitempty" validate:"omitempty"`
 }
 
 // HTTPHeaderCriteria structure defines optional HTTP headers criterion for ALP.
 type HTTPHeaderCriteria struct {
-	Header   string   `json:"header" validate:"required"`
-	Operator string   `json:"operator" validate:"required,oneof=Exists DoesNotExist HasPrefix HasSuffix In NotIn MatchesRegex"`
-	Values   []string `json:"values" validate:"required"`
+	Header   string `json:"header" validate:"required"`
+	Operator string `json:"operator" validate:"required,oneof=Exists DoesNotExist HasPrefix HasSuffix In NotIn MatchesRegex"`
+	// +listType=atomic
+	Values []string `json:"values" validate:"required"`
 }
 
 // ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type
@@ -199,15 +203,17 @@ type EntityRule struct {
 	//
 	// Since only some protocols have ports, if any ports are specified it requires the
 	// Protocol match in the Rule to be set to "TCP" or "UDP".
+	// +listType=atomic
 	Ports []numorstring.Port `json:"ports,omitempty" validate:"omitempty,dive"`
 
 	// Domains is an optional field, valid for egress Allow rules only, that restricts the rule
 	// to apply only to traffic to one of the specified domains.  If this field is specified,
 	// Action must be Allow, and Nets and Selector must both be left empty.
+	// +listType=atomic
 	Domains []string `json:"domains,omitempty" validate:"omitempty,dive,wildname"`
 
 	// NotNets is the negated version of the Nets field.
-	// listType=set
+	// +listType=set
 	NotNets []string `json:"notNets,omitempty" validate:"omitempty,dive,net"`
 
 	// NotSelector is the negated version of the Selector field.  See Selector field for
@@ -217,6 +223,7 @@ type EntityRule struct {
 	// NotPorts is the negated version of the Ports field.
 	// Since only some protocols have ports, if any ports are specified it requires the
 	// Protocol match in the Rule to be set to "TCP" or "UDP".
+	// +listType=atomic
 	NotPorts []numorstring.Port `json:"notPorts,omitempty" validate:"omitempty,dive"`
 
 	// ServiceAccounts is an optional field that restricts the rule to only apply to traffic that originates from (or

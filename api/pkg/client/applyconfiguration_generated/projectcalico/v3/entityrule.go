@@ -72,7 +72,6 @@ type EntityRuleApplyConfiguration struct {
 	// Action must be Allow, and Nets and Selector must both be left empty.
 	Domains []string `json:"domains,omitempty"`
 	// NotNets is the negated version of the Nets field.
-	// listType=set
 	NotNets []string `json:"notNets,omitempty"`
 	// NotSelector is the negated version of the Selector field.  See Selector field for
 	// subtleties with negated selectors.
