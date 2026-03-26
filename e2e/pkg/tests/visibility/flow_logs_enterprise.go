@@ -384,8 +384,8 @@ func flowLogQuery(namespace, reporter, sourceName, destName, process string) *el
 
 type flowExpectation struct {
 	action       string
-	policy       runtime.Object // expected policy object (mutually exclusive with profileNS)
-	profileNS    string         // expected profile namespace (mutually exclusive with policy)
+	policy       runtime.Object // expected policy object
+	profileNS    string         // expected profile namespace
 	process      string
 	sourceLabels []string
 	destLabels   []string
@@ -419,9 +419,13 @@ func validateFlowLogs(esclient *elastic.Client, esquery *elastic.BoolQuery, expe
 		// Validate the enforced policy using structured PolicyHit parsing.
 		if expectation.policy != nil {
 			flowlogs.ExpectPolicyInFlowLogs(policies, expectation.policy)
-		} else if expectation.profileNS != "" {
+		}
+
+		// Validate the enforced profile using structured PolicyHit parsing.
+		if expectation.profileNS != "" {
 			flowlogs.ExpectProfileInFlowLogs(policies, expectation.profileNS)
 		}
+
 		Expect(fl.Action).To(Equal(expectation.action), "flow log action was %q, expected %q", fl.Action, expectation.action)
 
 		// If process name is given in the expectation, verify process information.
