@@ -833,6 +833,108 @@ var _ = Describe("FlowLog middleware", func() {
 				),
 			)
 
+			It("includes pending policy reports from PendingPolicies", func() {
+				mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+
+				// Build a response with both enforced and pending policies.
+				setResponse(v1.List[v1.L3Flow]{
+					Items: []v1.L3Flow{
+						{
+							Key: v1.L3FlowKey{
+								Reporter: "src",
+								Action:   "allow",
+							},
+							LogStats: &v1.LogStats{FlowLogCount: 1, LogCount: 1},
+							Policies: policiesToV1([]map[string]any{
+								{"key": "0|tier1|namespace1/tier1.enforced-policy|allow|0", "doc_count": 1},
+							}),
+							PendingPolicies: policiesToV1([]map[string]any{
+								{"key": "0|tier1|namespace1/tier1.staged:staged-policy|allow|0", "doc_count": 1},
+							}),
+						},
+						{
+							Key: v1.L3FlowKey{
+								Reporter: "dst",
+								Action:   "allow",
+							},
+							LogStats: &v1.LogStats{FlowLogCount: 1, LogCount: 1},
+							Policies: policiesToV1([]map[string]any{
+								{"key": "0|tier2|namespace2/tier2.enforced-policy|allow|0", "doc_count": 1},
+							}),
+							PendingPolicies: policiesToV1([]map[string]any{
+								{"key": "0|tier2|namespace2/tier2.staged:staged-policy|allow|0", "doc_count": 1},
+							}),
+						},
+					},
+				})
+
+				flowLogHandler.ServeHTTP(respRecorder, req)
+				Expect(respRecorder.Code).Should(Equal(200))
+
+				respBody, err := io.ReadAll(respRecorder.Body)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var flResponse FlowResponse
+				Expect(json.Unmarshal(respBody, &flResponse)).To(Succeed())
+
+				// Enforced policies should be in the existing fields.
+				Expect(flResponse.SrcPolicyReport).NotTo(BeNil())
+				Expect(flResponse.SrcPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
+				Expect(flResponse.SrcPolicyReport.AllowedFlowPolicies[0].Name).To(Equal("tier1.enforced-policy"))
+
+				Expect(flResponse.DstPolicyReport).NotTo(BeNil())
+				Expect(flResponse.DstPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
+				Expect(flResponse.DstPolicyReport.AllowedFlowPolicies[0].Name).To(Equal("tier2.enforced-policy"))
+
+				// Pending policies should be in the new fields.
+				Expect(flResponse.SrcPendingPolicyReport).NotTo(BeNil())
+				Expect(flResponse.SrcPendingPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
+				Expect(flResponse.SrcPendingPolicyReport.AllowedFlowPolicies[0].Name).To(Equal("tier1.staged-policy"))
+				Expect(flResponse.SrcPendingPolicyReport.AllowedFlowPolicies[0].IsStaged).To(BeTrue())
+
+				Expect(flResponse.DstPendingPolicyReport).NotTo(BeNil())
+				Expect(flResponse.DstPendingPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
+				Expect(flResponse.DstPendingPolicyReport.AllowedFlowPolicies[0].Name).To(Equal("tier2.staged-policy"))
+				Expect(flResponse.DstPendingPolicyReport.AllowedFlowPolicies[0].IsStaged).To(BeTrue())
+			})
+
+			It("omits pending policy reports when PendingPolicies is empty", func() {
+				mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+
+				// Build a response with only enforced policies, no pending.
+				setResponse(v1.List[v1.L3Flow]{
+					Items: []v1.L3Flow{
+						{
+							Key: v1.L3FlowKey{
+								Reporter: "src",
+								Action:   "allow",
+							},
+							LogStats: &v1.LogStats{FlowLogCount: 1, LogCount: 1},
+							Policies: policiesToV1([]map[string]any{
+								{"key": "0|tier1|namespace1/tier1.policy1|allow|0", "doc_count": 1},
+							}),
+						},
+					},
+				})
+
+				flowLogHandler.ServeHTTP(respRecorder, req)
+				Expect(respRecorder.Code).Should(Equal(200))
+
+				respBody, err := io.ReadAll(respRecorder.Body)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var flResponse FlowResponse
+				Expect(json.Unmarshal(respBody, &flResponse)).To(Succeed())
+
+				// Enforced policies should be present.
+				Expect(flResponse.SrcPolicyReport).NotTo(BeNil())
+				Expect(flResponse.SrcPolicyReport.AllowedFlowPolicies).To(HaveLen(1))
+
+				// Pending policy report keys should not be present in the raw JSON (omitempty).
+				Expect(string(respBody)).NotTo(ContainSubstring("srcPendingPolicyReport"))
+				Expect(string(respBody)).NotTo(ContainSubstring("dstPendingPolicyReport"))
+			})
+
 			DescribeTable("obfuscating policies",
 				func(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]any,
 					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
