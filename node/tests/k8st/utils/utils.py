@@ -36,40 +36,39 @@ class DiagsCollector(object):
         pass
 
     def __exit__(self, exc_type, exc_value, tb):
-        if exc_type is not None:
-            # Print out diagnostics for the test. These will go to screen
-            # on test failure.
-            _log.info("===================================================")
-            _log.info("==== TEST IS FAILING, COLLECTING DIAGS FOR TEST ===")
-            _log.info("===================================================")
-            _log.info("Exception information: %s, %s, %s", exc_type, exc_value, traceback.format_tb(tb))
-            kubectl("version")
-            kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
-            for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
-                _log.info("")
-                calicoctl("get " + resource + " -o yaml")
-            nodes, _, _ = node_info()
-            for node in nodes:
-                _log.info("")
-                run("docker exec " + node + " ip r")
-                run("docker exec " + node + " ip -6 r")
-                run("docker exec " + node + " ip l")
-            kubectl("logs -n calico-system -l k8s-app=calico-node")
-            self.print_confd_templates(nodes)
-            for pod_name in calico_node_pod_names():
-                kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
-                        allow_fail=True)
-                kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
-                        allow_fail=True)
-                kubectl("logs -n calico-system %s" % pod_name,
-                        allow_fail=True)
-            _log.info("===================================================")
-            _log.info("============= COLLECTED DIAGS FOR TEST ============")
-            _log.info("===================================================")
-        else:
-            _log.info("===================================================")
-            _log.info("========= TEST COMPLETED WITHOUT EXCEPTION ========")
-            _log.info("===================================================")
+        if exc_type is None:
+            # Test passed, no need to collect diagnostics.
+            return
+
+        # Print out diagnostics for the test. These will go to screen
+        # on test failure.
+        _log.info("===================================================")
+        _log.info("==== TEST IS FAILING, COLLECTING DIAGS FOR TEST ===")
+        _log.info("===================================================")
+        _log.info("Exception information: %s, %s, %s", exc_type, exc_value, traceback.format_tb(tb))
+        kubectl("version")
+        kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
+        for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
+            _log.info("")
+            calicoctl("get " + resource + " -o yaml")
+        nodes, _, _ = node_info()
+        for node in nodes:
+            _log.info("")
+            run("docker exec " + node + " ip r")
+            run("docker exec " + node + " ip -6 r")
+            run("docker exec " + node + " ip l")
+        kubectl("logs -n calico-system -l k8s-app=calico-node")
+        self.print_confd_templates(nodes)
+        for pod_name in calico_node_pod_names():
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
+                    allow_fail=True)
+            kubectl("exec -n calico-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
+                    allow_fail=True)
+            kubectl("logs -n calico-system %s" % pod_name,
+                    allow_fail=True)
+        _log.info("===================================================")
+        _log.info("============= COLLECTED DIAGS FOR TEST ============")
+        _log.info("===================================================")
 
     def print_confd_templates(self, nodes):
         for node in nodes:
@@ -109,13 +108,7 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
     # Check how much space there is inside the container.  We may need
     # to retry this, as it may take a while for the image to download
     # and the container to start running.
-    while True:
-        try:
-            run("docker exec %s df -h" % name)
-            break
-        except subprocess.CalledProcessError:
-            _log.exception("Container not ready yet")
-            time.sleep(20)
+    retry_until_success(run, retries=30, wait_time=2, function_args=["docker exec %s df -h" % name])
 
     # Install curl and iproute2.
     run("docker exec %s apk add --no-cache curl iproute2" % name)
