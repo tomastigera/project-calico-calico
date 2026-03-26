@@ -8,7 +8,8 @@ import time
 import pytest
 
 from tests.k8st.test_base import NetcatClientTCP, Container, Pod, TestBase
-from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, retry_until_success, update_ds_env
+from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, retry_until_success, \
+        update_felix_config, set_encapsulation, get_felix_config_field
 
 _log = logging.getLogger(__name__)
 
@@ -17,13 +18,15 @@ class TestExternalNetwork(TestBase):
     def setUp(self):
         super(TestExternalNetwork, self).setUp()
 
-        newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
-                  "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_EGRESSGATEWAYPOLLINTERVAL": "1",
-                  "FELIX_ExternalNetworkSupport": "Enabled"}
-        update_ds_env("calico-node", "calico-system", newEnv)
+        update_felix_config({
+            "policySyncPathPrefix": "/var/run/nodeagent",
+            "egressIPSupport": "EnabledPerNamespaceOrPerPod",
+            "egressGatewayPollInterval": "1s",
+            "externalNetworkSupport": "Enabled",
+        })
 
-        # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
+        # Wait for Felix to get past its route-cleanup grace period after
+        # the restart triggered by the FelixConfiguration change above.
         time.sleep(20)
 
     def tearDown(self):
@@ -38,16 +41,20 @@ class TestExternalNetwork(TestBase):
 
     def _setup_ippools(self, ipv4_encap, egress_pool_cidr, block_size):
         assert ipv4_encap in ["IPIP", "VXLAN", "None"]
-        ipip_mode = "Never"
-        if ipv4_encap == "IPIP":
-            ipip_mode = "Always"
-        vxlan_mode = "Never"
-        if ipv4_encap == "VXLAN":
-            vxlan_mode = "Always"
-        # Patch default IPv4 to change IPIP mode depending on encap
-        kubectl("patch --type=merge ippool default-ipv4-ippool --patch '{\"spec\": {\"ipipMode\": \"%s\", \"vxlanMode\": \"%s\"}}'" % (ipip_mode, vxlan_mode))
 
-        # Create egress gateway IP pool.
+        # Change encapsulation via Installation CR so the operator
+        # reconciles the default IPPool.
+        set_encapsulation(ipv4_encap)
+
+        # Create egress gateway IP pool. This is a test-specific pool,
+        # not managed by the operator, so we create it directly. Match
+        # the encap mode to what we set on the default pool above.
+        egress_encap_modes = {
+            "IPIP": ("Always", "Never"),
+            "VXLAN": ("Never", "Always"),
+            "None": ("Never", "Never"),
+        }
+        egress_ipip, egress_vxlan = egress_encap_modes[ipv4_encap]
         kubectl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -60,7 +67,7 @@ spec:
   ipipMode: %s
   vxlanMode: %s
 EOF
-""" % (egress_pool_cidr, block_size, ipip_mode, vxlan_mode))
+""" % (egress_pool_cidr, block_size, egress_ipip, egress_vxlan))
         self.add_cleanup(lambda: kubectl("delete ippool egress-ippool-1"))
 
     def _test_external_net_basic(self, ipv4_encap):
@@ -289,17 +296,15 @@ EOF
             # Verify a route to the server exists in the externalnetwork's route table
             retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 
-            # Restart Felix by updating log level.
-            log_level = self.get_ds_env("calico-node", "calico-system", "FELIX_LOGSEVERITYSCREEN")
+            # Trigger a Felix config change by toggling log level.
+            log_level = get_felix_config_field("logSeverityScreen")
             if log_level == "Debug":
                 new_log_level = "Info"
             else:
                 new_log_level = "Debug"
-            _log.info("--- Start restarting calico/node ---")
-            oldEnv = {"FELIX_LOGSEVERITYSCREEN": log_level}
-            newEnv = {"FELIX_LOGSEVERITYSCREEN": new_log_level}
-            update_ds_env("calico-node", "calico-system", newEnv)
-            self.add_cleanup(lambda: update_ds_env("calico-node", "calico-system", oldEnv))
+            _log.info("--- Updating FelixConfiguration log level ---")
+            update_felix_config({"logSeverityScreen": new_log_level})
+            self.add_cleanup(lambda: update_felix_config({"logSeverityScreen": log_level}))
 
             # Verify that each client still reaches the correct expected external server
             retry_until_success(_retry_connect, function_args=[client_red, server_A_addr, "server A"])

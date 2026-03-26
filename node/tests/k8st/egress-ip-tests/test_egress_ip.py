@@ -12,7 +12,8 @@ import pytest
 
 from tests.k8st.test_base import NetcatServerTCP, NetcatClientTCP, Pod, TestBase
 from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, \
-        node_info, retry_until_success, stop_for_debug, update_ds_env
+        node_info, retry_until_success, stop_for_debug, update_felix_config, \
+        set_encapsulation, get_felix_config_field
 
 _log = logging.getLogger(__name__)
 
@@ -47,36 +48,36 @@ class _TestEgressIP(TestBase):
     @classmethod
     def env_ippool_setup(self, backend, wireguard):
         self.disableDefaultDenyTest = False
-        newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
-                  "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_IPINIPENABLED": "false",
-                  "FELIX_VXLANENABLED": "false",
-                  "FELIX_WIREGUARDENABLED": "false",
-                  "FELIX_EGRESSGATEWAYPOLLINTERVAL": "1"}
-        if backend == "VXLAN":
-            modeVxlan = "Always"
-            modeIPIP = "Never"
-            newEnv["FELIX_VXLANENABLED"] = "true"
-        elif backend == "IPIP":
-            modeVxlan = "Never"
-            modeIPIP = "Always"
-            newEnv["FELIX_IPINIPENABLED"] = "true"
-        elif backend == "NoOverlay":
-            modeVxlan = "Never"
-            modeIPIP = "Never"
-        else:
+
+        # Map backend to Installation encapsulation value.
+        encap_map = {
+            "VXLAN": ("VXLAN", "Always", "Never"),
+            "IPIP": ("IPIP", "Never", "Always"),
+            "NoOverlay": ("None", "Never", "Never"),
+        }
+        if backend not in encap_map:
             raise Exception('wrong backend type')
+        encap, modeVxlan, modeIPIP = encap_map[backend]
 
-        patch_ippool("default-ipv4-ippool",
-                    vxlanMode=modeVxlan,
-                    ipipMode=modeIPIP)
+        # Change encapsulation via Installation CR so the operator
+        # reconciles the default IPPool.
+        set_encapsulation(encap)
 
+        # Configure Felix settings for egress IP testing.
+        felix_config = {
+            "policySyncPathPrefix": "/var/run/nodeagent",
+            "egressIPSupport": "EnabledPerNamespaceOrPerPod",
+            "egressGatewayPollInterval": "1s",
+        }
         if wireguard:
             self.disableDefaultDenyTest = True
-            newEnv["FELIX_WIREGUARDENABLED"] = "true"
-        update_ds_env("calico-node", "calico-system", newEnv)
+            felix_config["wireguardEnabled"] = True
+        else:
+            felix_config["wireguardEnabled"] = False
+        update_felix_config(felix_config)
 
-        # Create egress IP pool.
+        # Create egress IP pool. This is a test-specific pool, not managed
+        # by the operator, so we create it directly.
         self.egress_cidr = "10.10.10.0/29"
         calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
@@ -92,7 +93,7 @@ spec:
 EOF
 """ % (self.egress_cidr, modeVxlan, modeIPIP))
 
-        # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
+        # Wait for Felix to get past its route-cleanup grace period.
         time.sleep(20)
 
     def test_access_service_node_port(self):
@@ -349,17 +350,15 @@ EOF
             # client_red all should send egress packets via gw, gw3, gw3_1
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
-            # Restart Felix by updating log level.
-            log_level = self.get_ds_env("calico-node", "calico-system", "FELIX_LOGSEVERITYSCREEN")
+            # Trigger a Felix config change by toggling log level.
+            log_level = get_felix_config_field("logSeverityScreen")
             if log_level == "Debug":
                 new_log_level = "Info"
             else:
                 new_log_level = "Debug"
-            _log.info("--- Start restarting calico/node ---")
-            oldEnv = {"FELIX_LOGSEVERITYSCREEN": log_level}
-            newEnv = {"FELIX_LOGSEVERITYSCREEN": new_log_level}
-            update_ds_env("calico-node", "calico-system", newEnv)
-            self.add_cleanup(lambda: update_ds_env("calico-node", "calico-system", oldEnv))
+            _log.info("--- Updating FelixConfiguration log level ---")
+            update_felix_config({"logSeverityScreen": new_log_level})
+            self.add_cleanup(lambda: update_felix_config({"logSeverityScreen": log_level}))
 
             # client_red should send egress packets via gw3, gw3_1
             self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
@@ -576,13 +575,18 @@ EOF
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
             self.validate_egress_ip(client_annotation_override, server, gw_blue.ip)
 
-            # Set EgressIPSupport to EnabledPerNamespace.
-            newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespace"}
-            update_ds_env("calico-node", "calico-system", newEnv)
+            # Set EgressIPSupport to EnabledPerNamespace. This is not
+            # hot-reloadable so Felix will auto-restart. Use a wrapper
+            # with enough retries for Felix to come back up.
+            update_felix_config({"egressIPSupport": "EnabledPerNamespace"})
 
             # Validate egress ip again, pod annotations should be ignored.
-            self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
-            self.validate_egress_ip(client_annotation_override, server, gw_red.ip)
+            # Allow extra retries for Felix to auto-restart after the
+            # config change.
+            retry_until_success(self.validate_egress_ip, retries=60, wait_time=1,
+                                function_args=[client_no_annotations, server, gw_red.ip])
+            retry_until_success(self.validate_egress_ip, retries=60, wait_time=1,
+                                function_args=[client_annotation_override, server, gw_red.ip])
 
     def test_egress_ip_local_preference(self):
         with DiagsCollector():
@@ -1157,13 +1161,11 @@ EOF
 
     def test_reuse_valid_table_on_restart(self):
         with DiagsCollector():
-            _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
-            oldEnv = {"FELIX_ROUTETABLERANGES": "201-250"}
-            newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
-            update_ds_env("calico-node", "calico-system", newEnv)
+            _log.info("--- Restarting calico/node with routeTableRange 1-200 ---")
+            update_felix_config({"routeTableRanges": [{"min": 1, "max": 200}]})
 
             def undo_route_table_range():
-                update_ds_env("calico-node", "calico-system", {"FELIX_ROUTETABLERANGES": "1-250"})
+                update_felix_config({"routeTableRanges": [{"min": 1, "max": 250}]})
             self.add_cleanup(undo_route_table_range)
 
             # Create 3 egress gateways, with an IP from that pool.
@@ -1193,7 +1195,9 @@ EOF
             c3 = clients[2]
             _log.info("test_max_hops: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
 
-            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+            # Allow extra retries for Felix to auto-restart after the
+            # routeTableRanges config change and program the ip rules.
+            retry_until_success(self.has_ip_rule, retries=30, wait_time=2, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
             def verify_tables_and_hops():
                 node_rules_and_tables = self.read_client_hops_for_node(node)
@@ -1240,8 +1244,8 @@ EOF
             run("docker exec %s ip route show table %s" % (node, "212"))
             run("docker exec %s ip route show table %s" % (node, "211"))
 
-            _log.info("--- Restarting calico/node with routeTableRage 201-250 ---")
-            update_ds_env("calico-node", "calico-system", oldEnv)
+            _log.info("--- Restarting calico/node with routeTableRange 201-250 ---")
+            update_felix_config({"routeTableRanges": [{"min": 201, "max": 250}]})
 
             run("docker exec %s ip rule" % node)
 
@@ -1261,7 +1265,7 @@ EOF
               hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
               assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
 
-            retry_until_success(verify_reused_tables, retries=3, wait_time=3)
+            retry_until_success(verify_reused_tables, retries=30, wait_time=2)
 
             # Cleanup manually added tables. ip rules should have been cleaned up already by felix.
             run("docker exec %s ip route flush table %s" % (node, "213"))

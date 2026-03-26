@@ -17,7 +17,7 @@
 # This script makes and pushes images for Windows.
 # It assumes Windows instances are provisioned with the terraform scripts
 # located at github.com/tigera/process/testing/windows-instances.
-set -ex
+set -ex -o pipefail
 
 # Build eks log forwarder binaries on the Semaphore VM.
 if [[ "$BASE" != "true" ]]; then

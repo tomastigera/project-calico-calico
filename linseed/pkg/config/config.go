@@ -86,6 +86,13 @@ type Config struct {
 	PolicyActivityCacheCleanupInterval time.Duration `envconfig:"POLICY_ACTIVITY_CACHE_CLEANUP_INTERVAL" default:"10m"`
 	// PolicyActivityCacheCleanupTTL defines the max age of a cache entry and should slightly exceed the deduplication window for policy activity.
 	PolicyActivityCacheCleanupTTL time.Duration `envconfig:"POLICY_ACTIVITY_CACHE_CLEANUP_TTL" default:"2h"`
+
+	// ElasticMultiIndexTenantSuffixEnabled controls whether tenant ID is appended to
+	// multi-index index names. When false, multi-index routing omits the tenant ID
+	// from the index name even when TENANT_ID is set. This prevents breaking
+	// existing multi-tenant internal ES setups where indices were created without
+	// tenant ID in the name.
+	ElasticMultiIndexTenantSuffixEnabled bool `envconfig:"ELASTIC_MULTI_INDEX_TENANT_SUFFIX_ENABLED" default:"true"`
 }
 
 // ElasticClientConfig represents the elastic configuration
