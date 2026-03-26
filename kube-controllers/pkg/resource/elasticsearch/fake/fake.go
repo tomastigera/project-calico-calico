@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
+	esv1 "github.com/elastic/cloud-on-k8s/v3/pkg/apis/elasticsearch/v1"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	restfake "k8s.io/client-go/rest/fake"

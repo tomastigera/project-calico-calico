@@ -1,0 +1,173 @@
+From e73816b7c30d4d89c29d58806732626c4cd3a948 Mon Sep 17 00:00:00 2001
+From: Panagiotis Koutsovasilis <pkoutsovasilis@users.noreply.github.com>
+Date: Sun, 02 Mar 2026 00:00:00 +0000
+Subject: [PATCH] avoid empty reconcile requests in StackConfigPolicy secret
+ watch
+
+Backport of elastic/cloud-on-k8s#9179 for v3.3.0.
+This fix is included upstream in v3.4.0 and this patch can be removed
+once the ECK operator version is bumped to v3.4.0+.
+
+The reconcileRequestForSoftOwnerPolicy function pre-allocates a slice
+with len(softOwners) but skips non-StackConfigPolicy entries with
+continue, leaving zero-value reconcile.Request entries (empty name and
+namespace) in the returned slice. When the operator runs with restricted
+--namespaces, these empty requests cause "unable to get: / because of
+unknown namespace for the cache" errors.
+
+Extracts logic into a toReconcileRequests function and uses append
+instead of pre-allocating by length.
+---
+ pkg/controller/stackconfigpolicy/controller.go      | 30 +++++++++++-------
+ pkg/controller/stackconfigpolicy/controller_test.go | 88 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 107 insertions(+), 11 deletions(-)
+
+diff --git a/pkg/controller/stackconfigpolicy/controller.go b/pkg/controller/stackconfigpolicy/controller.go
+--- a/pkg/controller/stackconfigpolicy/controller.go
++++ b/pkg/controller/stackconfigpolicy/controller.go
+@@ -111,25 +111,31 @@ func addWatches(mgr manager.Manager, c controller.Controller, r *ReconcileStackC
+
+ func reconcileRequestForSoftOwnerPolicy() handler.TypedEventHandler[*corev1.Secret, reconcile.Request] {
+ 	return handler.TypedEnqueueRequestsFromMapFunc[*corev1.Secret](func(ctx context.Context, secret *corev1.Secret) []reconcile.Request {
+-		softOwners, err := reconciler.SoftOwnerRefs(secret)
+-		if err != nil {
+-			ulog.Log.Error(err, "Fail to get soft-owner policies of secret", "secret_name", secret.GetName(), "secret_namespace", secret.GetNamespace())
+-			return nil
+-		}
++		return toReconcileRequests(secret)
++	})
++}
+
+-		if len(softOwners) == 0 {
+-			return nil
+-		}
++// toReconcileRequests returns reconcile requests for StackConfigPolicy owners of the given secret.
++// Returns nil if the secret has no soft owners or if none of the owners are StackConfigPolicy resources.
++func toReconcileRequests(secret *corev1.Secret) []reconcile.Request {
++	softOwners, err := reconciler.SoftOwnerRefs(secret)
++	if err != nil {
++		ulog.Log.Error(err, "Fail to get soft-owner policies of secret", "secret_name", secret.GetName(), "secret_namespace", secret.GetNamespace())
++		return nil
++	}
+
+-		requests := make([]reconcile.Request, len(softOwners))
+-		for idx, nsn := range softOwners {
+-			if nsn.Kind != policyv1alpha1.Kind {
+-				continue
+-			}
+-			requests[idx] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: nsn.Namespace, Name: nsn.Name}}
++	if len(softOwners) == 0 {
++		return nil
++	}
++
++	var requests []reconcile.Request
++	for _, nsn := range softOwners {
++		if nsn.Kind != policyv1alpha1.Kind {
++			continue
+ 		}
+-		return requests
+-	})
++		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: nsn.Namespace, Name: nsn.Name}})
++	}
++	return requests
+ }
+
+ // requestsAllStackConfigPolicies returns the requests to reconcile all StackConfigPolicy resources.
+diff --git a/pkg/controller/stackconfigpolicy/controller_test.go b/pkg/controller/stackconfigpolicy/controller_test.go
+--- a/pkg/controller/stackconfigpolicy/controller_test.go
++++ b/pkg/controller/stackconfigpolicy/controller_test.go
+@@ -1182,3 +1182,91 @@ func assertKibanaConfigSecret(t *testing.T, c client.Client, kibanaName string,
+ 	require.Equal(t, expectedKibanaSecret.Annotations, kibanaSecret.Annotations)
+ 	require.Equal(t, expectedKibanaSecret.Data, kibanaSecret.Data)
+ }
++
++func Test_reconcileRequestForSoftOwnerPolicy(t *testing.T) {
++	tests := []struct {
++		name     string
++		secret   *corev1.Secret
++		wantReqs []reconcile.Request
++	}{
++		{
++			name: "Secret without soft-owner labels returns no requests",
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Name:      "test-secret",
++					Namespace: "ns",
++				},
++			},
++			wantReqs: nil,
++		},
++		{
++			name: "Secret soft-owned by Elasticsearch returns no requests",
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Name:      "test-secret",
++					Namespace: "ns",
++					Labels: map[string]string{
++						reconciler.SoftOwnerKindLabel:      esv1.Kind,
++						reconciler.SoftOwnerNameLabel:      "my-es",
++						reconciler.SoftOwnerNamespaceLabel: "ns",
++					},
++				},
++			},
++			wantReqs: nil,
++		},
++		{
++			name: "Secret soft-owned by StackConfigPolicy returns request for that policy",
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Name:      "test-secret",
++					Namespace: "ns",
++					Labels: map[string]string{
++						reconciler.SoftOwnerKindLabel:      policyv1alpha1.Kind,
++						reconciler.SoftOwnerNameLabel:      "my-policy",
++						reconciler.SoftOwnerNamespaceLabel: "policy-ns",
++					},
++				},
++			},
++			wantReqs: []reconcile.Request{
++				{NamespacedName: types.NamespacedName{Namespace: "policy-ns", Name: "my-policy"}},
++			},
++		},
++		{
++			name: "Secret with multiple soft-owners via annotation returns only StackConfigPolicy requests",
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Name:      "test-secret",
++					Namespace: "ns",
++					Labels: map[string]string{
++						reconciler.SoftOwnerKindLabel: policyv1alpha1.Kind,
++					},
++					Annotations: map[string]string{
++						reconciler.SoftOwnerRefsAnnotation: `["ns1/policy1","ns2/policy2"]`,
++					},
++				},
++			},
++			wantReqs: []reconcile.Request{
++				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "policy1"}},
++				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "policy2"}},
++			},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			gotReqs := toReconcileRequests(tt.secret)
++
++			if tt.wantReqs == nil {
++				assert.Empty(t, gotReqs)
++			} else {
++				assert.Equal(t, tt.wantReqs, gotReqs)
++			}
++
++			// Verify no zero-value requests are returned
++			for _, req := range gotReqs {
++				assert.NotEmpty(t, req.Namespace, "reconcile request should not have empty namespace")
++				assert.NotEmpty(t, req.Name, "reconcile request should not have empty name")
++			}
++		})
++	}
++}
+--
+2.25.1
+

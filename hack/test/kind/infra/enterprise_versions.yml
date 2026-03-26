@@ -138,7 +138,7 @@ components:
     image: eck-operator
     version: test-build
   eck-elasticsearch-operator:
-    version: 2.16.0
+    version: 3.3.0
   l7-collector:
     image: l7-collector
     version: test-build

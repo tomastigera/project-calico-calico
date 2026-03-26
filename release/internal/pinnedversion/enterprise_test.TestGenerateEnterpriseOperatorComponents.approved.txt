@@ -57,7 +57,7 @@ components:
   eck-elasticsearch:
     version: 8.19.12
   eck-elasticsearch-operator:
-    version: 2.16.0
+    version: 3.3.0
   eck-kibana:
     version: 8.19.12
   egress-gateway:

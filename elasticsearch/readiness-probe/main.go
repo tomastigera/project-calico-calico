@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	esHttp "github.com/elastic/cloud-on-k8s/v2/pkg/controller/common/http"
-	"github.com/elastic/cloud-on-k8s/v2/pkg/controller/elasticsearch/label"
-	"github.com/elastic/cloud-on-k8s/v2/pkg/controller/elasticsearch/volume"
+	esHttp "github.com/elastic/cloud-on-k8s/v3/pkg/controller/common/http"
+	"github.com/elastic/cloud-on-k8s/v3/pkg/controller/elasticsearch/label"
+	"github.com/elastic/cloud-on-k8s/v3/pkg/controller/elasticsearch/volume"
 	"github.com/sirupsen/logrus"
 )
 
