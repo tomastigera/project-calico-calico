@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/ginkgo/v2"
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
