@@ -20,7 +20,6 @@ ignore:
   - charts/tigera-operator/templates/
   - charts/tigera-prometheus-operator/templates/
   - process/testing/aso/infra/templates/
-  - e2e/pkg/tests/visibility/test-manifests/
   # these dirs are not owned by us, we don't own yamls that they may contain
   - cni-plugin/containernetworking-plugins/
   - cni-plugin/flannel-cni-plugin/

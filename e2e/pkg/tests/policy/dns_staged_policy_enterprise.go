@@ -44,14 +44,11 @@ var _ = describe.EnterpriseDescribe(
 			cli      ctrlclient.Client
 			esclient *elastic.Client
 
-			err error
+			namespaceBaseName = "dns-staged-policy"
+			f                 = utils.NewDefaultFramework(namespaceBaseName)
 
-			nameSpaceBaseName = "dns-staged-policy"
-			f                 = utils.NewDefaultFramework(nameSpaceBaseName)
-
-			checker conncheck.ConnectionTester
-			client1 *conncheck.Client
-			// tier
+			checker    conncheck.ConnectionTester
+			client1    *conncheck.Client
 			customTier *v3.Tier
 			order      = 10.0
 
@@ -62,36 +59,37 @@ var _ = describe.EnterpriseDescribe(
 		)
 
 		validateFlowLogs := func(clientName, destination, policyName string) {
+			By("Validating flowlogs")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			// refresh indices for both single tenant and multi-tenant / single-index elastic deployments
 			result, err := esclient.Refresh("tigera_secure_ee_flows.*", "calico_flowlogs.*").Do(ctx)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(result.Shards.Successful).ToNot(Equal(0))
+			Expect(err).ShouldNot(HaveOccurred(), "failed to refresh elasticsearch indices")
+			Expect(result.Shards.Successful).ToNot(Equal(0), "expected at least one successful shard refresh")
 
 			flowLogs := fetchDNSStagedFlowlogs(esclient, f.Namespace.Name, clientName, destination, "src", "tcp")
-			Expect(flowLogs).NotTo(BeEmpty())
+			Expect(flowLogs).NotTo(BeEmpty(), "expected flow logs to be non-empty")
 
 			for _, item := range flowLogs {
 				hit := flowlogs.FindPolicyHitByName(item.Policies.PendingPolicies, policyName)
-				Expect(string(hit.Action())).To(Equal("allow"))
+				Expect(string(hit.Action())).To(Equal("allow"), "expected policy hit action to be allow")
 				flowlogs.ExpectProfileInFlowLogs(item.Policies.EnforcedPolicies, f.Namespace.Name)
 			}
 		}
 
 		BeforeEach(func() {
 			By("Initializing...")
-			// initialize controller-runtime client
+			var err error
 			cli, err = cclient.New(f.ClientConfig())
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "failed to create controller-runtime client")
 
-			// initialize esclient
 			pfInfo = elasticsearch.PortForward()
+			DeferCleanup(func() { pfInfo.Stop() })
+
 			esclient = elasticsearch.InitClient(f, pfInfo.ElasticsearchURL)
 			elasticsearch.WaitForElastic(esclient)
 
-			// configure felix
 			By("Updating felix configurations.")
 			ctx := context.TODO()
 			var originalFC *v3.FelixConfiguration
@@ -120,75 +118,65 @@ var _ = describe.EnterpriseDescribe(
 			})
 
 			By("Creating a custom tier.")
-			// create custom tier
-			customTierName := "dns-staged-tier"
 			customTier = v3.NewTier()
-			customTier.Name = customTierName
+			customTier.Name = utils.GenerateRandomName("dns-staged-tier")
 			customTier.Spec.Order = &order
 
-			Expect(cli.Create(context.TODO(), customTier)).NotTo(HaveOccurred())
+			Expect(cli.Create(context.TODO(), customTier)).NotTo(HaveOccurred(), "failed to create custom tier")
+			DeferCleanup(func() {
+				Expect(cli.Delete(context.TODO(), customTier)).NotTo(HaveOccurred(), "failed to delete custom tier")
+			})
 
 			checker = conncheck.NewConnectionTester(f)
 			client1 = conncheck.NewClient("client", f.Namespace)
 			checker.AddClient(client1)
 			checker.Deploy()
-		})
-
-		AfterEach(func() {
-			checker.Stop()
-			pfInfo.Stop()
-
-			// delete custom tier
-			Expect(cli.Delete(context.TODO(), customTier)).ShouldNot(HaveOccurred())
+			DeferCleanup(func() { checker.Stop() })
 		})
 
 		Context("Test DNS in staged network policies ", func() {
 			var stagedNetworkPolicy *v3.StagedNetworkPolicy
 
 			BeforeEach(func() {
-				By("Creating a staged network policy.")
-				// create staged network policy
 				selector := ""
 				egress := []v3.Rule{
 					createDNSAllowRule(),
 				}
 
-				stagedNetworkPolicy = CreateStagedNetworkPolicy("snp-with-networkset", customTier.Name,
-					f.Namespace.Name, order, selector, nil, egress)
-				Expect(cli.Create(context.TODO(), stagedNetworkPolicy)).NotTo(HaveOccurred())
+				stagedNetworkPolicy = CreateStagedNetworkPolicy(
+					"snp-with-networkset", customTier.Name,
+					f.Namespace.Name, order, selector, nil, egress,
+				)
+				Expect(cli.Create(context.TODO(), stagedNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to create staged network policy",
+				)
+				DeferCleanup(func() {
+					Expect(cli.Delete(context.TODO(), stagedNetworkPolicy)).NotTo(
+						HaveOccurred(), "failed to delete staged network policy",
+					)
+				})
 			})
 
-			AfterEach(func() {
-				// delete staged network policy
-				Expect(cli.Delete(context.TODO(), stagedNetworkPolicy)).ShouldNot(HaveOccurred())
-			})
+			It("should use domain name in a staged network policy", func() {
+				domain := "www.example.com"
 
-			It("Use domain name in a staged network policy", func() {
-				domains := []string{"www.example.com"}
+				stagedNetworkPolicy.Spec.Egress = append(
+					stagedNetworkPolicy.Spec.Egress,
+					createDestinationDomainsRule(v3.Allow, []string{domain}),
+				)
+				Expect(cli.Update(context.TODO(), stagedNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to update staged network policy with domain",
+				)
 
-				By("Updating staged global network policy with destination domain: " + domains[0])
-				// update the policy with egress domains
-				stagedNetworkPolicy.Spec.Egress = append(stagedNetworkPolicy.Spec.Egress,
-					createDestinationDomainsRule(v3.Allow, domains))
-
-				Expect(cli.Update(context.TODO(), stagedNetworkPolicy)).NotTo(HaveOccurred())
-
-				By("Connecting to domain: " + domains[0])
-				for _, domain := range domains {
-					checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
-				}
+				checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
 				checker.Execute()
 
-				By("Validating flowlogs.")
 				validateFlowLogs(client1.Name(), "", stagedNetworkPolicy.Name)
 			})
 
-			It("Use networkset in a staged network policy", func() {
+			It("should use networkset in a staged network policy", func() {
 				domains := []string{"example.com"}
 				networksetName := "ns-example"
-
-				By("Creating a networkset: " + networksetName)
-				// create networkset
 				labels := map[string]string{"destination": "example"}
 
 				networkset := v3.NewNetworkSet()
@@ -198,102 +186,101 @@ var _ = describe.EnterpriseDescribe(
 				networkset.Spec.Nets = nil
 				networkset.Spec.AllowedEgressDomains = domains
 
-				err = cli.Create(context.TODO(), networkset)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(cli.Create(context.TODO(), networkset)).NotTo(
+					HaveOccurred(), "failed to create network set",
+				)
+				DeferCleanup(func() {
+					Expect(cli.Delete(context.TODO(), networkset)).NotTo(
+						HaveOccurred(), "failed to delete network set",
+					)
+				})
 
-				By("Updating staged network policy with networkset selector.")
-				// update the policy with referring network set in the egress rules
-				stagedNetworkPolicy.Spec.Egress = append(stagedNetworkPolicy.Spec.Egress,
-					createDestinationSelector(v3.Allow, "destination==\"example\""))
+				stagedNetworkPolicy.Spec.Egress = append(
+					stagedNetworkPolicy.Spec.Egress,
+					createDestinationSelector(v3.Allow, "destination==\"example\""),
+				)
+				Expect(cli.Update(context.TODO(), stagedNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to update staged network policy with networkset selector",
+				)
 
-				Expect(cli.Update(context.TODO(), stagedNetworkPolicy)).NotTo(HaveOccurred())
-
-				By("Connecting to domain: " + domains[0])
-				for _, domain := range domains {
-					checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
-				}
+				checker.ExpectSuccess(client1, conncheck.NewDomainTarget("example.com"))
 				checker.Execute()
 
-				// delete networkset
-				Expect(cli.Delete(context.TODO(), networkset)).NotTo(HaveOccurred())
-
-				By("Validating flowlogs.")
 				validateFlowLogs(client1.Name(), "", stagedNetworkPolicy.Name)
 			})
 		})
 
 		Context("Test DNS in staged global network policies ", func() {
 			var stagedGlobalNetworkPolicy *v3.StagedGlobalNetworkPolicy
+
 			BeforeEach(func() {
-				// create staged global network policy
 				selector := ""
 				egress := []v3.Rule{
 					createDNSAllowRule(),
 				}
 
-				stagedGlobalNetworkPolicy = CreateStagedGlobalNetworkPolicy("dns-sgnp", customTier.Name,
-					order, selector, nil, egress)
-				Expect(cli.Create(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(HaveOccurred())
+				stagedGlobalNetworkPolicy = CreateStagedGlobalNetworkPolicy(
+					"dns-sgnp", customTier.Name,
+					order, selector, nil, egress,
+				)
+				Expect(cli.Create(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to create staged global network policy",
+				)
+				DeferCleanup(func() {
+					Expect(cli.Delete(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(
+						HaveOccurred(), "failed to delete staged global network policy",
+					)
+				})
 			})
 
-			AfterEach(func() {
-				// delete staged global network policy
-				Expect(cli.Delete(context.TODO(), stagedGlobalNetworkPolicy)).ShouldNot(HaveOccurred())
-			})
+			It("should use domain name in a staged global network policy", func() {
+				domain := "www.google.com"
 
-			It("Use domain name in a staged global network policy", func() {
-				domains := []string{"www.google.com"}
+				stagedGlobalNetworkPolicy.Spec.Egress = append(
+					stagedGlobalNetworkPolicy.Spec.Egress,
+					createDestinationDomainsRule(v3.Allow, []string{domain}),
+				)
+				Expect(cli.Update(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to update staged global network policy with domain",
+				)
 
-				By("Updating staged global network policy with destination domain: " + domains[0])
-				// update the policy with egress domains
-				stagedGlobalNetworkPolicy.Spec.Egress = append(stagedGlobalNetworkPolicy.Spec.Egress,
-					createDestinationDomainsRule(v3.Allow, domains))
-
-				Expect(cli.Update(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(HaveOccurred())
-
-				By("Connecting to domain: " + domains[0])
-				for _, domain := range domains {
-					checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
-				}
+				checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
 				checker.Execute()
 
-				By("Validating flowlogs.")
 				validateFlowLogs(client1.Name(), "", stagedGlobalNetworkPolicy.Name)
 			})
 
-			It("Use global networkset in a staged global network policy", func() {
+			It("should use global networkset in a staged global network policy", func() {
 				domains := []string{"google.com"}
-				networksetName := "global-ns-ggl"
+				globalNetworkSetName := utils.GenerateRandomName("global-ns-ggl")
 
-				By("Creating a global networkset: " + networksetName)
-				// create global networkset
 				networkset := v3.NewGlobalNetworkSet()
-				networkset.Name = networksetName
+				networkset.Name = globalNetworkSetName
 				networkset.Labels = map[string]string{"destination": "global-ggl"}
 				networkset.Spec.Nets = nil
 				networkset.Spec.AllowedEgressDomains = domains
 
-				err = cli.Create(context.TODO(), networkset)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(cli.Create(context.TODO(), networkset)).NotTo(
+					HaveOccurred(), "failed to create global network set",
+				)
+				DeferCleanup(func() {
+					Expect(cli.Delete(context.TODO(), networkset)).NotTo(
+						HaveOccurred(), "failed to delete global network set",
+					)
+				})
 
-				By("Updating staged global network policy with networkset selector.")
-				// update the policy with referring network set in the egress rules
-				stagedGlobalNetworkPolicy.Spec.Egress = append(stagedGlobalNetworkPolicy.Spec.Egress,
-					createDestinationSelector(v3.Allow, "destination=='global-ggl'"))
+				stagedGlobalNetworkPolicy.Spec.Egress = append(
+					stagedGlobalNetworkPolicy.Spec.Egress,
+					createDestinationSelector(v3.Allow, "destination=='global-ggl'"),
+				)
+				Expect(cli.Update(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(
+					HaveOccurred(), "failed to update staged global network policy with networkset selector",
+				)
 
-				Expect(cli.Update(context.TODO(), stagedGlobalNetworkPolicy)).NotTo(HaveOccurred())
-
-				By("Connecting to domain: " + domains[0])
-				for _, domain := range domains {
-					checker.ExpectSuccess(client1, conncheck.NewDomainTarget(domain))
-				}
+				checker.ExpectSuccess(client1, conncheck.NewDomainTarget("google.com"))
 				checker.Execute()
 
-				// delete networkset
-				Expect(cli.Delete(context.TODO(), networkset)).NotTo(HaveOccurred())
-
-				By("Validating flowlogs.")
-				validateFlowLogs(client1.Name(), networksetName, stagedGlobalNetworkPolicy.Name)
+				validateFlowLogs(client1.Name(), globalNetworkSetName, stagedGlobalNetworkPolicy.Name)
 			})
 		})
 	})
@@ -319,10 +306,9 @@ func createDestinationSelector(action v3.Action, selector string) v3.Rule {
 func createDNSAllowRule() v3.Rule {
 	protocol := numorstring.ProtocolFromString("UDP")
 
+	// On OpenShift DNS is mapped to a named "dns" port, so allow that too.
 	dnsPort, err := numorstring.NamedPort("dns")
-	if err != nil {
-		panic(fmt.Sprintf("failed to create named port: %v", err))
-	}
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to create named dns port")
 
 	return v3.Rule{
 		Action:   v3.Allow,
@@ -330,14 +316,16 @@ func createDNSAllowRule() v3.Rule {
 		Destination: v3.EntityRule{
 			Ports: []numorstring.Port{
 				numorstring.SinglePort(53),
-				// On OpenShift DNS is mapped to a named "dns" port, so allow that too.
 				dnsPort,
 			},
 		},
 	}
 }
 
-func fetchDNSStagedFlowlogs(esclient *elastic.Client, srcNamespace, clientPodNamePrefix, serverPodNamePrefix, reporter, protocol string) []elasticsearch.FlowLog {
+func fetchDNSStagedFlowlogs(
+	esclient *elastic.Client,
+	srcNamespace, clientPodNamePrefix, serverPodNamePrefix, reporter, protocol string,
+) []elasticsearch.FlowLog {
 	var queryResult *elastic.SearchResult
 	var flowLogs []elasticsearch.FlowLog
 
@@ -365,15 +353,17 @@ func fetchDNSStagedFlowlogs(esclient *elastic.Client, srcNamespace, clientPodNam
 
 	// Compile the query for logging.
 	src, err := logQuery.Source()
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to compile flow log query")
 	logrus.WithField("src", src).Info("Running DNS staged flow log query")
 
-	Eventually(func() bool {
+	Eventually(func() error {
 		queryResult = elasticsearch.SearchInEs(esclient, logQuery, elasticsearch.FlowlogsIndex)
 		flowLogs = elasticsearch.GetFlowlogsFromESSearchResult(queryResult)
-
-		return len(flowLogs) > 0
-	}, 5*time.Minute, 5*time.Second).Should(BeTrue())
+		if len(flowLogs) == 0 {
+			return fmt.Errorf("no flow logs found matching query %+v", src)
+		}
+		return nil
+	}, 2*time.Minute, 5*time.Second).Should(Succeed())
 
 	return flowLogs
 }

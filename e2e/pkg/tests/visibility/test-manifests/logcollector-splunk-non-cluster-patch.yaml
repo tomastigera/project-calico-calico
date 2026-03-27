@@ -1,8 +1,0 @@
-apiVersion: operator.tigera.io/v1
-kind: LogCollector
-metadata:
-  name: tigera-secure
-spec:
-  additionalStores:
-    splunk:
-      hostScope: NonClusterOnly

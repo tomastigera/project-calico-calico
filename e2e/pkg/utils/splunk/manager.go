@@ -22,6 +22,8 @@ import (
 	e2enetwork "k8s.io/kubernetes/test/e2e/framework/network"
 	e2esvc "k8s.io/kubernetes/test/e2e/framework/service"
 	"k8s.io/utils/ptr"
+
+	"github.com/projectcalico/calico/e2e/pkg/utils/images"
 )
 
 const (
@@ -61,6 +63,7 @@ func (s *Manager) Deploy(ctx context.Context) string {
 	By("creating a Splunk enterprise server")
 	_, err := s.f.ClientSet.AppsV1().Deployments(s.f.Namespace.Name).Create(ctx, s.splunkDeployment(), metav1.CreateOptions{})
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
 	_, err = s.f.ClientSet.CoreV1().Services(s.f.Namespace.Name).Create(ctx, s.splunkService(), metav1.CreateOptions{})
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 
@@ -88,6 +91,7 @@ func (s *Manager) Deploy(ctx context.Context) string {
 		}
 		return nil
 	}, 5*time.Minute, 15*time.Second).WithOffset(1).Should(Succeed())
+
 	err = e2enetwork.WaitForService(ctx, s.f.ClientSet, s.f.Namespace.Name, splunkServiceName, true, framework.Poll, e2esvc.RespondingTimeout)
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 	s.splunkPodName = s.getSplunkPodName()
@@ -205,7 +209,7 @@ func (s *Manager) splunkDeployment() *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  "splunk",
-							Image: "splunk/splunk:9.4.9",
+							Image: images.SplunkEnterprise,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SPLUNK_GENERAL_TERMS",
