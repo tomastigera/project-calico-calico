@@ -2848,7 +2848,7 @@ var _ = Describe("Reporting Metrics", func() {
 					// confirm we don't receive expire update, this would mean flow logs will keep getting sent for this case
 					Consistently(mockReporter.reportChan, c.config.AgeTimeout-c.config.AgeTimeout/10).ShouldNot(Receive(Equal(tmu)))
 					// ensure that we do eventually get the forced expire update after AgeTimeout
-					Eventually(mockReporter.reportChan).Should(Receive(Equal(tmu)))
+					Eventually(mockReporter.reportChan, c.config.AgeTimeout/2).Should(Receive(Equal(tmu)))
 				})
 			})
 		})
