@@ -119,9 +119,7 @@ func classifyUnusedPolicies(policies []querycacheclient.Policy) *v1.UnusedPolici
 
 		if p.LastEvaluated == nil {
 			resp.Policies = append(resp.Policies, v1.UnusedPolicyEntry{
-				Kind:                          p.Kind,
-				Namespace:                     p.Namespace,
-				Name:                          p.Name,
+				PolicyKey:                     v1.PolicyKey{Kind: p.Kind, Namespace: p.Namespace, Name: p.Name},
 				Generation:                    p.Generation,
 				CreationTime:                  p.CreationTime,
 				EvaluatedAtPreviousGeneration: evalAtPrevGen,

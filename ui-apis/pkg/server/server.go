@@ -446,6 +446,11 @@ func Start(cfg *Config) error {
 		middleware.AuthenticateRequest(authn,
 			middleware.NewAuthorizationReviewHandler(reviewer)))
 
+	// Authorization for /policies/activities is delegated to Linseed.
+	sm.Handle("/policies/activities",
+		middleware.AuthenticateRequest(authn,
+			middleware.NewPolicyActivityHandler(linseed)))
+
 	if cfg.GoldmaneEnabled && cfg.VoltronURL != "" {
 		creds, err := credentials.NewClientTLSFromFile(cfg.VoltronCAPath, "")
 		if err != nil {

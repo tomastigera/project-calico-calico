@@ -4,6 +4,13 @@ package v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// PolicyKey uniquely identifies a Calico policy by kind, namespace, and name.
+type PolicyKey struct {
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // UnusedPoliciesResponse is the response body for GET /policies/unused.
 type UnusedPoliciesResponse struct {
 	// Policies contains policies with no activity in the requested time window.
@@ -15,9 +22,7 @@ type UnusedPoliciesResponse struct {
 
 // UnusedPolicyEntry identifies an entirely-unused policy.
 type UnusedPolicyEntry struct {
-	Kind                          string       `json:"kind"`
-	Namespace                     string       `json:"namespace,omitempty"`
-	Name                          string       `json:"name"`
+	PolicyKey                     `json:",inline"`
 	Generation                    int64        `json:"generation,omitempty"`
 	CreationTime                  *metav1.Time `json:"creationTimestamp,omitempty"`
 	EvaluatedAtPreviousGeneration bool         `json:"evaluatedAtPreviousGeneration,omitempty"`

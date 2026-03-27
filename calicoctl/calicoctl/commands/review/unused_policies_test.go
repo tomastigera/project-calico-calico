@@ -133,9 +133,7 @@ func TestFetchUnusedPolicies(t *testing.T) {
 	mockResp := &v1.UnusedPoliciesResponse{
 		Policies: []v1.UnusedPolicyEntry{
 			{
-				Kind:         "NetworkPolicy",
-				Namespace:    "default",
-				Name:         "deny-all",
+				PolicyKey:    v1.PolicyKey{Kind: "NetworkPolicy", Namespace: "default", Name: "deny-all"},
 				Generation:   1,
 				CreationTime: &createdAt,
 			},
@@ -282,7 +280,7 @@ func TestPrintWarnings(t *testing.T) {
 	t.Run("no warnings when no flags set", func(t *testing.T) {
 		RegisterTestingT(t)
 		resp := &v1.UnusedPoliciesResponse{
-			Policies: []v1.UnusedPolicyEntry{{Kind: "NetworkPolicy", Name: "test"}},
+			Policies: []v1.UnusedPolicyEntry{{PolicyKey: v1.PolicyKey{Kind: "NetworkPolicy", Name: "test"}}},
 		}
 		out := captureStdout(func() { printWarnings(resp) })
 		Expect(out).To(BeEmpty())
@@ -292,7 +290,7 @@ func TestPrintWarnings(t *testing.T) {
 		RegisterTestingT(t)
 		resp := &v1.UnusedPoliciesResponse{
 			Policies: []v1.UnusedPolicyEntry{
-				{Kind: "NetworkPolicy", Name: "test", EvaluatedAtPreviousGeneration: true},
+				{PolicyKey: v1.PolicyKey{Kind: "NetworkPolicy", Name: "test"}, EvaluatedAtPreviousGeneration: true},
 			},
 		}
 		out := captureStdout(func() { printWarnings(resp) })
@@ -307,7 +305,7 @@ func TestPrintText(t *testing.T) {
 		RegisterTestingT(t)
 		resp := &v1.UnusedPoliciesResponse{
 			Policies: []v1.UnusedPolicyEntry{
-				{Kind: "NetworkPolicy", Namespace: "default", Name: "deny-all", Generation: 1},
+				{PolicyKey: v1.PolicyKey{Kind: "NetworkPolicy", Namespace: "default", Name: "deny-all"}, Generation: 1},
 			},
 			Rules: []v1.UnusedRuleEntry{
 				{
@@ -355,7 +353,7 @@ func TestPrintText(t *testing.T) {
 		RegisterTestingT(t)
 		resp := &v1.UnusedPoliciesResponse{
 			Policies: []v1.UnusedPolicyEntry{
-				{Kind: "GlobalNetworkPolicy", Name: "gnp-test", Generation: 1},
+				{PolicyKey: v1.PolicyKey{Kind: "GlobalNetworkPolicy", Name: "gnp-test"}, Generation: 1},
 			},
 			Rules: []v1.UnusedRuleEntry{},
 		}
@@ -384,16 +382,13 @@ func TestUnusedPoliciesE2E(t *testing.T) {
 	mockResp := &v1.UnusedPoliciesResponse{
 		Policies: []v1.UnusedPolicyEntry{
 			{
-				Kind:                          "NetworkPolicy",
-				Namespace:                     "default",
-				Name:                          "deny-all",
+				PolicyKey:                     v1.PolicyKey{Kind: "NetworkPolicy", Namespace: "default", Name: "deny-all"},
 				Generation:                    1,
 				CreationTime:                  &createdAt,
 				EvaluatedAtPreviousGeneration: true,
 			},
 			{
-				Kind:         "GlobalNetworkPolicy",
-				Name:         "global-unused",
+				PolicyKey:    v1.PolicyKey{Kind: "GlobalNetworkPolicy", Name: "global-unused"},
 				Generation:   3,
 				CreationTime: &createdAt,
 			},
