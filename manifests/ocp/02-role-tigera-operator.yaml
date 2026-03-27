@@ -166,6 +166,7 @@ rules:
     resourceNames:
       - agents.agent.k8s.elastic.co
       - apmservers.apm.k8s.elastic.co
+      - autoopsagentpolicies.autoops.k8s.elastic.co
       - beats.beat.k8s.elastic.co
       - elasticmapsservers.maps.k8s.elastic.co
       - elasticsearchautoscalers.autoscaling.k8s.elastic.co
@@ -173,6 +174,7 @@ rules:
       - enterprisesearches.enterprisesearch.k8s.elastic.co
       - kibanas.kibana.k8s.elastic.co
       - logstashes.logstash.k8s.elastic.co
+      - packageregistries.packageregistry.k8s.elastic.co
       - stackconfigpolicies.stackconfigpolicy.k8s.elastic.co
 
   # We need update and delete access for the ClusterNetworkPolicy CRD to set owner references
