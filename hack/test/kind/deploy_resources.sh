@@ -235,9 +235,18 @@ ${kubectl} get secret tigera-pull-secret -n tigera-operator ||
 # Apply the enterprise license.
 ${kubectl} exec -i -n kube-system calicoctl -- calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
+# Wait for log-storage to be available before waiting for its pods.
+echo "Wait for log-storage to be ready..."
+if ! ( ${kubectl} wait --for=create --timeout=120s tigerastatus/log-storage &&
+       ${kubectl} wait --for=condition=Available --timeout=300s tigerastatus/log-storage ); then
+  echo "TigeraStatus for log-storage failed to become Available"
+  exit 1
+fi
+
 # Wait for the full Calico Enterprise system to be running.
 wait_pod_ready -n tigera-fluentd -l k8s-app
 wait_pod_ready -n tigera-elasticsearch -l k8s-app
+wait_pod_ready -n tigera-elasticsearch -l k8s-app=tigera-linseed
 
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
 ${kubectl} create ns metallb-system || true

@@ -369,6 +369,17 @@ e2e-run-cnp-test:
 	  -exempt-features=$(K8S_NETPOL_UNSUPPORTED_FEATURES) \
 	  -supported-features=$(K8S_NETPOL_SUPPORTED_FEATURES)
 
+e2e-test-policy:
+	$(MAKE) -C e2e build
+	$(MAKE) -C node kind-k8st-setup
+	$(MAKE) e2e-run-policy-test
+
+## Run the policy e2e tests against a pre-existing kind cluster.
+e2e-run-policy-test:
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test \
+	  -ginkgo.label-filter="Feature:Continuous-Policy-Recommendations" \
+	  -ginkgo.skip=$(E2E_SKIP)
+
 ###############################################################################
 # Release logic below
 ###############################################################################

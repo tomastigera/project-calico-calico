@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/onsi/gomega"
@@ -46,18 +47,26 @@ func (k *Kubectl) PortForward(ns, pod, remotePort, user string, timeOut chan tim
 		return 0, fmt.Errorf("failed to allocate local port: %w", err)
 	}
 
-	options := []string{"port-forward", pod, fmt.Sprintf("%d:%s", localPort, remotePort)}
+	k.portForward(ns, pod, fmt.Sprintf("%d:%s", localPort, remotePort), user, timeOut)
+	return localPort, nil
+}
+
+// PortForwardWithPorts starts a kubectl port-forward with explicit local and remote ports.
+func (k *Kubectl) PortForwardWithPorts(ns, pod, localPort, remotePort, user string, timeOut chan time.Time) {
+	k.portForward(ns, pod, fmt.Sprintf("%s:%s", localPort, remotePort), user, timeOut)
+}
+
+func (k *Kubectl) portForward(ns, pod, portMapping, user string, timeOut chan time.Time) {
+	options := []string{"port-forward", pod, portMapping}
 	if user != "" {
 		options = append(options, fmt.Sprintf("--as=%v", user))
 	}
 
 	go func() {
-		_, err := kubectl.NewKubectlCommand(ns, options...).WithTimeout(timeOut).Exec()
-		if err != nil {
-			return
+		if _, err := kubectl.NewKubectlCommand(ns, options...).WithTimeout(timeOut).Exec(); err != nil {
+			fmt.Fprintf(os.Stderr, "kubectl port-forward %s/%s %s failed: %v\n", ns, pod, portMapping, err)
 		}
 	}()
-	return localPort, nil
 }
 
 // WaitForPortForward waits for the port-forward to be ready by making an HTTP GET request to the given URL.
