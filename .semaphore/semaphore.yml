@@ -830,6 +830,12 @@ blocks:
               value: '"BGP|\[sig-calico\].*staged"'
             - name: STORE_BUILD_CACHE
               value: "true"
+        - name: "E2E tests: Policy"
+          execution_time_limit:
+            minutes: 60
+          commands:
+            - sudo docker system prune -af
+            - .semaphore/run-and-monitor e2e-test-policy.log make e2e-test-policy
       epilogue:
         always:
           commands:
