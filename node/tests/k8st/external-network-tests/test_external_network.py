@@ -342,7 +342,7 @@ EOF
             kubectl("delete bgppeer peer-a1")
             self.add_cleanup(lambda:run("echo '%s' | kubectl apply -f -" % peer_a1_in, allow_fail=True))
 
-            retry_until_success(lambda: client_red.cannot_connect(server_A_addr, 80, command="wget"), retries=10, wait_time=2)
+            retry_until_success(lambda: client_red.cannot_connect(server_A_addr, 80, command="wget"), timeout=30)
             # Verify a route to the server exists in the externalnetwork's route table
             retry_until_success(lambda: self.assertIn("172.31.91.0/24", kubectl("exec -n calico-system %s -- ip route list table 500" % self.get_calico_node_pod("kind-worker"))))
 

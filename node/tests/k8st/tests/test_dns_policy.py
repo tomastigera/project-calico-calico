@@ -123,16 +123,16 @@ EOF
             raise Exception("should not have connected")
 
         # No policy.
-        retry_until_success(should_connect, retries=5)
+        retry_until_success(should_connect, timeout=10)
 
         # Deny all egress.
         self.deny_all_egress_except_dns("egress == 'restricted'")
-        retry_until_success(should_not_connect, retries=5)
+        retry_until_success(should_not_connect, timeout=10)
 
         # DNS policy.
         self.allow_egress_to_domains("egress == 'restricted'",
                                      ["microsoft.com", "www.microsoft.com"])
-        retry_until_success(should_connect, retries=5)
+        retry_until_success(should_connect, timeout=10)
 
 
 TestDNSPolicy.needs_tsee = True

@@ -225,7 +225,7 @@ class _FailoverTest(TestBase):
         # Before starting each test case, wait until all pod block routes are correctly
         # ECMP again, as they may need a little time to repair after being broken in the
         # previous test case.
-        retry_until_success(self.routes_all_ecmp, retries=10, wait_time=6)
+        retry_until_success(self.routes_all_ecmp, timeout=90)
 
     def start_client(self, client_pod, ip, port):
         name = "from %s to %s:%s" % (client_pod, ip, port)
@@ -334,13 +334,13 @@ class _FailoverTest(TestBase):
                             raise
                         time.sleep(0.25)
                     try:
-                        retry_until_success(short_connection, retries=3, wait_time=0.25)
+                        retry_until_success(short_connection, timeout=10)
                     finally:
                         self.clean_up_servers([f.server_pod], 8091)
                         _log.info("Short connection %s log:\n%s", f.server_pod, "".join(short_log.logs))
                     def check_transmission():
                         assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
-                    retry_until_success(check_transmission, retries=3, wait_time=0.25)
+                    retry_until_success(check_transmission, timeout=10)
 
             if count == 5:
                 break_func()
@@ -533,7 +533,7 @@ class FailoverCluster(object):
             kubectl("exec ra-server -n " + ns + " -- date")
             kubectl("exec rb-server -n " + ns + " -- date")
 
-        retry_until_success(check_exec, retries=5, wait_time=1)
+        retry_until_success(check_exec, timeout=10)
 
     def cleanup(self, ns):
         kubectl("delete ns " + ns)
@@ -629,7 +629,7 @@ def ensureCalicoReady():
                     bgp_established += 1
             assert bgp_established == 2, "Only %d established BGP sessions on %s" % (bgp_established, node)
 
-    retry_until_success(assertCalicoReady, retries=12, wait_time=10)
+    retry_until_success(assertCalicoReady, timeout=120)
 
 
 @pytest.mark.non_vanilla
@@ -659,7 +659,7 @@ class TestRestartCalicoNodes(TestBase):
             kubectl("delete po %s -n calico-system" % self.restart_pod_name)
 
             # Wait until a replacement calico-node pod has been created.
-            retry_until_success(self.get_restart_node_pod_name, retries=10, wait_time=1)
+            retry_until_success(self.get_restart_node_pod_name, timeout=20)
 
             # Wait until it is ready, before returning.
             kubectl("wait po %s -n calico-system --timeout=2m --for=condition=ready" %

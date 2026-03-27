@@ -99,7 +99,7 @@ EOF
     def test_access_service_node_port(self):
 
         def check_source_ip(client, dest_ip, port, expected_ips=[], not_expected_ips=[]):
-            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": dest_ip, "port": port, "command": "wget"})
+            retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": dest_ip, "port": port, "command": "wget"})
             reply = client.get_last_output()
             m = re.match(r"^.*client_address=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*$", reply.replace("\n",""))
             if m:
@@ -187,7 +187,7 @@ EOF
                 output = run("docker exec -t %s bridge fdb show" % client.nodename)
                 if output.find('10.10.10') != -1:
                     raise Exception('FDB entries not been properly cleared %s' % output)
-            retry_until_success(check_arp_fdb_cleared, retries=10, wait_time=2)
+            retry_until_success(check_arp_fdb_cleared, timeout=30)
 
             # Create gateway pods again.
             # Validate ECMP routes works again.
@@ -266,14 +266,14 @@ EOF
                 hops = tables[client.ip]["hops"]
                 assert set(hops) == set(expected), ("Expected client's hops to be %s not %s." % (expected, hops))
 
-            retry_until_success(check_routes, retries=10, wait_time=3, function_args=[[gw2.ip, gw3.ip]])
+            retry_until_success(check_routes, timeout=60, function_args=[[gw2.ip, gw3.ip]])
             self.check_ecmp_routes(client, servers[1:], gw_ips[1:])
 
             # Reinstate the probe, it should be added back into service.
             self.server_add_route(servers[0], gw)
             gw.wait_ready()
 
-            retry_until_success(check_routes, retries=10, wait_time=3, function_args=[[gw.ip, gw2.ip, gw3.ip]])
+            retry_until_success(check_routes, timeout=60, function_args=[[gw.ip, gw2.ip, gw3.ip]])
             self.check_ecmp_routes(client, servers, gw_ips)
 
     def test_ecmp_with_pod_namespace_selector(self):
@@ -585,9 +585,9 @@ EOF
             # Validate egress ip again, pod annotations should be ignored.
             # Allow extra retries for Felix to auto-restart after the
             # config change.
-            retry_until_success(self.validate_egress_ip, retries=60, wait_time=1,
+            retry_until_success(self.validate_egress_ip, timeout=90,
                                 function_args=[client_no_annotations, server, gw_red.ip])
-            retry_until_success(self.validate_egress_ip, retries=60, wait_time=1,
+            retry_until_success(self.validate_egress_ip, timeout=90,
                                 function_args=[client_annotation_override, server, gw_red.ip])
 
     def test_egress_ip_local_preference(self):
@@ -643,7 +643,7 @@ EOF
             })
             self.add_cleanup(egw_client.delete)
             egw_client.wait_ready()
-            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+            retry_until_success(self.has_ip_route_and_table, timeout=20,
                                 function_kwargs={
                                     "nodename": egw_client.nodename,
                                     "client_ip": egw_client.ip,
@@ -698,7 +698,7 @@ spec:
       gatewayPreference: PreferNodeLocal
 EOF
 """ % (server1.ip))
-            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+            retry_until_success(self.has_ip_route_and_table, timeout=20,
                                 function_kwargs={
                                     "nodename": egw_client.nodename,
                                     "client_ip": egw_client.ip,
@@ -731,7 +731,7 @@ EOF
                     assert(len(hops)) == 1
                 else:
                     raise Exception("Client IP %s not found in node rules" % egw_client.ip)
-            retry_until_success(check_max_next_hops, retries=10, wait_time=2)
+            retry_until_success(check_max_next_hops, timeout=30)
 
 
     def test_egress_ip_host_endpoint_policy(self):
@@ -827,7 +827,7 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-all-heps"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-all-heps"))
             self.add_cleanup(lambda: kubectl("patch --type=merge kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
-            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
             self.validate_egress_ip(client, server, gw.ip)
 
     def test_egress_ip_with_policy_to_server(self):
@@ -854,7 +854,7 @@ spec:
 EOF
 """ % (server.ip + "/32"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-server"))
-            retry_until_success(client.cannot_connect, retries=3, wait_time=3, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client.cannot_connect, timeout=20, function_kwargs={"ip": server.ip, "port": server.port})
 
     def test_egress_ip_with_policy_to_gateway(self):
         with DiagsCollector():
@@ -878,7 +878,7 @@ spec:
 EOF
 """)
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress"))
-            retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client.cannot_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
 
             # Allow egress to the server only (there's no need to allow egress to the gateway).
             calicoctl("""apply -f - << EOF
@@ -900,7 +900,7 @@ spec:
 EOF
 """ % server.ip)
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allow-to-server"))
-            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
             self.validate_egress_ip(client, server, gw.ip)
 
     def test_gateway_termination_annotations(self):
@@ -924,7 +924,7 @@ EOF
             self.add_cleanup(client.delete)
             client.wait_ready()
 
-            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+            retry_until_success(self.has_ip_route_and_table, timeout=20,
                                 function_kwargs={
                                     "nodename": client.nodename,
                                     "client_ip": client.ip,
@@ -1005,9 +1005,9 @@ EOF
 """)
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-policy"))
             # check can not connect to the same node
-            retry_until_success(client_red.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client_red.cannot_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
             # check can not connect to a different node
-            retry_until_success(client_blue.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client_blue.cannot_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
 
             if self.disableDefaultDenyTest:
                 return
@@ -1066,7 +1066,7 @@ EOF
             c3 = clients[2]
             _log.info("test_max_hops_pod_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
 
-            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+            retry_until_success(self.has_ip_rule, timeout=20, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
             def verify_tables_and_hops():
                 node_rules_and_tables = self.read_client_hops_for_node(node)
@@ -1130,7 +1130,7 @@ EOF
             c3 = clients[2]
             _log.info("test_max_hops_namespace_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
 
-            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+            retry_until_success(self.has_ip_rule, timeout=20, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
             def verify_tables_and_hops():
                 node_rules_and_tables = self.read_client_hops_for_node(node)
@@ -1203,7 +1203,7 @@ EOF
 
             # Allow extra retries for Felix to auto-restart after the
             # routeTableRanges config change and program the ip rules.
-            retry_until_success(self.has_ip_rule, retries=30, wait_time=2, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+            retry_until_success(self.has_ip_rule, timeout=90, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
             def verify_tables_and_hops():
                 node_rules_and_tables = self.read_client_hops_for_node(node)
@@ -1219,7 +1219,7 @@ EOF
                 assert (int(table1) <= 200) and (int(table2) <= 200) and (int(table3) <= 200)
                 return table1, table2, table3
 
-            table1, table2, table3 = retry_until_success(verify_tables_and_hops, retries=10, wait_time=2)
+            table1, table2, table3 = retry_until_success(verify_tables_and_hops, timeout=30)
 
             def customise_ip_rule_and_table(node, src, current_table, new_table, hop1, hop2):
                 run("docker exec %s ip rule add priority 100 from %s fwmark 0x80000/0x80000 lookup %s" % (node, src, new_table))
@@ -1271,7 +1271,7 @@ EOF
               hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
               assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
 
-            retry_until_success(verify_reused_tables, retries=30, wait_time=2)
+            retry_until_success(verify_reused_tables, timeout=90)
 
             # Cleanup manually added tables. ip rules should have been cleaned up already by felix.
             run("docker exec %s ip route flush table %s" % (node, "213"))
@@ -1339,17 +1339,17 @@ EOF
             # No gateway is available, verify no connection can be made.
             for s in servers:
                 _log.info("Checking cannot-connect, Client IP: %s Server IP: %s Port: %d", client.ip, s.ip, s.port)
-                retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": s.ip, "port": s.port})
+                retry_until_success(client.cannot_connect, timeout=10, function_kwargs={"ip": s.ip, "port": s.port})
             return
 
         # In case calico-node just restarted and egress ip rule has not been programmed yet,
         # we should wait for it to happen.
-        retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": client.nodename, "ip": client.ip})
+        retry_until_success(self.has_ip_rule, timeout=20, function_kwargs={"nodename": client.nodename, "ip": client.ip})
 
         expected_ips = gw_ips[:]
         for s in servers * 5:
             _log.info("Checking can-connect, Client IP: %s Server IP: %s Port: %d", client.ip, s.ip, s.port)
-            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": s.ip, "port": s.port})
+            retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": s.ip, "port": s.port})
             # Check the source IP as seen by the server.
             client_ip = s.get_recent_client_ip()
             _log.info("xxxxx ecmp route xxxxxxxxx   Client IPs: %r", client_ip)
@@ -1386,7 +1386,7 @@ EOF
         validate server seen node name as source
         """
         _log.info("Client IP: %s Server IP: %s Port: %d", client.ip, server.ip, server.port)
-        retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+        retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
 
         # Check the node name accessing external server.
         node_name = server.get_recent_node()
@@ -1398,7 +1398,7 @@ EOF
         validate server seen expected ip as source ip
         """
         _log.info("Client IP: %s Server IP: %s Port: %d", client.ip, server.ip, server.port)
-        retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+        retry_until_success(client.can_connect, timeout=10, function_kwargs={"ip": server.ip, "port": server.port})
 
         # Check the source IP accessing external server is gateway ip.
         client_ip = server.get_recent_client_ip()
@@ -1410,7 +1410,7 @@ EOF
         check the maintenance timestamp and cidr annotations were applied to the workload pod
         """
         _log.info("Client IP: %s", client.ip)
-        retry_until_success(client.has_egress_annotations, retries=3, wait_time=5, function_kwargs={"egress_ip": egress_ip, "now": now, "termination_grace_period": termination_grace_period})
+        retry_until_success(client.has_egress_annotations, timeout=20, function_kwargs={"egress_ip": egress_ip, "now": now, "termination_grace_period": termination_grace_period})
 
     def setup_client_server_gateway(self, gateway_node):
         """
@@ -1439,7 +1439,7 @@ EOF
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
                 assert set(hops) == set(expected), ("Expected client's hops to be %s not %s." % (expected, hops))
-        retry_until_success(check_routes, retries=10, wait_time=2, function_args=[[]])
+        retry_until_success(check_routes, timeout=20, function_args=[[]])
 
         # Give the server a route back to the egress IP.
         self.server_add_route(server, gateway)
@@ -1450,7 +1450,7 @@ EOF
         # unreachable route or the transition phrase from unreachable route to a valid route.
         # What we found is that `kubectl exec test 1 -- nc -w 2` sometimes hung. We added
         # `timeout 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
-        retry_until_success(check_routes, retries=10, wait_time=2, function_args=[[gateway.ip]])
+        retry_until_success(check_routes, timeout=20, function_args=[[gateway.ip]])
 
         self.validate_egress_ip(client, server, gateway.ip)
 
