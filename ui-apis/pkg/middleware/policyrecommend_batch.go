@@ -113,6 +113,8 @@ func BatchStagedActionsHandler(auth lmaauth.JWTAuth, clientSetk8sClientFactory l
 
 		if builder.Len() > 0 {
 			createAndReturnError(errors.New("failed to patch staged network policies"), builder.String(), http.StatusBadRequest, api.PolicyRec, w)
+
+			return
 		}
 
 		resp := &BatchResponse{
@@ -203,7 +205,7 @@ func patchSNP(ctx context.Context, cs lmak8s.ClientSet, snp v3.StagedNetworkPoli
 	}
 
 	// tigera-manager role must have Resource:stagednetworkpolicies Verb:patch defined
-	if _, err = cs.ProjectcalicoV3().StagedNetworkPolicies(snp.Namespace).Patch(ctx, snp.Name, types.StrategicMergePatchType, patchData, metav1.PatchOptions{
+	if _, err = cs.ProjectcalicoV3().StagedNetworkPolicies(snp.Namespace).Patch(ctx, snp.Name, types.MergePatchType, patchData, metav1.PatchOptions{
 		TypeMeta: snp.TypeMeta,
 	}); err != nil {
 		// Send the error down the channel
