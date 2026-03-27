@@ -205,7 +205,7 @@ func (s *Manager) splunkDeployment() *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  "splunk",
-							Image: "splunk/splunk:9.4",
+							Image: "splunk/splunk:9.4.9",
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SPLUNK_GENERAL_TERMS",
@@ -361,5 +361,5 @@ type splunkSearchResponse struct {
 }
 
 type splunkSearchResult struct {
-	Count int `json:",string"`
+	Count int `json:"count,string"`
 }

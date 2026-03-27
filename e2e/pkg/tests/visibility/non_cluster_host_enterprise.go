@@ -231,10 +231,8 @@ var _ = describe.EnterpriseDescribe(
 				// Wait for the host to make a connection that is denied.
 				Eventually(testConnect, 15*time.Second, 3*time.Second).WithArguments(nodeClient, target).Should(HaveOccurred())
 
-				By("validating flow logs pushed to elasticsearch have action as deny to node port", func() {
-					validateNCHFlowLogs(esclient, hepNodePortQuery(host.Name, host.Name, destIP, destPort),
-						"default.deny-egress", "default", "deny", nil)
-				})
+				By("validating flow logs pushed to elasticsearch have action as deny to node port")
+				validateNCHFlowLogs(esclient, hepNodePortQuery(host.Name, host.Name, destIP, destPort), "default.deny-egress", "default", "deny", nil)
 			})
 		})
 

@@ -375,7 +375,5 @@ func fetchDNSStagedFlowlogs(esclient *elastic.Client, srcNamespace, clientPodNam
 		return len(flowLogs) > 0
 	}, 5*time.Minute, 5*time.Second).Should(BeTrue())
 
-	Expect(len(flowLogs) > 0).To(BeTrue())
-
 	return flowLogs
 }
