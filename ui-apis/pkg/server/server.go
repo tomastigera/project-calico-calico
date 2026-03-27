@@ -286,6 +286,11 @@ func Start(cfg *Config) error {
 				qsConfig,
 				linseed,
 			)))
+	// Authorization is delegated to queryserver for /policies/unused.
+	sm.Handle("/policies/unused",
+		middleware.AuthenticateRequest(authn,
+			middleware.UnusedPoliciesHandler(qsConfig)))
+
 	sm.Handle("/endpoints/names",
 		middleware.AuthenticateRequest(authn,
 			middleware.EndpointsNamesHandler(

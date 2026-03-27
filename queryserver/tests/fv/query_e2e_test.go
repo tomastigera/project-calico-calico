@@ -94,6 +94,8 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 							tqd.response.(*client.QueryPoliciesResp).Items[i].Order = nil
 							tqd.response.(*client.QueryPoliciesResp).Items[i].UID = ""
 							tqd.response.(*client.QueryPoliciesResp).Items[i].Generation = 0
+							tqd.response.(*client.QueryPoliciesResp).Items[i].LastEvaluated = nil
+							tqd.response.(*client.QueryPoliciesResp).Items[i].LastEvaluatedAnyGeneration = nil
 						}
 					}
 				}
@@ -172,6 +174,8 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 				ro.Items[i].CreationTime = nil
 				ro.Items[i].Order = nil
 				ro.Items[i].Generation = 0
+				ro.Items[i].LastEvaluated = nil
+				ro.Items[i].LastEvaluatedAnyGeneration = nil
 			}
 		}
 

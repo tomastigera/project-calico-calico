@@ -50,6 +50,7 @@ func main() {
     bgp                      Access BGP related information.
     captured-packets         Capture packet file command.
     nonclusterhost           Non-cluster host management.
+    review                   Review policy activity and unused resources.
     version                  Display the version of this binary.
 
 Options:
@@ -144,6 +145,8 @@ Description:
 			err = commands.Datastore(args)
 		case "nonclusterhost":
 			err = commands.NonClusterHost(args)
+		case "review":
+			err = commands.Review(args)
 		default:
 			err = fmt.Errorf("unknown command: %q\n%s", command, doc)
 		}

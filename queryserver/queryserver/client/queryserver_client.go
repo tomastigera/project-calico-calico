@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -124,4 +125,63 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 	}
 
 	return &qsResp, err
+}
+
+// SearchPolicies calls GET /policies on the queryserver, optionally filtering by time range.
+func (q *queryServerClient) SearchPolicies(cfg *QueryServerConfig, from, to *time.Time, clusterID string) (*querycacheclient.QueryPoliciesResp, error) {
+	url := cfg.QueryServerURL
+	if clusterID != "cluster" {
+		url = cfg.QueryServerTunnelURL
+	}
+
+	req, err := http.NewRequest("GET", url+"/policies", nil)
+	if err != nil {
+		log.WithError(err).Info("failed to create http request: ", err)
+		return nil, err
+	}
+	if cfg.QueryServerToken == "" {
+		log.WithError(errInvalidToken).Info("token is empty: ", errInvalidToken)
+		return nil, errInvalidToken
+	}
+
+	query := req.URL.Query()
+	if from != nil {
+		query.Set("from", from.Format(time.RFC3339))
+	}
+	if to != nil {
+		query.Set("to", to.Format(time.RFC3339))
+	}
+	req.URL.RawQuery = query.Encode()
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cfg.QueryServerToken))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("x-cluster-id", clusterID)
+
+	resp, err := q.client.Do(req)
+	if err != nil {
+		log.WithError(err).Info("failed to execute queryserver request: ", err)
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("call to read response body from queryserver failed.")
+		return nil, errors.New("failed to read response from queryserver")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Errorf("queryserver returned status %d: %s", resp.StatusCode, string(respBytes))
+		return nil, fmt.Errorf("queryserver returned status %d: %s", resp.StatusCode, string(respBytes))
+	}
+
+	qsResp := querycacheclient.QueryPoliciesResp{}
+	err = json.Unmarshal(respBytes, &qsResp)
+	if err != nil {
+		log.Errorf("Response: %s", string(respBytes))
+		log.WithError(err).Error("unmarshalling policiesRespBody failed.")
+		return nil, err
+	}
+
+	return &qsResp, nil
 }
