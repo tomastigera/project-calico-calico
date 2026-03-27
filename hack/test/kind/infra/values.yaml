@@ -17,6 +17,48 @@ installation:
     - cidr: 192.168.0.0/16
     - cidr: fd00:10:244::/64
 
+  calicoNodeDaemonSet:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: calico-node
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+
+  typhaDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: calico-typha
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+
+  calicoKubeControllersDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: calico-kube-controllers
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+
 # Pin the apiserver / webhooks to the control-plane node so connectivity with the
 # k8s apiserver is not impacted by tests that disable / re-enable networking.
 # Only one of these deployments is created depending on the CRD mode (v1 vs v3),
@@ -29,12 +71,30 @@ apiServer:
         spec:
           nodeSelector:
             kubernetes.io/hostname: kind-control-plane
+          containers:
+          - name: calico-apiserver
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 128Mi
   calicoWebhooksDeployment:
     spec:
       template:
         spec:
           nodeSelector:
             kubernetes.io/hostname: kind-control-plane
+          containers:
+          - name: calico-webhooks
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 200m
+                memory: 64Mi
 
 goldmane:
   # Goldmane is not supported in enterprise.
@@ -57,16 +117,110 @@ tigera-prometheus-operator:
     registry: docker.io
 intrusionDetection:
   enabled: true
+  intrusionDetectionControllerDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: controller
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
+          - name: webhooks-processor
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
 logCollector:
   enabled: true
+  fluentdDaemonSet:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: fluentd
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
 logStorage:
   enabled: true
+  linseedDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: tigera-linseed
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+  esGatewayDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: tigera-secure-es-gateway
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
 manager:
   enabled: true
+  managerDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: calico-voltron
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 128Mi
+          - name: calico-ui-apis
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
 monitor:
   enabled: true
 policyRecommendation:
   enabled: true
+  policyRecommendationDeployment:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: policy-recommendation-controller
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
 
 # CRDs are installed by `make kind-cluster-create` in lib.Makefile ($(KUBECTL) create -f $(REPO_ROOT)/libcalico-go/config/crd;)
 manageCRDs: false
@@ -76,3 +230,11 @@ tigeraOperator:
   image: tigera/operator
   version: test-build
   registry: docker.io
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

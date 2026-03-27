@@ -57,6 +57,19 @@ class DiagsCollector(object):
             run("docker exec " + node + " ip r")
             run("docker exec " + node + " ip -6 r")
             run("docker exec " + node + " ip l")
+        _log.info("== Resource requests/limits for calico-system pods ==")
+        kubectl("get pods -n calico-system -o custom-columns="
+                "'NAME:.metadata.name,"
+                "CONTAINER:.spec.containers[*].name,"
+                "CPU_REQ:.spec.containers[*].resources.requests.cpu,"
+                "CPU_LIM:.spec.containers[*].resources.limits.cpu,"
+                "MEM_REQ:.spec.containers[*].resources.requests.memory,"
+                "MEM_LIM:.spec.containers[*].resources.limits.memory'",
+                allow_fail=True)
+        for pod_name in calico_node_pod_names():
+            _log.info("== CPU throttling stats for %s ==", pod_name)
+            kubectl("exec -n calico-system %s -- cat /sys/fs/cgroup/cpu.stat" % pod_name,
+                    allow_fail=True)
         kubectl("logs -n calico-system -l k8s-app=calico-node")
         self.print_confd_templates(nodes)
         for pod_name in calico_node_pod_names():

@@ -180,12 +180,14 @@ EOF
 
             # No Gateway pods in the cluster.
             # Validate all egress ip related ARP and FDB entries been removed.
-            output = run("docker exec -t %s ip neigh" % client.nodename)
-            if output.find('10.10.10') != -1:
-                raise Exception('ARP entries not been properly cleared %s' % output)
-            output = run("docker exec -t %s bridge fdb show" % client.nodename)
-            if output.find('10.10.10') != -1:
-                raise Exception('FDB entries not been properly cleared %s' % output)
+            def check_arp_fdb_cleared():
+                output = run("docker exec -t %s ip neigh" % client.nodename)
+                if output.find('10.10.10') != -1:
+                    raise Exception('ARP entries not been properly cleared %s' % output)
+                output = run("docker exec -t %s bridge fdb show" % client.nodename)
+                if output.find('10.10.10') != -1:
+                    raise Exception('FDB entries not been properly cleared %s' % output)
+            retry_until_success(check_arp_fdb_cleared, retries=10, wait_time=2)
 
             # Create gateway pods again.
             # Validate ECMP routes works again.
@@ -720,12 +722,16 @@ spec:
       gatewayPreference: PreferNodeLocal
 EOF
 """ % (server1.ip))
-            node_rules_and_tables = self.read_client_hops_for_node("kind-worker")
-            if egw_client.ip in node_rules_and_tables:
-                rule_and_table = node_rules_and_tables[egw_client.ip]
-                table = rule_and_table["table"]
-                hops = rule_and_table["hops"]
-                assert(len(hops)) == 1
+            def check_max_next_hops():
+                node_rules_and_tables = self.read_client_hops_for_node("kind-worker")
+                if egw_client.ip in node_rules_and_tables:
+                    rule_and_table = node_rules_and_tables[egw_client.ip]
+                    table = rule_and_table["table"]
+                    hops = rule_and_table["hops"]
+                    assert(len(hops)) == 1
+                else:
+                    raise Exception("Client IP %s not found in node rules" % egw_client.ip)
+            retry_until_success(check_max_next_hops, retries=10, wait_time=2)
 
 
     def test_egress_ip_host_endpoint_policy(self):
@@ -1213,7 +1219,7 @@ EOF
                 assert (int(table1) <= 200) and (int(table2) <= 200) and (int(table3) <= 200)
                 return table1, table2, table3
 
-            table1, table2, table3 = verify_tables_and_hops()
+            table1, table2, table3 = retry_until_success(verify_tables_and_hops, retries=10, wait_time=2)
 
             def customise_ip_rule_and_table(node, src, current_table, new_table, hop1, hop2):
                 run("docker exec %s ip rule add priority 100 from %s fwmark 0x80000/0x80000 lookup %s" % (node, src, new_table))
@@ -1433,7 +1439,7 @@ EOF
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
                 assert set(hops) == set(expected), ("Expected client's hops to be %s not %s." % (expected, hops))
-        retry_until_success(check_routes, retries=3, wait_time=3, function_args=[[]])
+        retry_until_success(check_routes, retries=10, wait_time=2, function_args=[[]])
 
         # Give the server a route back to the egress IP.
         self.server_add_route(server, gateway)
@@ -1444,7 +1450,7 @@ EOF
         # unreachable route or the transition phrase from unreachable route to a valid route.
         # What we found is that `kubectl exec test 1 -- nc -w 2` sometimes hung. We added
         # `timeout 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
-        retry_until_success(check_routes, retries=3, wait_time=3, function_args=[[gateway.ip]])
+        retry_until_success(check_routes, retries=10, wait_time=2, function_args=[[gateway.ip]])
 
         self.validate_egress_ip(client, server, gateway.ip)
 
