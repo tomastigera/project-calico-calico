@@ -3789,6 +3789,13 @@ func startBPFDataplaneComponents(
 		}
 	}
 
+	if ipFamily == proto.IPVersion_IPV4 && config.RulesConfig.IstioAmbientModeEnabled {
+		// Create an 'ipset' to represent Istio WEPs.
+		ipSets.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: rules.IPSetIDAllIstioWEPs, Type: ipsets.IPSetTypeHashIP},
+			nil)
+	}
+
 	failsafeMgr := failsafes.NewManager(
 		maps.FailsafesMap,
 		config.RulesConfig.FailsafeInboundHostPorts,

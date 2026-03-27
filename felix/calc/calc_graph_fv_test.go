@@ -702,7 +702,12 @@ var baseTests = []StateList{
 		wireguardV6,
 		wireguardV4V6,
 	},
-
+	// Istio tests - verify that the all-istio-weps IPSet is populated correctly
+	{
+		istioWithAmbientPod,
+		istioWithMixedPods,
+		istioSelectorEdgeCases,
+	},
 	// Live migration: local WEP as source, then LM removed.
 	{localEp1WithPolicyLMSource, localEp1WithPolicy},
 	// Live migration: local WEP as source (workload-level), then LM removed.
@@ -1031,6 +1036,7 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		conf := config.New()
 		conf.FelixHostname = localHostname
 		conf.BPFEnabled = true
+		conf.IstioAmbientMode = "Enabled"
 		conf.SetUseNodeResourceUpdates(expandedTest.UsesNodeResources())
 		conf.RouteSource = expandedTest.RouteSource()
 		conf.EgressIPSupport = "EnabledPerNamespaceOrPerPod"
