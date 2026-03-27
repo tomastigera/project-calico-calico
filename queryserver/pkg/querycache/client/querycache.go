@@ -1083,8 +1083,12 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 	pr := p.GetResource()
 
 	// We need to convert the policy to the v1 equivalent so that we get the correct converted selector.
+	// Use p.Kind() rather than pr.GetObjectKind().GroupVersionKind().Kind because the stored resource
+	// GVK can be ambiguous. For example, KubernetesNetworkPolicy resources are stored as
+	// *apiv3.NetworkPolicy (GVK Kind "NetworkPolicy"), which is the same as Calico NetworkPolicy.
+	// p.Kind() returns the kind from the V1 key, which correctly distinguishes the two.
 	var converted *bapi.Update
-	switch pr.GetObjectKind().GroupVersionKind().Kind {
+	switch p.Kind() {
 	case v3.KindNetworkPolicy:
 		converted = c.npConverter.ConvertV3ToV1(&bapi.Update{
 			UpdateType: bapi.UpdateTypeKVNew,
