@@ -3,6 +3,7 @@
 package externalnode
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -229,6 +230,24 @@ func (e *Client) TestCalicoServiceReady(service string) error {
 	}
 	if output != "active" {
 		return fmt.Errorf("service %s is not active, state=%s", service, output)
+	}
+	return nil
+}
+
+// TestFlowLogFilePopulated checks that the flow log file exists and is non-empty on the external node.
+func (e *Client) TestFlowLogFilePopulated() error {
+	_, err := e.Exec("/bin/sh", "-c", "cat /var/log/calico/flowlogs/flows.log")
+	return err
+}
+
+// TestFluentBitForwardLogs checks that calico-fluent-bit has successfully forwarded logs.
+func (e *Client) TestFluentBitForwardLogs() error {
+	output, err := e.Exec("/bin/sh", "-c", "journalctl --no-pager -u calico-fluent-bit.service")
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(output, "successfully sent") {
+		return errors.New("fluent-bit have not forwarded logs yet")
 	}
 	return nil
 }

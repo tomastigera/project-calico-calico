@@ -79,3 +79,22 @@ func ExpectProfileInFlowLogs(policyStrings []string, namespace string) {
 	)
 	ExpectWithOffset(1, false).To(BeTrue(), msg)
 }
+
+// FindPolicyHitByName parses each flow log policy string and returns the PolicyHit whose name
+// matches the given name. Fails the test if no match is found.
+func FindPolicyHitByName(policyStrings []string, name string) api.PolicyHit {
+	for _, s := range policyStrings {
+		hit, err := api.PolicyHitFromFlowLogPolicyString(s)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to parse policy string %s", s))
+		if hit.Name() == name {
+			return hit
+		}
+	}
+
+	msg := fmt.Sprintf(
+		"Expected to find policy with name %q in flow logs but did not. Got policies: %v",
+		name, policyStrings,
+	)
+	ExpectWithOffset(1, false).To(BeTrue(), msg)
+	return nil
+}

@@ -85,6 +85,8 @@ var features = map[string]bool{
 	"Istio":                             true,
 	"Flow-Logs":                         true,
 	"DNS-Policy":                        true,
+	"DNS-Staged-Policy":                 true,
+	"Non-Cluster-Host":                  true,
 	"Continuous-Policy-Recommendations": true,
 }
 
