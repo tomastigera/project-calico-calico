@@ -17,6 +17,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/e2e/pkg/describe"
@@ -54,6 +56,9 @@ var _ = describe.EnterpriseDescribe(
 			order      = 10.0
 
 			pfInfo *elasticsearch.PortForwardInfo
+
+			oldFlowLogsFlushInterval *metav1.Duration
+			oldDNSPolicyMode         *v3.DNSPolicyMode
 		)
 
 		validateFlowLogs := func(clientName, destination, policyName string) {
@@ -88,19 +93,28 @@ var _ = describe.EnterpriseDescribe(
 
 			// configure felix
 			By("Updating felix configurations.")
+			ctx := context.TODO()
+			var originalFC *v3.FelixConfiguration
+			Eventually(func() error {
+				originalFC = v3.NewFelixConfiguration()
+				return cli.Get(ctx, types.NamespacedName{Name: "default"}, originalFC)
+			}, 10*time.Second, 1*time.Second).Should(Succeed())
+
+			oldFlowLogsFlushInterval = originalFC.Spec.FlowLogsFlushInterval
+			oldDNSPolicyMode = originalFC.Spec.DNSPolicyMode
+
 			Eventually(func() error {
 				return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
 					spec.FlowLogsFlushInterval = &metav1.Duration{Duration: 10 * time.Second}
-					mode := v3.DNSPolicyModeDelayDNSResponse
-					spec.DNSPolicyMode = &mode
+					spec.DNSPolicyMode = ptr.To(v3.DNSPolicyModeDelayDNSResponse)
 				})
 			}, 10*time.Second, 1*time.Second).Should(Succeed())
 
 			DeferCleanup(func() {
 				Eventually(func() error {
 					return utils.UpdateFelixConfig(cli, func(spec *v3.FelixConfigurationSpec) {
-						spec.FlowLogsFlushInterval = nil
-						spec.DNSPolicyMode = nil
+						spec.FlowLogsFlushInterval = oldFlowLogsFlushInterval
+						spec.DNSPolicyMode = oldDNSPolicyMode
 					})
 				}, 10*time.Second, 1*time.Second).Should(Succeed())
 			})
@@ -365,4 +379,3 @@ func fetchDNSStagedFlowlogs(esclient *elastic.Client, srcNamespace, clientPodNam
 
 	return flowLogs
 }
-

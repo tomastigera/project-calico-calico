@@ -104,7 +104,10 @@ func (s *Manager) Deploy(ctx context.Context) string {
 			"token": splunkHECToken,
 		},
 	}
-	_, err = s.f.ClientSet.CoreV1().Secrets("tigera-operator").Create(context.Background(), secret, metav1.CreateOptions{})
+	// Delete (with ignore-not-found) then create the secret
+	_, err = e2ekubectl.RunKubectl("tigera-operator", "delete", "secret", logcollectorSplunkSecretName, "--ignore-not-found=true")
+	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+	_, err = s.f.ClientSet.CoreV1().Secrets("tigera-operator").Create(ctx, secret, metav1.CreateOptions{})
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 
 	By("Update LogCollector with Splunk additional stores")
@@ -125,7 +128,7 @@ func (s *Manager) Cleanup() {
 	}, 5*time.Second, 1*time.Second).WithOffset(1).ShouldNot(HaveOccurred())
 
 	By("Delete LogCollector Splunk secret")
-	_, err := e2ekubectl.RunKubectl("tigera-operator", "delete", "secret", logcollectorSplunkSecretName)
+	_, err := e2ekubectl.RunKubectl("tigera-operator", "delete", "secret", logcollectorSplunkSecretName, "--ignore-not-found=true")
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 }
 

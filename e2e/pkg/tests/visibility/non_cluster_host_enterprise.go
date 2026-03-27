@@ -127,6 +127,7 @@ var _ = describe.EnterpriseDescribe(
 
 			By("getting and validating non-cluster hosts")
 			hostsConfig := getNonClusterHosts()
+			Expect(hostsConfig.Hosts).NotTo(BeEmpty(), "no non-cluster hosts configured; ensure non-cluster host configuration YAML defines at least one host")
 			host = hostsConfig.Hosts[0]
 			nodeClient = externalnode.NewClientManualConfig(host.IP, host.Key, host.User)
 

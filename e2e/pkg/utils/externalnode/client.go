@@ -236,7 +236,7 @@ func (e *Client) TestCalicoServiceReady(service string) error {
 
 // TestFlowLogFilePopulated checks that the flow log file exists and is non-empty on the external node.
 func (e *Client) TestFlowLogFilePopulated() error {
-	_, err := e.Exec("/bin/sh", "-c", "cat /var/log/calico/flowlogs/flows.log")
+	_, err := e.Exec("/bin/sh", "-c", "test -s /var/log/calico/flowlogs/flows.log")
 	return err
 }
 
@@ -247,7 +247,7 @@ func (e *Client) TestFluentBitForwardLogs() error {
 		return err
 	}
 	if !strings.Contains(output, "successfully sent") {
-		return errors.New("fluent-bit have not forwarded logs yet")
+		return errors.New("calico-fluent-bit has not forwarded logs yet")
 	}
 	return nil
 }
