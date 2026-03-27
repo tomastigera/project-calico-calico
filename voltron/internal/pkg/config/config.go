@@ -68,7 +68,7 @@ type Config struct {
 	ComplianceInsecureTLS        bool   `default:"false" split_words:"true"`
 	EnableCompliance             bool   `default:"true" split_words:"true"`
 	EnableNonclusterHost         bool   `default:"false" split_words:"true"`
-	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
+	UIBackendEndpoint            string `default:"https://127.0.0.1:8443" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
 	EnableMultiClusterManagement bool   `default:"false" split_words:"true"`

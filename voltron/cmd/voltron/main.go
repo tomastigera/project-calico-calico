@@ -261,7 +261,7 @@ func main() {
 			// Route the legacy CRD-style AuthorizationReview path to ui-apis,
 			// which now serves this endpoint directly instead of the API server.
 			Path:             "/apis/projectcalico.org/v3/authorizationreviews",
-			Dest:             cfg.ElasticEndpoint,
+			Dest:             cfg.UIBackendEndpoint,
 			PathRegexp:       []byte("^/apis/projectcalico.org/v3/authorizationreviews$"),
 			PathReplace:      []byte("/authorizationreviews"),
 			AllowInsecureTLS: true,
@@ -272,19 +272,31 @@ func main() {
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		},
 		{
+			Path:             "/ui-apis/",
+			Dest:             cfg.UIBackendEndpoint,
+			PathRegexp:       []byte("^/ui-apis/?"),
+			PathReplace:      []byte("/"),
+			AllowInsecureTLS: true,
+		},
+		{
+			Path:             "/ui-apis/version",
+			Dest:             cfg.UIBackendEndpoint,
+			PathRegexp:       []byte("^/ui-apis/version$"),
+			PathReplace:      []byte("/version"),
+			AllowInsecureTLS: true,
+			Unauthenticated:  true,
+		},
+		{
+			// Legacy route kept for backwards compatibility with older UI versions.
 			Path:             "/tigera-elasticsearch/",
-			Dest:             cfg.ElasticEndpoint,
+			Dest:             cfg.UIBackendEndpoint,
 			PathRegexp:       []byte("^/tigera-elasticsearch/?"),
 			PathReplace:      []byte("/"),
 			AllowInsecureTLS: true,
 		},
 		{
-			// Define this a separate path because the liveness probe for ui-apis goes through
-			// voltron and does not need to be authenticated but the rest of tigera-elasticsearch
-			// does. With this defined this Path will be matched specifically and we can serve
-			// it unauthenticated.
 			Path:             "/tigera-elasticsearch/version",
-			Dest:             cfg.ElasticEndpoint,
+			Dest:             cfg.UIBackendEndpoint,
 			PathRegexp:       []byte("^/tigera-elasticsearch/version$"),
 			PathReplace:      []byte("/version"),
 			AllowInsecureTLS: true,
