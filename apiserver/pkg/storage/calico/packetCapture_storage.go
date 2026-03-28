@@ -48,7 +48,7 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		return c.PacketCaptures().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.PacketCapture)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.PacketCapture)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

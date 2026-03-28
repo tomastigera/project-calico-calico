@@ -49,7 +49,7 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		return c.GlobalAlerts().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.AlertManagement)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

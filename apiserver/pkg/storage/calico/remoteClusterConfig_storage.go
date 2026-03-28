@@ -48,7 +48,7 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		return c.RemoteClusterConfigurations().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.FederatedServices)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.FederatedServices)
 	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

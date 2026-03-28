@@ -28,7 +28,7 @@ func NewPolicyRecommendationScopeStatusStorage(opts Options) (registry.DryRunnab
 		return c.PolicyRecommendationScopes().Get(ctx, name, ogo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.ThreatDefense)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

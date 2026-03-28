@@ -187,7 +187,7 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 		return aapierrors.NewForbidden(
 			schema.GroupResource{Group: v3.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
 			key,
-			errors.New("license does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+			errors.New("this operation is not allowed: the enterprise license is missing, expired, or does not include this feature. Contact Tigera support or email licensing@tigera.io"),
 		)
 	}
 
@@ -533,7 +533,7 @@ func (rs *resourceStore) GuaranteedUpdate(
 			return aapierrors.NewForbidden(
 				schema.GroupResource{Group: v3.GroupName, Resource: libcalicoObj.GetObjectKind().GroupVersionKind().Kind},
 				key,
-				errors.New("license does not support updating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+				errors.New("this operation is not allowed: the enterprise license is missing, expired, or does not include this feature. Contact Tigera support or email licensing@tigera.io"),
 			)
 		}
 

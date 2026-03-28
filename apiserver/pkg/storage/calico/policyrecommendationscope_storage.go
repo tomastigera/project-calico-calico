@@ -49,7 +49,7 @@ func NewPolicyRecommendationScopeStorage(opts Options) (registry.DryRunnableStor
 		return c.PolicyRecommendationScopes().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.PolicyRecommendation)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.PolicyRecommendation)
 	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
