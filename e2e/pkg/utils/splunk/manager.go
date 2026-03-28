@@ -209,7 +209,7 @@ func (s *Manager) splunkDeployment() *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  "splunk",
-							Image: images.SplunkEnterprise,
+							Image: images.Splunk,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SPLUNK_GENERAL_TERMS",
