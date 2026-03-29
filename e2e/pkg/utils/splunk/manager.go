@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	operatorv1 "github.com/tigera/operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,9 @@ import (
 	e2enetwork "k8s.io/kubernetes/test/e2e/framework/network"
 	e2esvc "k8s.io/kubernetes/test/e2e/framework/service"
 	"k8s.io/utils/ptr"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	cclient "github.com/projectcalico/calico/e2e/pkg/utils/client"
 	"github.com/projectcalico/calico/e2e/pkg/utils/images"
 )
 
@@ -42,20 +45,11 @@ const (
 type Manager struct {
 	f             *framework.Framework
 	splunkPodName string
-
-	// The LogCollector YAML template that the manager will apply after deploying Splunk.
-	// It must have a single `%s` specifier, which the manager will replace with the Splunk endpoint.
-	logCollectorSplunkTemplate string
-
-	// The LogCollector YAML that the manager will restore after cleanup.
-	logCollectorDefault string
 }
 
-func NewManager(f *framework.Framework, logCollectorSplunkTemplate string, logCollectorDefault string) *Manager {
+func NewManager(f *framework.Framework) *Manager {
 	return &Manager{
-		f:                          f,
-		logCollectorSplunkTemplate: logCollectorSplunkTemplate,
-		logCollectorDefault:        logCollectorDefault,
+		f: f,
 	}
 }
 
@@ -115,30 +109,62 @@ func (s *Manager) Deploy(ctx context.Context) string {
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 
 	By("Update LogCollector with Splunk additional stores")
+	cli, err := cclient.New(s.f.ClientConfig())
+	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
 	endpoint := fmt.Sprintf("http://%s.%s.svc:%d", splunkServiceName, s.f.Namespace.Name, splunkHECPort)
 	logrus.Infof("Splunk HEC endpoint=%s", endpoint)
-	lcYAML := fmt.Sprintf(s.logCollectorSplunkTemplate, endpoint)
-	_, err = e2ekubectl.RunKubectlInput("", lcYAML, "replace", "-f", "-")
-	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
+	lc := &operatorv1.LogCollector{}
+	err = cli.Get(ctx, ctrlclient.ObjectKey{Name: "tigera-secure"}, lc)
+	Expect(err).WithOffset(1).NotTo(HaveOccurred(), "failed to get LogCollector")
+
+	if lc.Spec.AdditionalStores == nil {
+		lc.Spec.AdditionalStores = &operatorv1.AdditionalLogStoreSpec{}
+	}
+	lc.Spec.AdditionalStores.Splunk = &operatorv1.SplunkStoreSpec{
+		Endpoint: endpoint,
+	}
+	err = cli.Update(ctx, lc)
+	Expect(err).WithOffset(1).NotTo(HaveOccurred(), "failed to update LogCollector with Splunk endpoint")
 
 	return s.splunkPodName
 }
 
 func (s *Manager) Cleanup() {
 	By("Restore LogCollector to default")
+	cli, err := cclient.New(s.f.ClientConfig())
+	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
 	Eventually(func() error {
-		_, err := e2ekubectl.RunKubectlInput("", s.logCollectorDefault, "replace", "-f", "-")
-		return err
-	}, 5*time.Second, 1*time.Second).WithOffset(1).ShouldNot(HaveOccurred())
+		lc := &operatorv1.LogCollector{}
+		if err := cli.Get(context.Background(), ctrlclient.ObjectKey{Name: "tigera-secure"}, lc); err != nil {
+			return err
+		}
+		if lc.Spec.AdditionalStores != nil {
+			lc.Spec.AdditionalStores.Splunk = nil
+		}
+		return cli.Update(context.Background(), lc)
+	}, 10*time.Second, 1*time.Second).WithOffset(1).ShouldNot(HaveOccurred())
 
 	By("Delete LogCollector Splunk secret")
-	_, err := e2ekubectl.RunKubectl("tigera-operator", "delete", "secret", logcollectorSplunkSecretName, "--ignore-not-found=true")
+	_, err = e2ekubectl.RunKubectl("tigera-operator", "delete", "secret", logcollectorSplunkSecretName, "--ignore-not-found=true")
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
 }
 
-func (s *Manager) ApplyLogCollectorPatch(yaml string) {
-	_, err := e2ekubectl.RunKubectlInput("", yaml, "apply", "-f", "-")
+func (s *Manager) SetHostScope(scope operatorv1.HostScope) {
+	cli, err := cclient.New(s.f.ClientConfig())
 	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
+	lc := &operatorv1.LogCollector{}
+	err = cli.Get(context.Background(), ctrlclient.ObjectKey{Name: "tigera-secure"}, lc)
+	Expect(err).WithOffset(1).NotTo(HaveOccurred())
+
+	if lc.Spec.AdditionalStores != nil && lc.Spec.AdditionalStores.Splunk != nil {
+		lc.Spec.AdditionalStores.Splunk.HostScope = &scope
+	}
+	err = cli.Update(context.Background(), lc)
+	Expect(err).WithOffset(1).NotTo(HaveOccurred(), "failed to set host scope on LogCollector")
 }
 
 func (s *Manager) SearchLogs(query string) (int, error) {
