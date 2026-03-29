@@ -46,6 +46,7 @@ const (
 	externalNodeSSHKey   = "EXT_KEY"
 	externalNodeUsername = "EXT_USER"
 	awsElasticIPs        = "AWS_ELASTIC_IPS"
+	nonClusterHostsYAML  = "NON_CLUSTER_HOSTS_YAML"
 )
 
 var allConfigOptions = map[string]*configOption{
@@ -81,6 +82,11 @@ var allConfigOptions = map[string]*configOption{
 		helpText:     "For AWS clusters, comma-delimited list if elastic IP addresses for tests to use.",
 		defaultValue: "",
 	},
+	nonClusterHostsYAML: {
+		envVarName:   nonClusterHostsYAML,
+		helpText:     "Path to a YAML file describing non-cluster hosts for bare-metal e2e tests.",
+		defaultValue: "",
+	},
 }
 
 func RemoteClusterKubeconfig() string {
@@ -97,6 +103,10 @@ func ExtNodeSSHKey() string {
 
 func ExtNodeIP() string {
 	return allConfigOptions[externalNodeIP].actualValue
+}
+
+func NonClusterHostsYAML() string {
+	return allConfigOptions[nonClusterHostsYAML].actualValue
 }
 
 func AWSElasticIPs() []net.IP {

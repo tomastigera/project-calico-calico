@@ -30,6 +30,7 @@ const (
 	Netutils      = "calico/k8s-e2e-netutils:stable"
 	Socat         = "docker.io/alpine/socat:1.8.0.1"
 	Netshoot      = "docker.io/nicolaka/netshoot:v0.13"
+	Splunk        = "splunk/splunk:9.4.9"
 )
 
 // Get client image and powershell command based on windows OS version
