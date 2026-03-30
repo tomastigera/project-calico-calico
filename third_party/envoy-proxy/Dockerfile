@@ -10,7 +10,8 @@ RUN microdnf upgrade -y && microdnf install -y \
 
 # For updating this version please see
 # https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
-FROM quay.io/tigera/envoybinary:v1.35.8-6ddb700081 AS envoybinary
+# See https://gateway.envoyproxy.io/news/releases/matrix/ for version compatibility.
+FROM quay.io/tigera/envoybinary:v1.37.1-0a0b20ed98 AS envoybinary
 
 FROM scratch AS source
 

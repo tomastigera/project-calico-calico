@@ -102,7 +102,7 @@ start-fv-deps: stop-fv-deps
 	docker run --rm --detach --net=host --name=echo-server ealen/echo-server:latest --port=8088
 	docker run --rm --detach --net=host --name=envoy \
 		-v $(REPO_ROOT)/gateway/fv/testdata:/shared \
-		envoyproxy/envoy:v1.35-latest \
+		envoyproxy/envoy:v1.37-latest \
 		--config-path /shared/test-config.yaml \
 		--component-log-level ext_proc:trace
 
