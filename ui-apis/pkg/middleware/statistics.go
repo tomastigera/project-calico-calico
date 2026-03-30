@@ -175,15 +175,15 @@ func buildParams(r *http.Request) (*proto.StatisticsRequest, error) {
 	}
 	if v, ok := urlParams["namespace"]; ok {
 		match = true
-		hit.Namespace = v[0]
+		hit.Namespace = &proto.StringMatch{Value: v[0], Type: proto.MatchType_Exact}
 	}
 	if v, ok := urlParams["name"]; ok {
 		match = true
-		hit.Name = v[0]
+		hit.Name = &proto.StringMatch{Value: v[0], Type: proto.MatchType_Exact}
 	}
 	if v, ok := urlParams["tier"]; ok {
 		match = true
-		hit.Tier = v[0]
+		hit.Tier = &proto.StringMatch{Value: v[0], Type: proto.MatchType_Exact}
 	}
 	if v, ok := urlParams["action"]; ok {
 		match = true
