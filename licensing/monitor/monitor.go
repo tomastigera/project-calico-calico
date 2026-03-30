@@ -26,6 +26,7 @@ const (
 type LicenseMonitor interface {
 	GetFeatureStatus(string) bool
 	GetLicenseStatus() lclient.LicenseStatus
+	IsFeatureRestricted(string) bool
 	MonitorForever(context.Context) error
 	RefreshLicense(context.Context) error
 	SetPollInterval(duration time.Duration)
@@ -100,6 +101,18 @@ func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
 	defer l.activeLicenseLock.Unlock()
 	// Use the ValidateAtTime variant so that we use mocked time in the UTs.
 	return l.activeLicense.ValidateAtTime(l.now())
+}
+
+// IsFeatureRestricted returns true if the feature should be blocked from write operations.
+// A feature is restricted when it is not in the license OR the license has expired past
+// the grace period. Use this for API server hasRestrictions checks.
+func (l *licenseMonitor) IsFeatureRestricted(feature string) bool {
+	l.activeLicenseLock.Lock()
+	defer l.activeLicenseLock.Unlock()
+	if !l.activeLicense.ValidateFeature(feature) {
+		return true
+	}
+	return l.activeLicense.ValidateAtTime(l.now()) == lclient.Expired
 }
 
 func (l *licenseMonitor) SetPollInterval(d time.Duration) {

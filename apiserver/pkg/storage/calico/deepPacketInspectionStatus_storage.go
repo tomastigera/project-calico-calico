@@ -28,7 +28,7 @@ func NewDeepPacketInspectionStatusStorage(opts Options) (registry.DryRunnableSto
 		return c.DeepPacketInspections().Get(ctx, ns, name, ogo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.ThreatDefense)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

@@ -48,7 +48,7 @@ func NewGlobalReportTypeStorage(opts Options) (registry.DryRunnableStorage, fact
 		return c.GlobalReportTypes().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.ComplianceReports)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.ComplianceReports)
 	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,

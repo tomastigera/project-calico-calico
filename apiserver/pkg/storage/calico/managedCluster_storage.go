@@ -102,7 +102,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		return c.ManagedClusters().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.MultiClusterManagement)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.MultiClusterManagement)
 	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,

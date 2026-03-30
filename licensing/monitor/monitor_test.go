@@ -43,6 +43,49 @@ func TestBasicFunction(t *testing.T) {
 	})
 }
 
+func TestIsFeatureRestricted(t *testing.T) {
+	t.Run("no license loaded", func(t *testing.T) {
+		RegisterTestingT(t)
+		m := New(nil).(*licenseMonitor)
+		Expect(m.IsFeatureRestricted("foo")).To(BeTrue(), "should be restricted when no license is loaded")
+	})
+
+	t.Run("valid license with feature", func(t *testing.T) {
+		RegisterTestingT(t)
+		m := New(nil).(*licenseMonitor)
+		m.activeLicense = &lclient.LicenseClaims{
+			Features: []string{"allowed-feature"},
+			Claims:   jwt.Claims{Expiry: jwt.NewNumericDate(time.Now().Add(24 * time.Hour))},
+		}
+		Expect(m.IsFeatureRestricted("allowed-feature")).To(BeFalse(), "should not be restricted for a valid license with the feature")
+		Expect(m.IsFeatureRestricted("other-feature")).To(BeTrue(), "should be restricted for a feature not in the license")
+	})
+
+	t.Run("license in grace period with feature", func(t *testing.T) {
+		RegisterTestingT(t)
+		m := New(nil).(*licenseMonitor)
+		m.activeLicense = &lclient.LicenseClaims{
+			Features:    []string{"allowed-feature"},
+			Claims:      jwt.Claims{Expiry: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour))},
+			GracePeriod: 30, // 30 days
+		}
+		Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
+		Expect(m.IsFeatureRestricted("allowed-feature")).To(BeFalse(), "should not be restricted during grace period")
+	})
+
+	t.Run("expired license with feature", func(t *testing.T) {
+		RegisterTestingT(t)
+		m := New(nil).(*licenseMonitor)
+		m.activeLicense = &lclient.LicenseClaims{
+			Features:    []string{"allowed-feature"},
+			Claims:      jwt.Claims{Expiry: jwt.NewNumericDate(time.Now().Add(-365 * 24 * time.Hour))},
+			GracePeriod: 90, // 90 days, but expired over a year ago
+		}
+		Expect(m.GetLicenseStatus()).To(Equal(lclient.Expired))
+		Expect(m.IsFeatureRestricted("allowed-feature")).To(BeTrue(), "should be restricted when license is expired past grace period")
+	})
+}
+
 func TestMonitorLoop(t *testing.T) {
 	RegisterTestingT(t)
 	m, h := setUpMonitorAndMocks()

@@ -48,7 +48,7 @@ func NewAlertExceptionStorage(opts Options) (registry.DryRunnableStorage, factor
 		return c.AlertExceptions().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
-		return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
+		return opts.LicenseMonitor.IsFeatureRestricted(features.AlertManagement)
 	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
