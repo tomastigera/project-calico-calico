@@ -9,11 +9,11 @@ RUN microdnf upgrade -y && microdnf install -y \
     shadow-utils
 
 # Ensure this version matches the version used in quay.io/tigera/envoybinary.
-FROM envoyproxy/envoy:v1.35.8 AS envoy
+FROM envoyproxy/envoy:v1.37.1 AS envoy
 
 # For updating this version please see
 # https://github.com/tigera/operator/blob/master/docs/common_tasks.md#updating-the-bundled-version-of-envoy-gateway
-FROM quay.io/tigera/envoybinary:v1.35.8-6ddb700081 AS envoybinary
+FROM quay.io/tigera/envoybinary:v1.37.1-0a0b20ed98 AS envoybinary
 
 FROM scratch AS source
 
