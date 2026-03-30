@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -600,6 +600,26 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		Expect(outRules).To(HaveLen(1))
 		Expect(outRules[0].DstDomains).To(HaveLen(2))
 		Expect(outRules[0].DstDomains).To(ConsistOf("docs.projectcalico.org", "k8s.io"))
+	})
+
+	It("should skip invalid CIDRs in NormalizeIPNets without panicking", func() {
+		// Reproduces https://github.com/projectcalico/calico/issues/7697 where an invalid
+		// CIDR like "10.2402.0.0/16" caused a nil pointer dereference in Rule.String().
+		r := apiv3.Rule{
+			Action: apiv3.Deny,
+			Destination: apiv3.EntityRule{
+				Nets:  []string{"10.2402.0.0/16", "10.0.0.0/8"},
+				Ports: []numorstring.Port{numorstring.SinglePort(4789)},
+			},
+		}
+
+		rulev1 := updateprocessors.RuleAPIV3ToBackend(r, "", false)
+
+		By("filtering out the invalid CIDR")
+		Expect(rulev1.DstNets).To(Equal([]*cnet.IPNet{mustParseCIDR("10.0.0.0/8")}))
+
+		By("not panicking when calling String()")
+		Expect(func() { _ = rulev1.String() }).NotTo(Panic())
 	})
 
 	It("should parse a set of rules and validates the namespaceselector with label and all()", func() {
