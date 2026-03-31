@@ -42,7 +42,7 @@ type recommendationScopeController struct {
 	linseed lsclient.Client
 
 	// The enabled flag is used keep track of the engine status.
-	enabled v3.PolicyRecommendationNamespaceStatus
+	enabled v3.PolicyRecommendationStatus
 
 	// The reconciler is used to reconcile the recommendation scope resource or the alternative tier resource.
 	scopeReconciler *recommendationScopeReconciler
@@ -83,7 +83,7 @@ func NewRecommendationScopeController(
 		clientSet: clientSet,
 		clusterID: clusterID,
 		linseed:   linseed,
-		enabled:   v3.PolicyRecommendationScopeDisabled,
+		enabled:   v3.PolicyRecommendationDisabled,
 	}
 
 	if !watcherCfg.WatchScope && !watcherCfg.WatchTier {

@@ -160,6 +160,9 @@ var _ = Describe("RecommendationController", func() {
 					Interval: &metav1.Duration{
 						Duration: time.Second * 2,
 					},
+					NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+						Selector: "all()",
+					},
 				},
 			},
 			minPollInterval,

@@ -69,7 +69,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					reconcilerBase: &reconcilerBase{
 						ctx:       ctx,
 						clientSet: mockClientSet,
-						enabled:   v3.PolicyRecommendationScopeDisabled,
+						enabled:   v3.PolicyRecommendationDisabled,
 						mutex:     sync.Mutex{},
 						stopChan:  make(chan struct{}),
 						clog:      logEntry,
@@ -100,8 +100,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: rectypes.PolicyRecommendationScopeName,
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-								RecStatus: v3.PolicyRecommendationScopeEnabled,
+							NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+								RecStatus: v3.PolicyRecommendationEnabled,
 							},
 						},
 					}, metav1.CreateOptions{})
@@ -111,7 +111,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				It("should start the controller, and transition the engine status from 'Disabled' to 'Enabled'", func() {
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -126,7 +126,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				It("should handle another update, the engine is enabled and the scope is still enabled", func() {
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -139,7 +139,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -159,8 +159,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: rectypes.PolicyRecommendationScopeName,
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-								RecStatus: v3.PolicyRecommendationScopeDisabled,
+							NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+								RecStatus: v3.PolicyRecommendationDisabled,
 							},
 						},
 					}, metav1.CreateOptions{})
@@ -170,7 +170,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				It("should not render the controller and the engine", func() {
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeDisabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationDisabled))
 
 					Expect(scopeReconciler.ctrl).To(BeNil())
 					Expect(scopeReconciler.engine).To(BeNil())
@@ -184,8 +184,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: rectypes.PolicyRecommendationScopeName,
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-								RecStatus: v3.PolicyRecommendationScopeEnabled,
+							NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+								RecStatus: v3.PolicyRecommendationEnabled,
 							},
 						},
 					}, metav1.CreateOptions{})
@@ -194,7 +194,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					err = scopeReconciler.Reconcile(mockNamespaced)
 					Expect(err).To(BeNil())
 
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 
 					Eventually(func() bool {
 						return mockEngine.scopeUpdatedCount == 1
@@ -211,8 +211,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: rectypes.PolicyRecommendationScopeName,
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-								RecStatus: v3.PolicyRecommendationScopeDisabled,
+							NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+								RecStatus: v3.PolicyRecommendationDisabled,
 							},
 						},
 					}, metav1.UpdateOptions{})
@@ -223,7 +223,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 				It("update the enabled status", func() {
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeDisabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationDisabled))
 					Expect(scopeReconciler.stopChan).To(BeClosed())
 
 					Eventually(func() bool {
@@ -236,7 +236,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 				It("should keep the status as disabled when the disabled scope is reconciled multiple times", func() {
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeDisabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationDisabled))
 					Expect(scopeReconciler.stopChan).To(BeClosed())
 
 					Eventually(func() bool {
@@ -247,7 +247,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					}, 10*time.Second).Should(BeFalse())
 
 					Expect(scopeReconciler.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
-					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationScopeDisabled))
+					Expect(scopeReconciler.enabled).To(Equal(v3.PolicyRecommendationDisabled))
 					Expect(scopeReconciler.stopChan).To(BeClosed())
 
 					Eventually(func() bool {
@@ -273,7 +273,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					reconcilerBase: &reconcilerBase{
 						ctx:       ctx,
 						clientSet: mockClientSet,
-						enabled:   v3.PolicyRecommendationScopeDisabled,
+						enabled:   v3.PolicyRecommendationDisabled,
 						mutex:     sync.Mutex{},
 						stopChan:  make(chan struct{}),
 						clog:      logEntry,
@@ -305,13 +305,13 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 						},
 					}, metav1.CreateOptions{})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeDisabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationDisabled))
 				})
 
 				It("should start the controller, and transition the engine status from 'Disabled' to 'Enabled'", func() {
 					Expect(tr.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -326,7 +326,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				It("should handle another update, the engine is enabled and the scope is still enabled", func() {
 					Expect(tr.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -339,7 +339,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 					Expect(tr.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -354,7 +354,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				It("should handle another delete, the engine is enabled and the scope is still enabled", func() {
 					Expect(tr.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())
@@ -368,7 +368,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					Expect(tr.clientSet.ProjectcalicoV3().Tiers().Delete(ctx, rectypes.PolicyRecommendationTierName, metav1.DeleteOptions{})).NotTo(HaveOccurred())
 					Expect(tr.Reconcile(mockNamespaced)).NotTo(HaveOccurred())
 
-					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationScopeEnabled))
+					Expect(tr.enabled).To(Equal(v3.PolicyRecommendationEnabled))
 					Eventually(func() bool {
 						return mockCtrl.running
 					}, 10*time.Second).Should(BeTrue())

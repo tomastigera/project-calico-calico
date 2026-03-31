@@ -88,8 +88,8 @@ var _ = Describe("Watcher", func() {
 						Name: "policy-recommendation",
 					},
 					Spec: v3.PolicyRecommendationScopeSpec{
-						NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-							RecStatus: v3.PolicyRecommendationScopeEnabled,
+						NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+							RecStatus: v3.PolicyRecommendationEnabled,
 						},
 					},
 				}, metav1.CreateOptions{})
@@ -104,8 +104,8 @@ var _ = Describe("Watcher", func() {
 						Name: "policy-recommendation",
 					},
 					Spec: v3.PolicyRecommendationScopeSpec{
-						NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-							RecStatus: v3.PolicyRecommendationScopeDisabled,
+						NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+							RecStatus: v3.PolicyRecommendationDisabled,
 						},
 					},
 				}, metav1.UpdateOptions{})

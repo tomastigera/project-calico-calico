@@ -578,8 +578,8 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 		Spec: v3.PolicyRecommendationScopeSpec{
 			MaxRules:               &defaultValue,
 			PoliciesLearningCutOff: &defaultValue,
-			NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-				RecStatus: v3.PolicyRecommendationScopeEnabled,
+			NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+				RecStatus: v3.PolicyRecommendationEnabled,
 				Selector:  "foo == \"bar\"",
 			},
 		},
@@ -727,8 +727,8 @@ func testPolicyRecommendationScopeClient(client calicoclient.Interface, name str
 			Spec: v3.PolicyRecommendationScopeSpec{
 				MaxRules:               &defaultValue,
 				PoliciesLearningCutOff: &defaultValue,
-				NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-					RecStatus: v3.PolicyRecommendationScopeEnabled,
+				NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+					RecStatus: v3.PolicyRecommendationEnabled,
 					Selector:  "foo == \"bar\"",
 				},
 			},

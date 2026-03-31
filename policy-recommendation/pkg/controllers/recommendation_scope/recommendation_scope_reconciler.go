@@ -35,7 +35,7 @@ func newRecommendationScopeReconciler(
 		clusterID:       clusterID,
 		clientSet:       clientSet,
 		linseed:         linseed,
-		enabled:         v3.PolicyRecommendationScopeDisabled,
+		enabled:         v3.PolicyRecommendationDisabled,
 		minPollInterval: minPollInterval,
 	}
 	return &recommendationScopeReconciler{

@@ -35,7 +35,7 @@ func newTierReconciler(
 		clusterID:       clusterID,
 		clientSet:       clientSet,
 		linseed:         linseed,
-		enabled:         v3.PolicyRecommendationScopeDisabled,
+		enabled:         v3.PolicyRecommendationDisabled,
 		minPollInterval: minPollInterval,
 		clog:            clog,
 	}
@@ -68,8 +68,8 @@ func isTargetTier(key types.NamespacedName) bool {
 func newDefaultRecommendationScope() *v3.PolicyRecommendationScope {
 	return &v3.PolicyRecommendationScope{
 		Spec: v3.PolicyRecommendationScopeSpec{
-			NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
-				RecStatus: v3.PolicyRecommendationScopeEnabled,
+			NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
+				RecStatus: v3.PolicyRecommendationEnabled,
 				Selector:  recengine.DefaultSelector,
 			},
 		},

@@ -186,7 +186,7 @@ var _ = Describe("RecommendationEngine", func() {
 					StabilizationPeriod: &metav1.Duration{
 						Duration: 2 * time.Minute,
 					},
-					NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+					NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
 						IntraNamespacePassThroughTraffic: true,
 						Selector:                         newSelector,
 					},

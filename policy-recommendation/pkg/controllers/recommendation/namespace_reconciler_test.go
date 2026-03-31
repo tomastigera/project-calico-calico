@@ -156,7 +156,7 @@ var _ = Describe("NamespaceReconciler", func() {
 					Interval: &metav1.Duration{
 						Duration: time.Second * 2,
 					},
-					NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+					NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
 						Selector: "!(projectcalico.org/name starts with 'tigera-') && !(projectcalico.org/name starts with 'calico-') && " +
 							"!(projectcalico.org/name starts with 'kube-') && !(projectcalico.org/name starts with 'openshift-')",
 					},

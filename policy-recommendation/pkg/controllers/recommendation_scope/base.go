@@ -31,7 +31,7 @@ type reconcilerBase struct {
 	clientSet       lmak8s.ClientSet
 	linseed         lsclient.Client
 	ctrl            controller.Controller
-	enabled         v3.PolicyRecommendationNamespaceStatus
+	enabled         v3.PolicyRecommendationStatus
 	engine          recengine.RecommendationEngine
 	stopChan        chan struct{}
 	minPollInterval metav1.Duration
@@ -44,9 +44,15 @@ type reconcilerBase struct {
 
 // reconcile is the shared logic for enabling/disabling the recommendation engine.
 func (r *reconcilerBase) reconcile(scope *v3.PolicyRecommendationScope) error {
-	status := scope.Spec.NamespaceSpec.RecStatus
+	var status v3.PolicyRecommendationStatus
+	if scope.Spec.NamespaceSpec == nil {
+		r.clog.Info("NamespaceSpec is not set, treating as disabled for namespaced policy recommendation")
+		status = v3.PolicyRecommendationDisabled
+	} else {
+		status = scope.Spec.NamespaceSpec.RecStatus
+	}
 	if r.enabled != status {
-		if status == v3.PolicyRecommendationScopeEnabled {
+		if status == v3.PolicyRecommendationEnabled {
 			if r.ctrl == nil {
 				var err error
 				if r.ctrlFactory != nil {
@@ -61,16 +67,16 @@ func (r *reconcilerBase) reconcile(scope *v3.PolicyRecommendationScope) error {
 			r.stopChan = make(chan struct{})
 			go r.ctrl.Run(r.stopChan)
 
-			r.enabled = v3.PolicyRecommendationScopeEnabled
+			r.enabled = v3.PolicyRecommendationEnabled
 			r.clog.Info("Recommendation engine enabled")
 		} else {
 			close(r.stopChan)
 			r.ctrl = nil
-			r.enabled = v3.PolicyRecommendationScopeDisabled
+			r.enabled = v3.PolicyRecommendationDisabled
 			r.clog.Info("Recommendation engine disabled")
 		}
 	}
-	if r.enabled == v3.PolicyRecommendationScopeEnabled {
+	if r.enabled == v3.PolicyRecommendationEnabled {
 		r.clog.Info("Updating PolicyRecommendation settings")
 		if r.engine != nil {
 			r.engine.ReceiveScopeUpdate(*scope)

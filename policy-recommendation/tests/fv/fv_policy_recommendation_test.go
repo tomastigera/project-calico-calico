@@ -54,7 +54,7 @@ func TestPolicyRecommendationEnable(t *testing.T) {
 
 	interval := metav1.Duration{Duration: 1 * time.Second}
 	stabilization := metav1.Duration{Duration: 1 * time.Second}
-	status := v3.PolicyRecommendationScopeEnabled
+	status := v3.PolicyRecommendationEnabled
 	selector := ""
 
 	// Enable policy recommendation
@@ -168,7 +168,7 @@ func TestPolicyRecommendationSelector(t *testing.T) {
 
 	interval := metav1.Duration{Duration: 1 * time.Second}
 	stabilization := metav1.Duration{Duration: 10 * time.Second}
-	status := v3.PolicyRecommendationScopeEnabled
+	status := v3.PolicyRecommendationEnabled
 	selector := "!(projectcalico.org/name == 'namespace2')"
 
 	// Enable policy recommendation
@@ -270,7 +270,7 @@ func TestPolicyRecommendationStabilization(t *testing.T) {
 
 	interval := metav1.Duration{Duration: 1 * time.Second}
 	stabilization := metav1.Duration{Duration: 1 * time.Second}
-	status := v3.PolicyRecommendationScopeEnabled
+	status := v3.PolicyRecommendationEnabled
 	selector := ""
 
 	// Enable policy recommendation
@@ -373,7 +373,7 @@ func TestPolicyRecommendationStabilization(t *testing.T) {
 // getPolicyRecommendationScope returns a policy recommendation scope with the given status,
 // selector, interval, and stabilization period.
 func getPolicyRecommendationScope(
-	status v3.PolicyRecommendationNamespaceStatus,
+	status v3.PolicyRecommendationStatus,
 	selector string,
 	interval metav1.Duration,
 	stabilization metav1.Duration,
@@ -385,7 +385,7 @@ func getPolicyRecommendationScope(
 		Spec: v3.PolicyRecommendationScopeSpec{
 			Interval:            &interval,
 			StabilizationPeriod: &stabilization,
-			NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+			NamespaceSpec: &v3.PolicyRecommendationScopeNamespaceSpec{
 				RecStatus: status,
 				Selector:  selector,
 			},
