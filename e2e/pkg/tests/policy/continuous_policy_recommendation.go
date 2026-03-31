@@ -569,7 +569,7 @@ func enablePolicyRecommendation(c ctrlclient.Client, interval, stabilization tim
 	}
 
 	By(fmt.Sprintf("Enabling Policy Recommendation (interval=%s, stabilization=%s, selector=%q)", interval, stabilization, selector))
-	scope.Spec.NamespaceSpec.RecStatus = v3.PolicyRecommendationScopeEnabled
+	scope.Spec.NamespaceSpec.RecStatus = v3.PolicyRecommendationEnabled
 	scope.Spec.NamespaceSpec.Selector = selector
 	scope.Spec.Interval = &metav1.Duration{Duration: interval}
 	scope.Spec.StabilizationPeriod = &metav1.Duration{Duration: stabilization}
@@ -584,7 +584,7 @@ func enablePolicyRecommendation(c ctrlclient.Client, interval, stabilization tim
 		if err := c.Get(ctx, ctrlclient.ObjectKey{Name: scope.Name}, scope); err != nil {
 			return fmt.Errorf("getting PolicyRecommendationScope for disable: %w", err)
 		}
-		scope.Spec.NamespaceSpec.RecStatus = v3.PolicyRecommendationScopeDisabled
+		scope.Spec.NamespaceSpec.RecStatus = v3.PolicyRecommendationDisabled
 		return c.Update(ctx, scope)
 	}, nil
 }
@@ -600,8 +600,8 @@ func resetPolicyRecommendationScope(c ctrlclient.Client) {
 		logrus.WithError(err).Warn("failed to get PolicyRecommendationScope for reset")
 		return
 	}
-	scope.Spec.NamespaceSpec = v3.PolicyRecommendationScopeNamespaceSpec{
-		RecStatus: v3.PolicyRecommendationScopeDisabled,
+	scope.Spec.NamespaceSpec = &v3.PolicyRecommendationScopeNamespaceSpec{
+		RecStatus: v3.PolicyRecommendationDisabled,
 	}
 	if err := c.Update(ctx, scope); err != nil {
 		logrus.WithError(err).Warn("failed to reset PolicyRecommendationScope")
