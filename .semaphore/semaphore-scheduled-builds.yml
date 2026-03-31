@@ -344,7 +344,9 @@ blocks:
   - name: Check images availability
     run:
       # Script fails on enterprise due to missing values.yaml.
-      when: "false and (true or (branch !~ 'build-v.*' and change_in(['/charts/', '/manifests/'], {pipeline_file: 'ignore'})))"
+      when: >-
+        false and (true or (branch !~ 'build-v.*' and change_in(['/charts/', '/manifests/'],
+        {pipeline_file: 'ignore'})))
     dependencies: []
     task:
       jobs:
@@ -503,7 +505,9 @@ blocks:
             - "true"
   - name: API
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/api/', '/test/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/api/', '/test/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -740,7 +744,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: E2E script & pipeline validations
     run:
-      when: "true or change_in(['/.semaphore/end-to-end/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/.semaphore/end-to-end/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     execution_time_limit:
       minutes: 5
     dependencies:
@@ -836,7 +842,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Envoy Gateway
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-gateway'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -854,7 +862,9 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: Envoy Proxy
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-proxy'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -876,7 +886,9 @@ blocks:
             - ../../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
   - name: "Envoy Ratelimit"
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/envoy-ratelimit'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1202,7 +1214,9 @@ blocks:
         - name: fv-tests-guru-github-token
   - name: Publish tigera/istio-ztunnel images
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        change_in(['/third_party/istio-ztunnel'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1217,7 +1231,9 @@ blocks:
             - make -C third_party/istio-ztunnel cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/istio-ztunnel images - native arm64 runner
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        change_in(['/third_party/istio-ztunnel'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1235,7 +1251,9 @@ blocks:
             - make -C third_party/istio-ztunnel cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/istio-ztunnel multi-arch manifests
     run:
-      when: "change_in(['/third_party/istio-ztunnel'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        change_in(['/third_party/istio-ztunnel'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Publish tigera/istio-ztunnel images
       - Publish tigera/istio-ztunnel images - native arm64 runner
@@ -1319,7 +1337,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Libraries (lib)
     run:
-      when: "true or change_in(['/lib/'], {pipeline_file: 'ignore'})"
+      when: >-
+        true or change_in(['/lib/'],
+        {pipeline_file: 'ignore'})
     execution_time_limit:
       minutes: 30
     dependencies:
@@ -1494,7 +1514,9 @@ blocks:
         - name: test-customer-license
   - name: 'Packaging (pkg)'
     run:
-      when: "true or change_in(['/lib/std/', '/pkg/'], {pipeline_file: 'ignore'})"
+      when: >-
+        true or change_in(['/lib/std/', '/pkg/'],
+        {pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -1535,7 +1557,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: "Tools (hack directory)"
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/hack/', '/api/', '/libcalico-go/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/hack/', '/api/', '/libcalico-go/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1687,7 +1711,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/snort3 images
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        false or change_in(['/third_party/snort3'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1706,7 +1732,9 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/snort3 images - native arm64 runner
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        false or change_in(['/third_party/snort3'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -1724,7 +1752,9 @@ blocks:
             - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/snort3 multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/snort3'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        false or change_in(['/third_party/snort3'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Publish tigera/snort3 images
       - Publish tigera/snort3 images - native arm64 runner
@@ -1833,7 +1863,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/elasticsearch images
     run:
-      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/elasticsearch'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -1852,7 +1884,9 @@ blocks:
             - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/elasticsearch images - native arm64 runner
     run:
-      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/elasticsearch'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -1870,7 +1904,9 @@ blocks:
             - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/elasticsearch multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/elasticsearch'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Publish tigera/elasticsearch images
       - Publish tigera/elasticsearch images - native arm64 runner
@@ -1957,7 +1993,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/fluentd-base images
     run:
-      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -1972,7 +2010,9 @@ blocks:
             - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
   - name: Publish tigera/fluentd-base images - native arm64 runner
     run:
-      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -1990,7 +2030,9 @@ blocks:
             - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
   - name: Publish tigera/fluentd-base multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Publish tigera/fluentd-base images
       - Publish tigera/fluentd-base images - native arm64 runner
@@ -2033,7 +2075,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/fluentd-base Windows images
     run:
-      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     execution_time_limit:
@@ -2067,7 +2111,9 @@ blocks:
             - BASE=true CONFIRM=true .semaphore/windows-cd.sh
   - name: Publish tigera/fluentd-base Windows multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Publish tigera/fluentd-base Windows images
     task:
@@ -2082,7 +2128,9 @@ blocks:
             - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
   - name: fluentd Windows
     run:
-      when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        true or change_in(['/fluentd/', '/third_party/fluentd-base'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Publish tigera/fluentd-base Windows multi-arch manifests
     task:
@@ -2207,7 +2255,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Publish tigera/kibana images
     run:
-      when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/kibana'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Prerequisites
     task:
@@ -2226,7 +2276,9 @@ blocks:
             - make -C third_party/kibana cd CONFIRM=true
   - name: Publish tigera/kibana multi-arch manifests
     run:
-      when: "false or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+      when: >-
+        false or change_in(['/third_party/kibana'],
+        {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})
     dependencies:
       - Publish tigera/kibana images
     task:
@@ -2594,7 +2646,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: Fluent Bit
     run:
-      when: "true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/fluent-bit/', '/pkg/nonclusterhost/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2616,7 +2670,9 @@ blocks:
             - 'test-results publish --name "${SEMAPHORE_JOB_NAME}" ./report/*.xml || true'
   - name: SELinux
     run:
-      when: "true or change_in(['/selinux/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/selinux/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2641,7 +2697,9 @@ blocks:
             - ../.semaphore/vms/clean-up-vms ${VM_PREFIX}
   - name: Alert Manager
     run:
-      when: "true or change_in(['/third_party/alertmanager/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/third_party/alertmanager/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2662,7 +2720,9 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: Dex
     run:
-      when: "true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/metadata.mk', '/lib.Makefile', '/third_party/dex/', '/crypto/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2682,7 +2742,9 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
   - name: ECK Operator
     run:
-      when: "true or change_in(['/third_party/eck-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/third_party/eck-operator/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2722,7 +2784,9 @@ blocks:
             - make -C intrusion-detection-controller geoip/dbip-city-lite.mmdb geoip/dbip-asn-lite.mmdb
   - name: Prometheus Operator
     run:
-      when: "true or change_in(['/third_party/prometheus-operator/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/third_party/prometheus-operator/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
@@ -2742,7 +2806,9 @@ blocks:
             - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
   - name: Prometheus
     run:
-      when: "true or change_in(['/third_party/prometheus/'], {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+      when: >-
+        true or change_in(['/third_party/prometheus/'],
+        {pipeline_file: 'ignore', exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})
     dependencies:
       - Prerequisites
     task:
