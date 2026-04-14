@@ -180,6 +180,8 @@ spec:
                   type: integer
                 bpfMapSizeRoute:
                   type: integer
+                bpfOverlayIPOnDevice:
+                  type: boolean
                 bpfPSNATPorts:
                   anyOf:
                     - type: integer
