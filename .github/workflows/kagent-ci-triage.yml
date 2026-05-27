@@ -1,0 +1,119 @@
+# Drop this into the target repo at: .github/workflows/kagent-ci-triage.yml
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   KAGENT_URL   = http://34.30.115.185:31208/api/a2a/kagent/ci-triage/messages
+#   KAGENT_TOKEN = (bearer token printed when we created the kagent-edge-token Secret)
+
+name: kagent CI triage
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_id:
+        description: "Semaphore workflow_id (UUID from the Semaphore URL)"
+        required: true
+        type: string
+      pr_number:
+        description: "PR number to comment on"
+        required: true
+        type: number
+
+permissions:
+  pull-requests: write   # upsert the comment
+  contents: read         # read PR metadata
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KAGENT_URL:   ${{ secrets.KAGENT_URL }}
+      KAGENT_TOKEN: ${{ secrets.KAGENT_TOKEN }}
+      WORKFLOW_ID:  ${{ inputs.workflow_id }}
+      PR_NUMBER:    ${{ inputs.pr_number }}
+      GH_TOKEN:     ${{ github.token }}
+      REPO:         ${{ github.repository }}
+    steps:
+      - name: Fetch PR title + body
+        run: |
+          gh api "repos/$REPO/pulls/$PR_NUMBER" \
+            --jq '{title: .title, body: .body}' > pr.json
+          echo "PR title: $(jq -r .title pr.json)"
+          echo "PR body length: $(jq -r '.body|length' pr.json) chars"
+
+      - name: Call kagent ci-triage agent (A2A)
+        run: |
+          PROMPT=$(jq -n --slurpfile pr pr.json --arg wf "$WORKFLOW_ID" '
+            "Triage Semaphore workflow " + $wf + ".\n\n" +
+            "PR title: " + $pr[0].title + "\n\n" +
+            "PR description:\n" + ($pr[0].body // "")')
+
+          jq -n --arg p "$PROMPT" --arg mid "gh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" '{
+            jsonrpc: "2.0",
+            id: 1,
+            method: "message/send",
+            params: {
+              message: {
+                messageId: $mid,
+                role: "user",
+                parts: [{kind: "text", text: $p}]
+              },
+              configuration: { returnImmediately: false }
+            }
+          }' > a2a.req.json
+
+          echo "request size: $(wc -c < a2a.req.json) bytes"
+
+          # Long timeout — triage typically 40-90s on first call.
+          HTTP=$(curl -sS --max-time 300 -o a2a.resp.json -w '%{http_code}' \
+            "$KAGENT_URL" \
+            -H "Authorization: Bearer $KAGENT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @a2a.req.json)
+          echo "HTTP $HTTP"
+          if [[ "$HTTP" != "200" ]]; then
+            echo "::error::kagent returned HTTP $HTTP"
+            head -c 1000 a2a.resp.json
+            exit 1
+          fi
+
+          # Extract the agent's reply. v0.9.4 puts it under
+          # .result.artifacts[0].parts[0].text — fall back to message shape
+          # just in case future versions move things around.
+          jq -r '
+            .result.artifacts[0].parts[0].text //
+            .result.message.parts[0].text //
+            empty
+          ' a2a.resp.json > triage.md
+
+          if [[ ! -s triage.md ]]; then
+            echo "::error::could not extract triage text from response"
+            head -c 1000 a2a.resp.json
+            exit 1
+          fi
+
+          echo "--- agent reply ---"
+          cat triage.md
+
+      - name: Upsert PR comment (skip on PASS)
+        run: |
+          BODY=$(cat triage.md)
+          if [[ "$BODY" == "PASS — no comment needed" ]]; then
+            echo "agent says PASS — no comment to post"
+            exit 0
+          fi
+
+          MARKER="<!-- kagent-ci-triage -->"
+          FULL_BODY="$MARKER"$'\n'"$BODY"
+
+          EXISTING=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+            --jq "[.[] | select(.body | startswith(\"$MARKER\"))][0].id")
+
+          PAYLOAD=$(jq -n --arg b "$FULL_BODY" '{body: $b}')
+
+          if [[ -n "$EXISTING" && "$EXISTING" != "null" ]]; then
+            echo "editing existing comment $EXISTING"
+            gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING" --input - <<<"$PAYLOAD"
+          else
+            echo "posting new comment"
+            gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" --input - <<<"$PAYLOAD"
+          fi
