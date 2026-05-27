@@ -1,15 +1,24 @@
 # Drop this into the target repo at: .github/workflows/kagent-ci-triage.yml
-# Required repo secrets (Settings → Secrets and variables → Actions):
-#   KAGENT_URL   = http://34.30.115.185:31208/api/a2a/kagent/ci-triage/messages
-#   KAGENT_TOKEN = (bearer token printed when we created the kagent-edge-token Secret)
+# Required repo secrets:
+#   KAGENT_URL   — full A2A endpoint, e.g.
+#                  http://<host>/api/a2a/kagent/ci-triage/messages
+#   KAGENT_TOKEN — bearer token validated by the kagent edge nginx
+#
+# The workflow is a no-op if either secret is missing, so it is safe to
+# merge before secrets are provisioned.
 
 name: kagent CI triage
 
 on:
+  # Auto: fires whenever any commit status is updated. We filter to
+  # Semaphore CI failures only inside the job's `if:`.
+  status: {}
+
+  # Manual: re-run an old workflow, or trigger against an arbitrary PR.
   workflow_dispatch:
     inputs:
       workflow_id:
-        description: "Semaphore workflow_id (UUID from the Semaphore URL)"
+        description: "Semaphore workflow_id (UUID)"
         required: true
         type: string
       pr_number:
@@ -17,32 +26,85 @@ on:
         required: true
         type: number
 
+# Coalesce concurrent runs against the same PR or commit.
+concurrency:
+  group: kagent-ci-triage-${{ inputs.pr_number || github.event.sha || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
-  pull-requests: write   # upsert the comment
+  pull-requests: write   # upsert the triage comment
   contents: read         # read PR metadata
 
 jobs:
   triage:
+    # Run when:
+    #   - manually triggered, OR
+    #   - Semaphore's "ci/semaphoreci/pr: Calico" status reports failure/error.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'status' &&
+       github.event.context == 'ci/semaphoreci/pr: Calico' &&
+       (github.event.state == 'failure' || github.event.state == 'error'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       KAGENT_URL:   ${{ secrets.KAGENT_URL }}
       KAGENT_TOKEN: ${{ secrets.KAGENT_TOKEN }}
-      WORKFLOW_ID:  ${{ inputs.workflow_id }}
-      PR_NUMBER:    ${{ inputs.pr_number }}
       GH_TOKEN:     ${{ github.token }}
       REPO:         ${{ github.repository }}
     steps:
-      - name: Fetch PR title + body
+      - name: Skip if secrets are not configured
+        id: gate
         run: |
-          gh api "repos/$REPO/pulls/$PR_NUMBER" \
+          if [[ -z "${KAGENT_URL}" || -z "${KAGENT_TOKEN}" ]]; then
+            echo "::warning::KAGENT_URL or KAGENT_TOKEN secret missing — skipping triage"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve workflow_id + pr_number from event
+        id: resolve
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "wid=${{ inputs.workflow_id }}" >> "$GITHUB_OUTPUT"
+            echo "pr=${{ inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+            echo "source=workflow_dispatch" >> "$GITHUB_OUTPUT"
+          else
+            TARGET="${{ github.event.target_url }}"
+            SHA="${{ github.event.sha }}"
+            WID=$(printf '%s' "$TARGET" | sed -nE 's|.*/workflows/([0-9a-fA-F-]{36}).*|\1|p')
+            if [[ -z "$WID" ]]; then
+              echo "::warning::could not extract workflow_id from target_url='$TARGET' — skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            PR=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+                   --jq '[.[] | select(.state == "open")] | .[0].number // empty')
+            if [[ -z "$PR" ]]; then
+              echo "::warning::no open PR for sha=$SHA — skipping (commit is likely on a branch with no open PR)"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "wid=$WID" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR" >> "$GITHUB_OUTPUT"
+            echo "source=status:${{ github.event.context }}:${{ github.event.state }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch PR title + body
+        if: steps.gate.outputs.skip != 'true' && steps.resolve.outputs.skip != 'true'
+        run: |
+          gh api "repos/$REPO/pulls/${{ steps.resolve.outputs.pr }}" \
             --jq '{title: .title, body: .body}' > pr.json
-          echo "PR title: $(jq -r .title pr.json)"
-          echo "PR body length: $(jq -r '.body|length' pr.json) chars"
+          echo "PR #${{ steps.resolve.outputs.pr }} : $(jq -r .title pr.json)"
+          echo "body length: $(jq -r '.body|length' pr.json) chars"
+          echo "trigger: ${{ steps.resolve.outputs.source }}"
 
       - name: Call kagent ci-triage agent (A2A)
+        if: steps.gate.outputs.skip != 'true' && steps.resolve.outputs.skip != 'true'
         run: |
-          PROMPT=$(jq -n --slurpfile pr pr.json --arg wf "$WORKFLOW_ID" '
+          PROMPT=$(jq -n --slurpfile pr pr.json --arg wf "${{ steps.resolve.outputs.wid }}" '
             "Triage Semaphore workflow " + $wf + ".\n\n" +
             "PR title: " + $pr[0].title + "\n\n" +
             "PR description:\n" + ($pr[0].body // "")')
@@ -61,24 +123,17 @@ jobs:
             }
           }' > a2a.req.json
 
-          echo "request size: $(wc -c < a2a.req.json) bytes"
-
-          # Long timeout — triage typically 40-90s on first call.
           HTTP=$(curl -sS --max-time 300 -o a2a.resp.json -w '%{http_code}' \
             "$KAGENT_URL" \
             -H "Authorization: Bearer $KAGENT_TOKEN" \
             -H 'Content-Type: application/json' \
             --data-binary @a2a.req.json)
-          echo "HTTP $HTTP"
           if [[ "$HTTP" != "200" ]]; then
             echo "::error::kagent returned HTTP $HTTP"
             head -c 1000 a2a.resp.json
             exit 1
           fi
 
-          # Extract the agent's reply. v0.9.4 puts it under
-          # .result.artifacts[0].parts[0].text — fall back to message shape
-          # just in case future versions move things around.
           jq -r '
             .result.artifacts[0].parts[0].text //
             .result.message.parts[0].text //
@@ -95,6 +150,7 @@ jobs:
           cat triage.md
 
       - name: Upsert PR comment (skip on PASS)
+        if: steps.gate.outputs.skip != 'true' && steps.resolve.outputs.skip != 'true'
         run: |
           BODY=$(cat triage.md)
           if [[ "$BODY" == "PASS — no comment needed" ]]; then
@@ -104,8 +160,9 @@ jobs:
 
           MARKER="<!-- kagent-ci-triage -->"
           FULL_BODY="$MARKER"$'\n'"$BODY"
+          PR=${{ steps.resolve.outputs.pr }}
 
-          EXISTING=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+          EXISTING=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
             --jq "[.[] | select(.body | startswith(\"$MARKER\"))][0].id")
 
           PAYLOAD=$(jq -n --arg b "$FULL_BODY" '{body: $b}')
@@ -114,6 +171,6 @@ jobs:
             echo "editing existing comment $EXISTING"
             gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING" --input - <<<"$PAYLOAD"
           else
-            echo "posting new comment"
-            gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" --input - <<<"$PAYLOAD"
+            echo "posting new comment on PR #$PR"
+            gh api -X POST "repos/$REPO/issues/$PR/comments" --input - <<<"$PAYLOAD"
           fi
