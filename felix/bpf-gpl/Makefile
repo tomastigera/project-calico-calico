@@ -224,7 +224,7 @@ conntrack_cleanup_v6.d: conntrack_cleanup.c
 	$(COMPILE_DEPS)
 
 
-LINK=$(LD) -march=bpf -filetype=obj -o $@ $<
+LINK=$(LD) -march=bpf -mcpu=v3 -filetype=obj -o $@ $<
 bin/tc_preamble_ingress.o: tc_preamble_ingress.ll | bin
 	$(LINK)
 bin/tc_preamble_egress.o: tc_preamble_egress.ll | bin
