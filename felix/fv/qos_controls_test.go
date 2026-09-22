@@ -365,6 +365,10 @@ var _ = infrastructure.DatastoreDescribe(
 					}
 				}
 
+				// A recount straddling an open or close writes a stale count that
+				// stands for a full ScanPeriod (10s).
+				const connLimitCountSettle = "20s"
+
 				Context("With bandwidth limits", func() {
 					BeforeEach(func() {
 						if BPFMode() && BPFAttachType() == "tc" {
@@ -752,7 +756,7 @@ var _ = infrastructure.DatastoreDescribe(
 
 						if BPFMode() {
 							By("Waiting for BPF connlimit counter to reflect closed connection")
-							Eventually(getBPFCurrentCount(0, 0, "ingress"), "5s", "1s").Should(BeNumerically("<", uint32(numConnections)))
+							Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(BeNumerically("<", uint32(numConnections)))
 						}
 
 						By("Re-filling the connection slot after FIN close")
@@ -926,7 +930,7 @@ var _ = infrastructure.DatastoreDescribe(
 							}()
 
 							By("Waiting for ingress counter to reach the limit")
-							Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+							Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 							By("SIGKILLing all test-connection client processes on workload 1's container")
 							// Kernel cleans up sockets on process death and is
@@ -976,7 +980,7 @@ var _ = infrastructure.DatastoreDescribe(
 							}()
 
 							By("Waiting for ingress counter to reach the limit")
-							Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+							Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 							By("Killing client processes attached to w[1] netns so kernel emits FIN/RST through still-attached veth")
 							// workload.Stop() tears down kill/veth/netns in parallel,
@@ -1063,7 +1067,7 @@ var _ = infrastructure.DatastoreDescribe(
 								}()
 
 								By("Waiting for ingress counter to reach the limit")
-								Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+								Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 								By("Attempting one more connection (rejected, leaves a REJECTED SYN-SENT CT entry)")
 								Eventually(func() bool {
@@ -1141,7 +1145,7 @@ var _ = infrastructure.DatastoreDescribe(
 								}
 
 								By("Waiting for ingress counter to reach the limit")
-								Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+								Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 								By("SIGSTOPping client test-connection processes so they cannot send")
 								// SIGSTOP keeps client sockets alive but blocks app sends.
@@ -1193,7 +1197,7 @@ var _ = infrastructure.DatastoreDescribe(
 								}
 
 								By("Waiting for ingress counter to reach the limit")
-								Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+								Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 								By("SIGSTOPping both client and server so connections idle")
 								Expect(w[1].C.ExecMayFail("pkill", "-STOP", "-f", "test-connection")).NotTo(HaveOccurred())
@@ -1242,7 +1246,7 @@ var _ = infrastructure.DatastoreDescribe(
 								}()
 
 								By("Waiting for ingress counter to reach the limit")
-								Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+								Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 								By("Dropping outbound TCP traffic in client netns to simulate partition")
 								// iptables OUTPUT DROP swallows kernel cleanup
@@ -1309,7 +1313,7 @@ var _ = infrastructure.DatastoreDescribe(
 						}()
 
 						By("Waiting for ingress counter to reach the limit")
-						Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+						Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 						// Use CanConnectTo (synchronous one-shot) rather than
 						// StartPersistentConnectionMayFail. The persistent-
@@ -1334,7 +1338,7 @@ var _ = infrastructure.DatastoreDescribe(
 						pcs[0] = nil
 
 						By("Waiting for ingress counter to drop below the limit (close-time decrement)")
-						Eventually(getBPFCurrentCount(0, 0, "ingress"), "10s", "1s").Should(BeNumerically("<", uint32(numConnections)))
+						Eventually(getBPFCurrentCount(0, 0, "ingress"), connLimitCountSettle, "1s").Should(BeNumerically("<", uint32(numConnections)))
 
 						// Flush BPF CT so the closed connection's entry is purged
 						// before the new SYN. Without this the new connection's
@@ -1383,7 +1387,7 @@ var _ = infrastructure.DatastoreDescribe(
 						}()
 
 						By("Waiting for egress counter to reach the limit")
-						Eventually(getBPFCurrentCount(0, 2, "egress"), "10s", "1s").Should(Equal(uint32(numConnections)))
+						Eventually(getBPFCurrentCount(0, 2, "egress"), connLimitCountSettle, "1s").Should(Equal(uint32(numConnections)))
 
 						// See ingress test for why this uses CanConnectTo
 						// rather than StartPersistentConnectionMayFail.
@@ -1397,7 +1401,7 @@ var _ = infrastructure.DatastoreDescribe(
 						pcs[0] = nil
 
 						By("Waiting for egress counter to drop below the limit (close-time decrement)")
-						Eventually(getBPFCurrentCount(0, 2, "egress"), "10s", "1s").Should(BeNumerically("<", uint32(numConnections)))
+						Eventually(getBPFCurrentCount(0, 2, "egress"), connLimitCountSettle, "1s").Should(BeNumerically("<", uint32(numConnections)))
 
 						// Flush BPF CT so the closed connection's entry is purged
 						// before the new SYN. Without this the new connection's
