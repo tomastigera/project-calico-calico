@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os"
 	"strings"
 	"sync"
@@ -2072,7 +2073,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					},
 					Spec: apiv3.BGPPeerSpec{
 						Node:     nodename,
-						PeerIP:   "aa:bb::cc/128",
+						PeerIP:   "aa:bb::cc",
 						ASNumber: numorstring.ASNumber(6514),
 					},
 				},
@@ -2092,7 +2093,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					},
 					Spec: apiv3.BGPPeerSpec{
 						Node:   nodename,
-						PeerIP: "aa:bb::cc/128",
+						PeerIP: "aa:bb::cc",
 					},
 				},
 			}
@@ -2644,7 +2645,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			cidr := net.MustParseCIDR("10.0.0.0/26")
 			kvp := model.KVPair{
 				Key: model.BlockAffinityKey{
-					CIDR:         cidr,
+					CIDR:         model.PrefixFromIPNet(cidr),
 					Host:         nodename,
 					AffinityType: string(ipam.AffinityTypeHost),
 				},
@@ -2658,7 +2659,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			cidr := net.MustParseCIDR("10.0.1.0/26")
 			kvp := model.KVPair{
 				Key: model.BlockAffinityKey{
-					CIDR:         cidr,
+					CIDR:         model.PrefixFromIPNet(cidr),
 					Host:         "othernode",
 					AffinityType: string(ipam.AffinityTypeHost),
 				},
@@ -2695,10 +2696,16 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "myfelixconfig",
 				},
+				// The fields the CRD schema defaults are spelled out, so the
+				// round trip compares equal.
 				Spec: apiv3.FelixConfigurationSpec{
-					InterfacePrefix: "xali-",
-					FloatingIPs:     ptr.To(apiv3.FloatingIPsEnabled),
-					NFTablesMode:    ptr.To(apiv3.NFTablesModeAuto),
+					InterfacePrefix:                "xali-",
+					FloatingIPs:                    ptr.To(apiv3.FloatingIPsEnabled),
+					NFTablesMode:                   ptr.To(apiv3.NFTablesModeAuto),
+					NFTablesFlowTableOffload:       ptr.To(apiv3.NFTablesFlowTableOffloadAll),
+					BPFConnectTimeLoadBalancing:    ptr.To(apiv3.BPFConnectTimeLBTCP),
+					BPFHostNetworkedNATWithoutCTLB: ptr.To(apiv3.BPFHostNetworkedNATEnabled),
+					ProgramClusterRoutes:           ptr.To(apiv3.EnabledIPIPOnly),
 				},
 			},
 		}
@@ -3819,7 +3826,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			// Create a block affinity.
 			_, err = c.Create(ctx, &model.KVPair{
 				Key: model.BlockAffinityKey{
-					CIDR:         net.MustParseCIDR("10.0.0.0/26"),
+					CIDR:         netip.MustParsePrefix("10.0.0.0/26"),
 					Host:         "test-hostname",
 					AffinityType: string(ipam.AffinityTypeHost),
 				},
@@ -3854,7 +3861,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			// Create a block.
 			_, err = c.Create(ctx, &model.KVPair{
 				Key: model.BlockKey{
-					CIDR: net.MustParseCIDR("10.0.0.0/26"),
+					CIDR: netip.MustParsePrefix("10.0.0.0/26"),
 				},
 				Value: &model.AllocationBlock{
 					Affinity:    nil,
@@ -3994,6 +4001,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			Expect(err).NotTo(HaveOccurred())
 
 			kvpRes.Value.(*model.IPAMConfig).MaxBlocksPerHost = 1000
+			kvpRes.Value.(*model.IPAMConfig).IPCooldownSeconds = 120
 
 			kvpRes, err = c.Update(ctx, kvpRes)
 			Expect(err).NotTo(HaveOccurred())
@@ -4004,6 +4012,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(kvpRes.Value.(*apiv3.IPAMConfiguration).Spec.MaxBlocksPerHost).To(Equal(int32(1000)))
+			Expect(kvpRes.Value.(*apiv3.IPAMConfiguration).Spec.IPCooldownSeconds).To(Equal(int32(120)))
 			Expect(kvpRes.Value.(*apiv3.IPAMConfiguration).CreationTimestamp).To(Equal(createdAt))
 		})
 

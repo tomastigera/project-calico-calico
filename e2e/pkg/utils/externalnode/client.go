@@ -1,18 +1,31 @@
-/* Copyright (c) 2020-2021 Tigera, Inc. All rights reserved. */
+// Copyright (c) 2020-2026 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package externalnode
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	"k8s.io/kubernetes/test/e2e/framework"
 
 	"github.com/projectcalico/calico/e2e/pkg/config"
 	"github.com/projectcalico/calico/e2e/pkg/utils/images"
@@ -42,13 +55,38 @@ func NewClient() *Client {
 	return client
 }
 
+// MustNewClient returns a client for the external node, failing the test if the
+// cluster has none.
+func MustNewClient() *Client {
+	client := NewClient()
+	if client == nil {
+		framework.Failf("No external node is configured, so the lane should exclude the ExternalNode label")
+	}
+	return client
+}
+
 func NewClientManualConfig(ip, key, user string) *Client {
 	return &Client{extIP: ip, extKey: key, extUser: user}
 }
 
+// IP returns the external node's first internal address. The ssh probe that
+// discovers them can come back empty, which is a broken external node rather
+// than a test failure, so say which node had none.
 func (e *Client) IP() string {
-	return e.IPs()[0]
+	ips := e.IPs()
+	Expect(ips).NotTo(BeEmpty(), fmt.Sprintf(
+		"no internal IPs discovered on external node %s", e.extIP))
+	return ips[0]
 }
+
+// SSHIP returns the address used to ssh to the external node.
+func (e *Client) SSHIP() string { return e.extIP }
+
+// SSHUser returns the ssh user.
+func (e *Client) SSHUser() string { return e.extUser }
+
+// SSHKeyPath returns the path to the private key used for ssh.
+func (e *Client) SSHKeyPath() string { return e.extKey }
 
 func (e *Client) IPs() []string {
 	e.lock.Lock()
@@ -155,42 +193,6 @@ func (e *Client) UDP(target string, postdata string) string {
 	return fmt.Sprintf(`echo %v | nc -6 -u -w1 %v`, postdata, target)
 }
 
-func (e *Client) TestCanConnect(target string) {
-	command := fmt.Sprintf(`curl -s -m2 %v`, target)
-	tryConnect := func() error {
-		_, err := e.Exec("sh", "-c", command)
-		return err
-	}
-
-	// Test connectivity. Use Eventually to handle potential race conditions in setting up the service.
-	Eventually(tryConnect, 15*time.Second, 3*time.Second).ShouldNot(HaveOccurred())
-
-	// Once we get a single success, it should consistently succeed afterwards.
-	Consistently(tryConnect, 9*time.Second, 3*time.Second).ShouldNot(HaveOccurred())
-
-	// It's reliably up. Check output.
-	_, err := e.Exec("sh", "-c", command)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func (e *Client) TestCannotConnect(target string) {
-	command := fmt.Sprintf(`curl -s -m2 %v`, target)
-	tryConnect := func() error {
-		_, err := e.Exec("sh", "-c", command)
-		return err
-	}
-
-	// Test connectivity. Use Eventually to handle potential race conditions in setting up the service.
-	Eventually(tryConnect, 15*time.Second, 3*time.Second).Should(HaveOccurred())
-
-	// Once we get a single failure, it should consistently fail afterwards.
-	Consistently(tryConnect, 9*time.Second, 3*time.Second).Should(HaveOccurred())
-
-	// It's reliably not working. Check output.
-	_, err := e.Exec("sh", "-c", command)
-	Expect(err).To(HaveOccurred())
-}
-
 func (e *Client) SetupIperf() {
 	shell := "/bin/sh"
 	opt := "-c"
@@ -215,6 +217,77 @@ func (e *Client) RunIperfCmd(iperfCmd string, timeoutSecs int) string {
 	Expect(err).NotTo(HaveOccurred())
 
 	return output
+}
+
+func joinArgs(parts ...string) string {
+	return strings.Join(parts, " ")
+}
+
+// RunContainer launches a container by name on the external node. flags carry
+// extra `docker run` options (e.g. -d, --privileged, --network host); args are
+// appended after the image and become the container command. Returns the raw
+// `docker run` stdout (typically the container ID for detached runs).
+//
+// For one-shot probes, prefer RunContainerOnce (which sets --rm).
+func (e *Client) RunContainer(name, image string, flags []string, args ...string) (string, error) {
+	cmd := "sudo docker run " + joinArgs(flags...) + " --name " + name + " " + image
+	if len(args) > 0 {
+		cmd = cmd + " " + joinArgs(args...)
+	}
+	return e.Exec("/bin/sh", "-c", cmd)
+}
+
+// RunContainerOnce runs an unnamed container with --rm semantics: exec,
+// capture stdout, container is removed on exit. Useful for one-shot probes
+// where the caller only cares about the captured output.
+func (e *Client) RunContainerOnce(image string, flags []string, args ...string) (string, error) {
+	cmd := "sudo docker run --rm " + joinArgs(flags...) + " " + image
+	if len(args) > 0 {
+		cmd = cmd + " " + joinArgs(args...)
+	}
+	return e.Exec("/bin/sh", "-c", cmd)
+}
+
+// RemoveContainer force-removes a container by name. Tolerates a missing
+// container so cleanup paths never fail on a re-run.
+func (e *Client) RemoveContainer(name string) error {
+	_, err := e.Exec("/bin/sh", "-c", fmt.Sprintf("sudo docker rm -f %s 2>/dev/null", name))
+	return err
+}
+
+// IsContainerRunning reports whether the named container exists and is in the
+// Running state. Wrap in Eventually for readiness polling.
+func (e *Client) IsContainerRunning(name string) (bool, error) {
+	out, err := e.Exec("/bin/sh", "-c",
+		fmt.Sprintf("sudo docker inspect -f '{{.State.Running}}' %s 2>&1", name))
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "true", nil
+}
+
+// RunInContainer executes args inside an already-running named container via
+// `docker exec`. Returns the command's stdout.
+func (e *Client) RunInContainer(name string, args ...string) (string, error) {
+	cmd := "sudo docker exec " + name + " " + joinArgs(args...)
+	return e.Exec("/bin/sh", "-c", cmd)
+}
+
+// WriteFileInContainer writes contents to path inside the named container,
+// using base64 to safely transport binary or multi-line data over docker exec
+// stdin without shell-quoting hazards.
+func (e *Client) WriteFileInContainer(name, path string, contents []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(contents)
+	cmd := fmt.Sprintf("echo %s | base64 -d | sudo docker exec -i %s tee %s > /dev/null",
+		encoded, name, path)
+	_, err := e.Exec("/bin/sh", "-c", cmd)
+	return err
+}
+
+// ContainerLogs returns the container runtime's captured stdout/stderr for
+// the named container.
+func (e *Client) ContainerLogs(name string) (string, error) {
+	return e.Exec("/bin/sh", "-c", fmt.Sprintf("sudo docker logs %s 2>/dev/null", name))
 }
 
 func (e *Client) TestCalicoServiceReady(service string) error {

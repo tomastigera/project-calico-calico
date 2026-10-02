@@ -31,8 +31,8 @@ const (
 	MarkSeenBypassForward     = MarkSeenBypass | 0x00300000
 	MarkSeenBypassXDP         = MarkSeenBypass | 0x00500000
 	MarkSeenBypassForwardMask = MarkSeenBypassMask | 0x00f00000
-	MarkSeenNATOutgoing       = MarkSeenBypass | 0x00800000
-	MarkSeenNATOutgoingMask   = MarkSeenBypassMask | 0x00f00000
+	MarkSeenNATOutgoing       = MarkSeen | 0x00800000
+	MarkSeenNATOutgoingMask   = MarkSeenMask | 0x00f00000
 	MarkSeenMASQ              = MarkSeenBypass | 0x00600000
 	MarkSeenMASQMask          = MarkSeenBypassMask | 0x00f00000
 	MarkSeenSkipFIB           = MarkSeen | 0x00100000
@@ -149,7 +149,6 @@ const (
 	EpTypeL3Device EndpointType = "l3dev"
 	EpTypeNAT      EndpointType = "nat"
 	EpTypeLO       EndpointType = "lo"
-	EpTypeVXLAN    EndpointType = "vxlan"
 )
 
 func SectionName(endpointType EndpointType, fromOrTo ToOrFromEp) string {
@@ -189,8 +188,6 @@ func ProgFilename(ipVer int, epType EndpointType, toOrFrom ToOrFromEp, epToHostD
 		epTypeShort = "nat"
 	case EpTypeLO:
 		epTypeShort = "lo"
-	case EpTypeVXLAN:
-		epTypeShort = "vxlan"
 	}
 	var versionPart string
 	if ipVer == 6 {

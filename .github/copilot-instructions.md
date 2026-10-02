@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-This is the main **Project Calico** repository - an open-source container networking and security solution. Calico provides data plane choice (eBPF, standard Linux, Windows, VPP), advanced security features, and scales to power 8M+ nodes daily. The repository is a large monorepo (~2000 Go files, 33 Dockerfiles) containing multiple interconnected components.
+This is the main **Project Calico** repository - an open-source container networking and security solution. Calico provides data plane choice (eBPF, standard Linux, Windows, VPP), advanced security features, and scales to power 8M+ nodes daily. The repository is a large monorepo (~2000 Go files) containing multiple interconnected components.
 
 **Key Stats:**
 - Type: Kubernetes networking and security platform
@@ -18,7 +18,7 @@ This is the main **Project Calico** repository - an open-source container networ
 - **Docker** - Required for all builds (validated: Docker Engine 28.0.4+)
 - **Make** - Primary build orchestration
 - **git** - Repository management
-- **Linux** - Required build environment (Ubuntu 16.04+ recommended)
+- **Linux** - Required build environment (Ubuntu 24.04+ recommended)
 
 ### Core Build Commands
 
@@ -80,7 +80,9 @@ To run a single test:
 - Temporarily change the `It()` block in the file to `FIt()` to "focus" the test.
 - Run the test in iptables mode:
   `make -C felix fv GINKGO_ARGS="-ginkgo.v"`
-- Run the test in eBPF mode with iptables (only tests marked BPF-SAFE should be run in this mode):
+- Run the test in eBPF mode with iptables (in CI, only tests whose name contains
+  `_BPF-SAFE_` or `_BPF_` run in this mode; name a new BPF-mode test accordingly or
+  CI will never run it):
   `make -C felix fv-bpf GINKGO_ARGS="-ginkgo.v"`
 - Run the test in nftables mode:
   `make -C felix fv(-bpf) GINKGO_ARGS="-ginkgo.v" FELIX_FV_NFTABLES=Enabled`
@@ -241,6 +243,89 @@ make image                   # Build all images (slow)
 **ALWAYS** use the PR template (`.github/PULL_REQUEST_TEMPLATE.md`) when submitting pull requests. The only mandatory section is the **Release Note** — fill it in with a one-line summary of the user-facing impact of the change. Take a broad view of "user-facing": bug fixes, new features, performance improvements, and behavioral changes all qualify. If there is genuinely no user-facing impact, write "None".
 
 Every PR needs one docs label (`docs-pr-required`, `docs-completed`, or `docs-not-required`) and one release note label (`release-note-required` or `release-note-not-required`). Optional: `cherry-pick-candidate` (bug fix backports), `needs-operator-pr` (requires operator change).
+
+## AI-assisted contribution policy
+
+[`AI_POLICY.md`](../AI_POLICY.md) at the repo root governs contributions written with AI assistance. The parts that affect what you produce:
+
+- The PR description discloses the assistance - the PR template has an **AI assistance** line for it.
+- Never add an AI co-author or `Assisted-By:` trailer to a commit.
+- The human author has to be able to explain the change without you, so leave the code and the PR description in a state they can defend.
+- Don't reply to review comments on their behalf.
+
+## Documentation map
+
+Calico's docs are split by purpose. Architecture lives in
+`DESIGN.md` files; operational guidance (build, test, debug)
+lives in `CLAUDE.md` / `AGENTS.md`; path-scoped review rules
+live under `.github/instructions/*.instructions.md`. Do not look
+for architecture in `CLAUDE.md`.
+
+- `<component>/DESIGN.md` — architecture, invariants, embedded
+  per-section review notes. Read before writing or reviewing a
+  change in that component.
+- Complex components have an index: [`felix/DESIGN.md`](../felix/DESIGN.md)
+  lists per-topic sub-designs under [`felix/design/`](../felix/design/)
+  with an "applies to" glob each. A PR touching multiple globs
+  must load every matching sub-design.
+- [`.github/instructions/*.instructions.md`](instructions/) are
+  thin path-scoped pointers to `DESIGN.md` files plus meta-rules
+  (the update rule, the `@copilot` invocation pattern). They do
+  not restate design content — always read the pointed-at
+  `DESIGN.md`.
+A design doc records the design, not the change that introduced
+it, and **the default is no edit**. Edit one only when a sentence
+in it is now false, a new invariant exists that a future change
+could silently break, or a new concept exists that the doc's
+mental model does not name. A new behaviour, flag, field, config
+key, or bug fix is not by itself any of those. A warranted edit
+lands **in the same PR as the code**, not in a follow-up, and is
+normally **one to three lines** in the section that already covers
+the area — not a new heading, and never a paraphrase of the commit
+message. For components with a design directory (Felix uses
+`felix/design/`), it goes in the sub-design covering the area, and
+in the index only when the sub-design table or scope changes.
+
+**If in doubt, make no change** — name what you considered and
+skipped in the PR description so a reviewer can ask for it. (The
+Copilot coding agent and automated review have no interactive
+user; a human-driven agent proposes the edit and waits for
+approval instead.) A missing doc update the author explicitly
+considered and skipped is not a review blocker on its own.
+
+This rule mirrors
+[`.claude/CLAUDE.md` → Documentation map](../.claude/CLAUDE.md) —
+keep the two in sync. The altitude rule, a worked example and the
+reviewer-side criteria are in
+[`.claude/skills/design-doc-edits/SKILL.md`](../.claude/skills/design-doc-edits/SKILL.md);
+read it before editing a design doc or reviewing a design-doc
+diff.
+
+## Tests required for code changes
+
+A PR that fixes a bug must include a test in the same PR that reproduces the bug. A PR that adds a feature must include tests that exercise the feature. A change without a corresponding test is the exception, not the default, and requires explicit justification (untestable interface boundary, infrastructure-only change).
+
+Prefer the lowest test level that meaningfully exercises the change:
+
+1. **Unit tests** — deterministic, fast, hermetic. Always the first choice when the behaviour can be reached without real infrastructure. UT failures point at the change directly.
+2. **Functional verification (FV) tests** — real binary against real infrastructure (containers, dataplane, kernel). Catch integration bugs UT cannot, but slower, harder to write, and can flake. Use FV when the integration *is* the thing being tested.
+3. **End-to-end / Kubernetes tests** — full stack against a real cluster. Reserve for behaviour that genuinely requires it.
+
+Tests-only follow-ups are an anti-pattern: by the time they land, the change has shipped untested. A reviewer who sees "I tested it manually" or "tests in a follow-up PR" should push back.
+
+Per-area sub-designs carry the area-specific test conventions on top of this general rule (e.g. [`felix/design/bpf-tests.md`](../felix/design/bpf-tests.md) for the BPF dataplane). This rule mirrors [`.claude/CLAUDE.md` → Tests required for code changes](../.claude/CLAUDE.md) — keep them in sync.
+
+## eBPF Dataplane Review
+
+The eBPF dataplane design is split across the `bpf-*.md` files under [`felix/design/`](../felix/design/), with [`bpf-overview.md`](../felix/design/bpf-overview.md) as the always-pulled umbrella (packet-path mental model, fast-path cost rule, cross-cutting review rules) and topic-specific sub-designs covering each area of the dataplane. See [`felix/DESIGN.md`](../felix/DESIGN.md) for the authoritative table mapping code paths to sub-design files.
+
+Path-specific reviewer rules live in [`.github/instructions/bpf.instructions.md`](instructions/bpf.instructions.md) — a single thin pointer that scopes to all BPF paths and directs the agent to load the matching sub-design(s) from [`felix/DESIGN.md`](../felix/DESIGN.md)'s topic table, with `bpf-overview.md` as the always-read companion. The doc-update rule above applies. For BPF, the changes that usually earn a doc edit are a new sub-program, CT flag, mark bit, map or map field, or a change to the packet path or forwarding decision — candidates for the test above, not triggers on their own.
+
+## Helm Chart Review
+
+The user-facing install and upgrade instructions are hand-written READMEs ([`charts/tigera-operator/README.md`](../charts/tigera-operator/README.md) and [`charts/crd.projectcalico.org.v1/README.md`](../charts/crd.projectcalico.org.v1/README.md)), not generated, so they drift silently when a chart change alters the steps a user has to run. [`.github/instructions/helm-charts.instructions.md`](instructions/helm-charts.instructions.md) scopes to `charts/**` and directs the reviewer to cross-check those READMEs against the change. These READMEs are **user-facing documentation, not design docs**, so the design-doc rule above — with its default of no edit — does not apply to them: a chart change that alters how a user installs or upgrades Calico must update them, and there the safe default is to update. That covers moving resources between charts (CRDs especially), adding or removing a manual step, renaming a chart, and changing a documented values key or example command.
+
+`charts/calico` is the exception, and it is exempt: nobody installs it with Helm. It is only the template source that `make gen-manifests` renders into `manifests/calico*.yaml`, so the rendered manifests are the whole contract - no Helm upgrade path, no install docs to sync. Review such a PR by reading the regenerated `manifests/` diff. Its `values.yaml` keys are an internal interface rather than a user-facing one: renaming one is fine, but the same PR has to update the in-repo consumers (`manifests/generate.sh`, the root `Makefile`, `hack/check-images-availability.sh`, and the overlays in `charts/values/`).
 
 ### Trust These Instructions
 These instructions are based on actual testing of the build system. Only search for additional information if you encounter specific errors not covered here or if the repository structure has changed significantly.

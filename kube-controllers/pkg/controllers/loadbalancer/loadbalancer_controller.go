@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2026 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -213,14 +213,25 @@ func (c *loadBalancerController) onServiceUpdate(objNew any, objOld any) {
 	}
 }
 
-func (c *loadBalancerController) onServiceDelete(objNew any) {
-	if svc, ok := objNew.(*v1.Service); ok {
-		svcKey, err := serviceKeyFromService(svc)
-		if err != nil {
+func (c *loadBalancerController) onServiceDelete(obj any) {
+	svc, ok := obj.(*v1.Service)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			log.WithField("type", fmt.Sprintf("%T", obj)).Warn("Unexpected object type in Service delete event")
 			return
 		}
-		c.serviceUpdates <- *svcKey
+		svc, ok = tombstone.Obj.(*v1.Service)
+		if !ok {
+			log.WithField("type", fmt.Sprintf("%T", tombstone.Obj)).Warn("Tombstone contained non-Service object")
+			return
+		}
 	}
+	svcKey, err := serviceKeyFromService(svc)
+	if err != nil {
+		return
+	}
+	c.serviceUpdates <- *svcKey
 }
 
 func (c *loadBalancerController) RegisterWith(f *utils.DataFeed) {
@@ -325,21 +336,27 @@ func (c *loadBalancerController) handleBlockUpdate(kvp model.KVPair) {
 
 	for i := range block.Allocations {
 		if block.Allocations[i] != nil {
-			if _, ok := block.Attributes[*block.Allocations[i]].ActiveOwnerAttrs[ipam.AttributeNamespace]; !ok {
-				log.Warnf("no %s attribute found for block with handle %s", ipam.AttributeNamespace, *block.Attributes[*block.Allocations[i]].HandleID)
+			attr := block.Attributes[*block.Allocations[i]]
+			if attr.HandleID == nil {
+				log.WithFields(log.Fields{"block": key, "ip": block.OrdinalToIP(i)}).Warn("No handle found for load balancer allocation")
 				continue
 			}
 
-			if _, ok := block.Attributes[*block.Allocations[i]].ActiveOwnerAttrs[ipam.AttributeService]; !ok {
-				log.Warnf("no %s attribute found for block with handle %s", ipam.AttributeService, *block.Attributes[*block.Allocations[i]].HandleID)
+			if _, ok := attr.ActiveOwnerAttrs[ipam.AttributeNamespace]; !ok {
+				log.Warnf("no %s attribute found for block with handle %s", ipam.AttributeNamespace, *attr.HandleID)
+				continue
+			}
+
+			if _, ok := attr.ActiveOwnerAttrs[ipam.AttributeService]; !ok {
+				log.Warnf("no %s attribute found for block with handle %s", ipam.AttributeService, *attr.HandleID)
 				continue
 			}
 
 			ip := block.OrdinalToIP(i)
 			svcKey := serviceKey{
-				handle:    *block.Attributes[*block.Allocations[i]].HandleID,
-				namespace: block.Attributes[*block.Allocations[i]].ActiveOwnerAttrs[ipam.AttributeNamespace],
-				name:      block.Attributes[*block.Allocations[i]].ActiveOwnerAttrs[ipam.AttributeService],
+				handle:    *attr.HandleID,
+				namespace: attr.ActiveOwnerAttrs[ipam.AttributeNamespace],
+				name:      attr.ActiveOwnerAttrs[ipam.AttributeService],
 			}
 
 			c.allocationTracker.assignAddressToBlock(key, ip.String(), svcKey)
@@ -380,7 +397,7 @@ func (c *loadBalancerController) handleIPPoolUpdate(kvp model.KVPair) {
 // creating Service LoadBalancer before any valid pools were created
 func (c *loadBalancerController) syncIPAM() {
 	if c.syncStatus != bapi.InSync {
-		log.WithField("status", c.syncStatus).Debug("Have not yet received InSync notification, skipping IPAM sync.")
+		log.WithField("status", c.syncStatus).Debug("Syncer not currently InSync, skipping IPAM sync.")
 		return
 	}
 
@@ -430,17 +447,20 @@ func (c *loadBalancerController) ensureDatastoreUpgraded() error {
 // - Updates the IP addresses in the Service Status to match the IPAM DB.
 func (c *loadBalancerController) syncService(svcKey serviceKey) {
 	if c.syncStatus != bapi.InSync {
-		// Defer service sync until the syncer has replayed all existing IPAM blocks
-		// into allocationTracker. Otherwise a service event observed during the cold-start
-		// window would see an empty tracker and allocate a fresh IP alongside the historical
-		// one that arrives later, leaving the service with more IPs than its IPFamilyPolicy
-		// permits. Events received pre-InSync are picked up by syncIPAM, which is kicked
-		// once the syncer reaches InSync.
+		// Defer service sync until we are InSync, so we know that all existing IPAM blocks are
+		// tracked by the allocationTracker. Otherwise a service event observed during the cold-start
+		// window would see an empty tracker and allocate a fresh IP alongside the historical one
+		// that arrives later, leaving the service with more IPs than its IPFamilyPolicy permits.
+		// Outside of the cold-start window, deferring until we are InSync provides us confidence
+		// that we are programming in response to a coherent state.
+		//
+		// Events received while not InSync are picked up by syncIPAM, which is kicked once the
+		// syncer reaches InSync.
 		log.WithFields(log.Fields{
 			"status":    c.syncStatus,
 			"namespace": svcKey.namespace,
 			"name":      svcKey.name,
-		}).Debug("Syncer not yet InSync; deferring service sync")
+		}).Debug("Syncer not currently InSync; deferring service sync")
 		return
 	}
 
@@ -687,6 +707,15 @@ func (c *loadBalancerController) assignIP(svc *v1.Service) ([]string, error) {
 		return nil, err
 	}
 
+	// Fall back to spec.loadBalancerIP when no specific IP was requested via annotation.
+	if loadBalancerIPs == nil && svc.Spec.LoadBalancerIP != "" {
+		ip := cnet.ParseIP(svc.Spec.LoadBalancerIP)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid IP in spec.loadBalancerIP: %s", svc.Spec.LoadBalancerIP)
+		}
+		loadBalancerIPs = []cnet.IP{*ip}
+	}
+
 	var assignedIPs []string
 
 	metadataAttrs := map[string]string{
@@ -898,10 +927,11 @@ func IsCalicoManagedLoadBalancer(svc *v1.Service, assignIPs api.AssignIPs) bool 
 
 		if svc.Annotations[annotationIPv4Pools] != "" ||
 			svc.Annotations[annotationIPv6Pools] != "" ||
-			svc.Annotations[annotationLoadBalancerIP] != "" {
+			svc.Annotations[annotationLoadBalancerIP] != "" ||
+			svc.Spec.LoadBalancerIP != "" {
 
 			if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != calicoLoadBalancerClass {
-				log.WithFields(log.Fields{"svc": svc.Name, "ns": svc.Namespace}).Warn("calico LoadBalancer annotation set with spec.LoadBalancerClass != calico is not supported")
+				log.WithFields(log.Fields{"svc": svc.Name, "ns": svc.Namespace}).Warn("calico LoadBalancer IP request set with spec.LoadBalancerClass != calico is not supported")
 				return false
 			}
 			return true

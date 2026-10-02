@@ -17,6 +17,7 @@ package model
 import (
 	"fmt"
 	"math/big"
+	"net/netip"
 	"reflect"
 	"regexp"
 	"strings"
@@ -30,11 +31,13 @@ import (
 
 const (
 	// Common attributes which may be set on allocations by clients.
-	IPAMBlockAttributePod             = "pod"
-	IPAMBlockAttributeNamespace       = "namespace"
-	IPAMBlockAttributeNode            = "node"
-	IPAMBlockAttributeType            = "type"
-	IPAMBlockAttributeService         = "service"
+	IPAMBlockAttributePod       = "pod"
+	IPAMBlockAttributeNamespace = "namespace"
+	IPAMBlockAttributeNode      = "node"
+	IPAMBlockAttributeType      = "type"
+	IPAMBlockAttributeService   = "service"
+
+	// A new type needs a case in accounting.Allocation.Kind, or IPAM reports count it as Unknown and never report it leaked.
 	IPAMBlockAttributeTypeIPIP        = "ipipTunnelAddress"
 	IPAMBlockAttributeTypeVXLAN       = "vxlanTunnelAddress"
 	IPAMBlockAttributeTypeVXLANV6     = "vxlanV6TunnelAddress"
@@ -58,6 +61,10 @@ const (
 
 	IPAMAffinityTypeHost    = "host"
 	IPAMAffinityTypeVirtual = "virtual"
+
+	// IPAMAffinityLoadBalancer is the affinity used for blocks that back Service
+	// LoadBalancer addresses. It is a virtual affinity: no node owns the block.
+	IPAMAffinityLoadBalancer = IPAMAffinityTypeVirtual + ":load-balancer"
 )
 
 var (
@@ -66,15 +73,16 @@ var (
 )
 
 type BlockKey struct {
-	CIDR net.IPNet `json:"-" validate:"required,name"`
+	CIDR netip.Prefix `json:"-" validate:"required,name"`
 }
 
 func (key BlockKey) defaultPath() (string, error) {
-	if key.CIDR.IP == nil {
+	if !key.CIDR.IsValid() {
 		return "", errors.ErrorInsufficientIdentifiers{}
 	}
-	c := strings.Replace(key.CIDR.String(), "/", "-", 1)
-	e := fmt.Sprintf("/calico/ipam/v2/assignment/ipv%d/block/%s", key.CIDR.Version(), c)
+	cidr := key.CIDR.Masked()
+	c := strings.Replace(cidr.String(), "/", "-", 1)
+	e := fmt.Sprintf("/calico/ipam/v2/assignment/ipv%d/block/%s", prefixVersion(cidr), c)
 	return e, nil
 }
 
@@ -118,14 +126,15 @@ func (options BlockListOptions) KeyFromDefaultPath(path string) Key {
 		return nil
 	}
 	cidrStr := strings.Replace(r[0][1], "-", "/", 1)
-	_, cidr, err := net.ParseCIDR(cidrStr)
+	prefix, err := netip.ParsePrefix(cidrStr)
 	if err != nil {
 		log.Debugf("find an invalid cidr %s for path=%v , info=%v ", r[0][1], path, err)
 		return nil
 	}
-	return BlockKey{CIDR: *cidr}
+	return BlockKey{CIDR: prefix.Masked()}
 }
 
+// +k8s:deepcopy-gen=true
 type AllocationBlock struct {
 	// The block's CIDR.
 	CIDR net.IPNet `json:"cidr"`
@@ -194,6 +203,13 @@ func (b *AllocationBlock) MarkDeleted() {
 
 func (b *AllocationBlock) IsDeleted() bool {
 	return b.Deleted
+}
+
+// Clone returns a copy of this block that can be modified without affecting
+// the original. It delegates to the generated DeepCopy so new fields are
+// handled automatically rather than silently dropped.
+func (b *AllocationBlock) Clone() *AllocationBlock {
+	return b.DeepCopy()
 }
 
 func (b *AllocationBlock) Host() string {
@@ -269,6 +285,7 @@ func (b *AllocationBlock) OrdinalToIP(ord int) net.IP {
 	return b.CIDR.NthIP(ord)
 }
 
+// +k8s:deepcopy-gen=true
 type AllocationAttribute struct {
 	// HandleID is the primary identifier for the allocation.
 	HandleID *string `json:"handle_id,omitempty"`
@@ -277,4 +294,12 @@ type AllocationAttribute struct {
 	// AlternateOwnerAttrs contains attributes of the previous or potential owner
 	// (used during live migration to track the source or target pod).
 	AlternateOwnerAttrs map[string]string `json:"alternateOwnerAttrs,omitempty"`
+	// ReleasedAt is the time this allocation was released, and is set during the allocation's
+	// "cooldown" phase. After `IPCooldownSeconds` have elapsed, the IP is deallocated (moved
+	// from `Allocated` to `Unallocated`).
+	ReleasedAt *metav1.Time `json:"releasedAt,omitempty"`
+}
+
+func (a AllocationAttribute) Clone() AllocationAttribute {
+	return *a.DeepCopy()
 }

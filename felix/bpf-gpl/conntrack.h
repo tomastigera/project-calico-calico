@@ -5,12 +5,28 @@
 #ifndef __CALI_CONNTRACK_H__
 #define __CALI_CONNTRACK_H__
 
+#include <linux/icmp.h>
 #include <linux/in.h>
-#include "nat.h"
-#include "bpf.h"
+#include <linux/ip.h>
+#include <linux/ipv6.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
+
+#include "allowsources.h"
+#include "cali_bpf.h"
+#include "conntrack_types.h"
+#include "counters.h"
+#include "globals.h"
 #include "icmp.h"
-#include "types.h"
+#include "ip_addr.h"
+#include "log.h"
+#include "nat.h"
+#include "qos.h"
+#include "reasons.h"
+#include "routes.h"
 #include "rpf.h"
+#include "skb.h"
+#include "types.h"
 
 #ifdef IPVER6
 #define IPPROTO_ICMP_46	IPPROTO_ICMPV6
@@ -19,6 +35,18 @@
 #endif
 
 // Connection tracking.
+
+/* Is this packet the initial SYN of a TCP connection, as opposed to a SYN-ACK?
+ *
+ * CT_RES_SYN is set by calico_ct_lookup() from the packet's own flags, and only
+ * when the lookup hits, so this answers "SYN on a flow we already track" - which
+ * is what the paths that force policy or withhold the bypass mark care about.
+ */
+static CALI_BPF_INLINE bool is_tcp_syn(struct cali_tc_ctx *ctx)
+{
+	return ctx->state->ip_proto == IPPROTO_TCP &&
+		ct_result_is_syn(ctx->state->ct_result.rc);
+}
 
 #define PSNAT_RETRIES	3
 
@@ -87,7 +115,7 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 	bool syn = false;
 	__u64 now;
 
-	if (ct_ctx->proto == IPPROTO_TCP) {
+	if (ct_ctx->proto == IPPROTO_TCP && !(ctx->state->flags & CALI_ST_NO_L4_HDR)) {
 		seq = tcp_hdr(ctx)->seq;
 		syn = tcp_hdr(ctx)->syn;
 	}
@@ -111,28 +139,31 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct cali_tc_ctx *ctx,
 			}
 			goto create;
 		}
+		struct calico_ct_leg *pkt_leg, *other_leg;
+
 		if (srcLTDest) {
 			CALI_DEBUG("CT-ALL update src_to_dst A->B");
-			ct_value->a_to_b.seqno = seq;
-			ct_value->a_to_b.syn_seen = syn;
-			if (CALI_F_TO_HOST) {
-				ct_value->a_to_b.approved = 1;
-				ct_value->a_to_b.workload = CALI_F_WEP ? 1 : 0;
-			} else {
-				ct_value->b_to_a.approved = 1;
-				ct_value->b_to_a.workload = CALI_F_WEP ? 1 : 0;
-			}
+			pkt_leg = &ct_value->a_to_b;
+			other_leg = &ct_value->b_to_a;
 		} else  {
 			CALI_DEBUG("CT-ALL update src_to_dst B->A");
-			ct_value->b_to_a.seqno = seq;
-			ct_value->b_to_a.syn_seen = syn;
-			if (CALI_F_TO_HOST) {
-				ct_value->b_to_a.approved = 1;
-				ct_value->b_to_a.workload = CALI_F_WEP ? 1 : 0;
-			} else {
-				ct_value->a_to_b.approved = 1;
-				ct_value->a_to_b.workload = CALI_F_WEP ? 1 : 0;
+			pkt_leg = &ct_value->b_to_a;
+			other_leg = &ct_value->a_to_b;
+		}
+
+		/* Set-only: the approval leg is unapproved - that is why lookup returned
+		 * NEW - and non-SYN TCP never reaches here.
+		 */
+		__u32 approval = CALI_CT_LEG_APPROVED | (CALI_F_WEP ? CALI_CT_LEG_WORKLOAD : 0);
+
+		pkt_leg->seqno = seq;
+		if (CALI_F_TO_HOST) {
+			ct_leg_set_flags(pkt_leg, approval | (syn ? CALI_CT_LEG_SYN_SEEN : 0));
+		} else {
+			if (syn) {
+				ct_leg_set_flags(pkt_leg, CALI_CT_LEG_SYN_SEEN);
 			}
+			ct_leg_set_flags(other_leg, approval);
 		}
 
 		return 0;
@@ -189,13 +220,20 @@ create:
 
 	dump_ct_key(ctx, k);
 
+	__u32 s2d_flags = (syn ? CALI_CT_LEG_SYN_SEEN : 0) | CALI_CT_LEG_OPENER;
+	__u32 d2s_flags = 0;
+
 	src_to_dst->seqno = seq;
-	src_to_dst->syn_seen = syn;
-	src_to_dst->opener = 1;
 	src_to_dst->packets = 1;
 	src_to_dst->bytes = ctx->skb->len;
 	if (CALI_F_TO_HOST) {
-		src_to_dst->ifindex = ctx->skb->ifindex;
+		/* Store the host-side primary ifindex. For netkit, skb->ifindex
+		 * is the peer (pod-side) ifindex; use host_ifindex from globals
+		 * so downstream consumers (connlimit decrement, redirect_peer)
+		 * see the primary that maps are keyed by.
+		 */
+		src_to_dst->ifindex = ctx->globals->data.host_ifindex ?
+			ctx->globals->data.host_ifindex : ctx->skb->ifindex;
 	} else {
 		src_to_dst->ifindex = CT_INVALID_IFINDEX;
 	}
@@ -204,37 +242,40 @@ create:
 
 	if (CALI_F_FROM_WEP) {
 		/* src is the from the WEP, policy approved this side */
-		src_to_dst->approved = 1;
-		src_to_dst->workload = 1;
+		s2d_flags |= CALI_CT_LEG_APPROVED | CALI_CT_LEG_WORKLOAD;
 	} else if (CALI_F_FROM_HEP) {
 		/* src is the from the HEP, policy approved this side */
-		src_to_dst->approved = 1;
+		s2d_flags |= CALI_CT_LEG_APPROVED;
 
 		if (ct_ctx->allow_return) {
 			/* When we do NAT and forward through the tunnel, we go through
 			 * a single policy, what we forward we also accept back,
 			 * approve both sides.
 			 */
-			dst_to_src->approved = 1;
+			d2s_flags |= CALI_CT_LEG_APPROVED;
 		}
 		CALI_DEBUG("CT-ALL approved source side - from HEP tun allow_return=%d",
 				ct_ctx->allow_return);
 	} else if (CALI_F_TO_HEP && !skb_seen(ctx->skb) && (ct_ctx->type == CALI_CT_TYPE_NAT_REV)) {
-		src_to_dst->approved = 1;
-		dst_to_src->approved = 1;
+		s2d_flags |= CALI_CT_LEG_APPROVED;
+		d2s_flags |= CALI_CT_LEG_APPROVED;
 		CALI_DEBUG("CT-ALL approved both due to host source port conflict resolution.");
 	} else if (CALI_F_FROM_HOST) {
 		if (ctx->state->flags & CALI_ST_CT_NP_LOOP) {
 			/* we do not run policy and it should behave like TO_HOST */
-			src_to_dst->approved = 1;
+			s2d_flags |= CALI_CT_LEG_APPROVED;
 			CALI_DEBUG("CT-ALL approved source side - from HEP tun allow_return=%d",
 					ct_ctx->allow_return);
 		} else {
 			/* dst is to the EP, policy approved this side */
-			dst_to_src->approved = 1;
+			d2s_flags |= CALI_CT_LEG_APPROVED;
 			CALI_DEBUG("CT-ALL approved dest side - to EP");
 		}
 	}
+
+	/* ct_value is still stack-local; nothing else can see these words yet. */
+	src_to_dst->bits_word = s2d_flags;
+	dst_to_src->bits_word = d2s_flags;
 
 	err = cali_ct_update_elem(k, &ct_value, BPF_NOEXIST);
 
@@ -517,14 +558,14 @@ static CALI_BPF_INLINE void ct_tcp_entry_update(struct cali_tc_ctx *ctx,
 {
 	if (tcp_header->fin) {
 		CALI_CT_VERB("FIN seen, marking CT entry.");
-		src_to_dst->fin_seen = 1;
+		ct_leg_set_flags(src_to_dst, CALI_CT_LEG_FIN_SEEN);
 	}
 
 	if (tcp_header->syn && tcp_header->ack) {
-		if (dst_to_src->syn_seen && seqno_add(dst_to_src->seqno, 1) == tcp_header->ack_seq) {
+		if (ct_leg_flag(dst_to_src, CALI_CT_LEG_SYN_SEEN) &&
+				seqno_add(dst_to_src->seqno, 1) == tcp_header->ack_seq) {
 			CALI_CT_VERB("SYN+ACK seen, marking CT entry.");
-			src_to_dst->syn_seen = 1;
-			src_to_dst->ack_seen = 1;
+			ct_leg_set_flags(src_to_dst, CALI_CT_LEG_SYN_SEEN | CALI_CT_LEG_ACK_SEEN);
 			src_to_dst->seqno = tcp_header->seq;
 		} else {
 			CALI_CT_VERB("SYN+ACK seen but packet's ACK (%u) "
@@ -533,10 +574,12 @@ static CALI_BPF_INLINE void ct_tcp_entry_update(struct cali_tc_ctx *ctx,
 					bpf_ntohl(dst_to_src->seqno));
 			/* XXX Have to let this through so source can reset? */
 		}
-	} else if (tcp_header->ack && !src_to_dst->ack_seen && src_to_dst->syn_seen) {
-		if (dst_to_src->syn_seen && seqno_add(dst_to_src->seqno, 1) == tcp_header->ack_seq) {
+	} else if (tcp_header->ack && !ct_leg_flag(src_to_dst, CALI_CT_LEG_ACK_SEEN) &&
+			ct_leg_flag(src_to_dst, CALI_CT_LEG_SYN_SEEN)) {
+		if (ct_leg_flag(dst_to_src, CALI_CT_LEG_SYN_SEEN) &&
+				seqno_add(dst_to_src->seqno, 1) == tcp_header->ack_seq) {
 			CALI_CT_VERB("ACK seen, marking CT entry.");
-			src_to_dst->ack_seen = 1;
+			ct_leg_set_flags(src_to_dst, CALI_CT_LEG_ACK_SEEN);
 		} else {
 			CALI_CT_VERB("ACK seen but packet's ACK (%u) doesn't "
 					"match other side's SYN (%u).",
@@ -546,15 +589,21 @@ static CALI_BPF_INLINE void ct_tcp_entry_update(struct cali_tc_ctx *ctx,
 		}
 	} else {
 		/* Normal packet, check that the handshake is complete. */
-		if (!dst_to_src->ack_seen) {
+		if (!ct_leg_flag(dst_to_src, CALI_CT_LEG_ACK_SEEN)) {
 			CALI_CT_VERB("Non-flagged packet but other side has never ACKed.");
 			/* XXX Have to let this through so source can reset? */
-		} else if (src_to_dst->rst_seen | dst_to_src->rst_seen) {
+		} else if (ct_leg_flag(src_to_dst, CALI_CT_LEG_RST_SEEN) ||
+				ct_leg_flag(dst_to_src, CALI_CT_LEG_RST_SEEN)) {
 			/* Remove the flag, we have seen traffic, but we still
 			 * have the RST timestamp in case this is some residual
 			 * traffic and the connection becomes silent.
 			 */
-			src_to_dst->rst_seen = dst_to_src->rst_seen = 0;
+			if (ct_leg_flag(src_to_dst, CALI_CT_LEG_RST_SEEN)) {
+				ct_leg_clear_flags(src_to_dst, CALI_CT_LEG_RST_SEEN);
+			}
+			if (ct_leg_flag(dst_to_src, CALI_CT_LEG_RST_SEEN)) {
+				ct_leg_clear_flags(dst_to_src, CALI_CT_LEG_RST_SEEN);
+			}
 		} else {
 			CALI_CT_VERB("Non-flagged packet and other side has ACKed.");
 		}
@@ -571,7 +620,70 @@ static CALI_BPF_INLINE bool tcp_recycled(bool syn, struct calico_ct_value *v)
 	/* When we see a SYN for a connection that has seen FIN or RST in both direction,
 	 * a new connection with the same tuple is trying to recycle this entry.
 	 */
-	return syn && (a->fin_seen || a->rst_seen) && (b->fin_seen || b->rst_seen);
+	return syn && ct_leg_flag(a, CALI_CT_LEG_CLOSED) && ct_leg_flag(b, CALI_CT_LEG_CLOSED);
+}
+
+/* qos_connlimit_decrement_for_ct decrements the per-pod connlimit counter(s)
+ * for a CT entry that is closing or being purged. Reads the entry's
+ * CONNLIMIT_* flags and the per-leg ifindex fields to pick the right
+ * (ifindex, direction) pair(s). Decrements exactly once: atomically claims the
+ * CONNLIMIT_DEC flag and only the caller that wins the claim decrements, so
+ * concurrent callers on other CPUs (the CT entry is in a shared, non-per-CPU
+ * map) bail.
+ *
+ * Called from the packet path on FIN-FIN / RST close, and from
+ * conntrack_cleanup when an idle entry is purged with no close packet.
+ */
+static CALI_BPF_INLINE void qos_connlimit_decrement_for_ct(struct calico_ct_value *v)
+{
+	__u32 cl_flags = ct_value_get_flags(v);
+	if (!(cl_flags & (CALI_CT_FLAG_CONNLIMIT_INGRESS | CALI_CT_FLAG_CONNLIMIT_EGRESS))) {
+		return;
+	}
+	/* Atomically set CONNLIMIT_DEC and bail if it was already set: this is the
+	 * exactly-once claim, replacing a non-atomic read/test/set that let two
+	 * CPUs both pass the check and both decrement. The bit lives in flags3,
+	 * but BPF atomics require a 4-byte-aligned target, so we OR into
+	 * type_flags_word, the __u32 overlaying type|flags|flags3|flags4. On the
+	 * little-endian BPF dataplane arches (amd64/arm64) the mask's single bit
+	 * lands in flags3, leaving type/flags/flags4 untouched -- same bit the old
+	 * ct_value_set_flags(v, CONNLIMIT_DEC) set. (s390x builds bpfeb where the
+	 * bit lands elsewhere, but the BPF dataplane does not run there.) */
+	if (__sync_fetch_and_or(&v->type_flags_word, CALI_CT_FLAG_CONNLIMIT_DEC) & CALI_CT_FLAG_CONNLIMIT_DEC) {
+		return;
+	}
+
+	/* Skip the ingress decrement if the entry was rejected by the
+	 * ingress limit check.
+	 */
+	/* CT entries are family-typed (v4 BPF programs only see v4 CT entries,
+	 * v6 only sees v6), so the family is known at compile time via IPVER6.
+	 */
+#ifdef IPVER6
+	const __u16 family = 6;
+#else
+	const __u16 family = 4;
+#endif
+
+	if ((cl_flags & CALI_CT_FLAG_CONNLIMIT_INGRESS) &&
+			!(cl_flags & CALI_CT_FLAG_CONNLIMIT_INGRESS_REJECTED)) {
+		/* Ingress: pod is the responder (non-opener). */
+		__u32 pod_ifindex = ct_leg_flag(&v->a_to_b, CALI_CT_LEG_OPENER)
+			? v->b_to_a.ifindex
+			: v->a_to_b.ifindex;
+		if (pod_ifindex != CT_INVALID_IFINDEX) {
+			qos_connlimit_decrement(pod_ifindex, 1, family);
+		}
+	}
+	if (cl_flags & CALI_CT_FLAG_CONNLIMIT_EGRESS) {
+		/* Egress: pod is the opener. */
+		__u32 pod_ifindex = ct_leg_flag(&v->a_to_b, CALI_CT_LEG_OPENER)
+			? v->a_to_b.ifindex
+			: v->b_to_a.ifindex;
+		if (pod_ifindex != CT_INVALID_IFINDEX) {
+			qos_connlimit_decrement(pod_ifindex, 0, family);
+		}
+	}
 }
 
 static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_ctx *ctx)
@@ -585,19 +697,20 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 	};
 	struct ct_lookup_ctx *ct_ctx = &ct_lookup_ctx;
 
-	switch (STATE->ip_proto) {
-	case IPPROTO_TCP:
+	/* A non-first fragment carries no TCP header to track. */
+	bool has_tcp_hdr = STATE->ip_proto == IPPROTO_TCP && !(STATE->flags & CALI_ST_NO_L4_HDR);
+
+	if (has_tcp_hdr) {
 		if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
 			deny_reason(ctx, CALI_REASON_SHORT);
 			CALI_DEBUG("Too short");
 			bpf_exit(TC_ACT_SHOT);
 		}
 		ct_lookup_ctx.tcp = tcp_hdr(ctx);
-		break;
 	}
 
 	__u8 proto_orig = STATE->ip_proto;
-	struct tcphdr *tcp_header = STATE->ip_proto == IPPROTO_TCP ? tcp_hdr(ctx) : NULL;
+	struct tcphdr *tcp_header = has_tcp_hdr ? tcp_hdr(ctx) : NULL;
 	bool related = false;
 
 	CALI_CT_DEBUG("lookup from " IP_FMT ":%d", debug_ip(STATE->ip_src), STATE->sport);
@@ -628,7 +741,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 #ifdef IPVER6
 		if (icmp_type_is_err(icmp_hdr(ctx)->icmp6_type)) {
 #else
-		if (icmp_type_is_err(icmp_hdr(ctx)->type)) {
+		if (!(STATE->flags & CALI_ST_NO_L4_HDR) && icmp_type_is_err(icmp_hdr(ctx)->type)) {
 #endif
 			/* ICMP error packets are a response to a failed UDP/TCP/etc
 			 * packet.  Try to extract the details of the inner packet.
@@ -707,15 +820,22 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 	result.flags = ct_value_get_flags(v);
 
 	// Return the if_index where the CT state was created.
-	if (v->a_to_b.opener) {
+	if (ct_leg_flag(&v->a_to_b, CALI_CT_LEG_OPENER)) {
 		result.ifindex_created = v->a_to_b.ifindex;
-	} else if (v->b_to_a.opener) {
+	} else if (ct_leg_flag(&v->b_to_a, CALI_CT_LEG_OPENER)) {
 		result.ifindex_created = v->b_to_a.ifindex;
 	}
 
 	struct calico_ct_leg *src_to_dst, *dst_to_src;
 
-	struct calico_ct_value *tracking_v;
+	/* Connection-level state -- the RST timestamp and the connlimit flags --
+	 * lives on the tracking entry. For a NAT_FWD hit that is the reverse
+	 * entry, picked up by the secondary lookup below, same as the legs
+	 * src_to_dst/dst_to_src point into; for every other type the entry we
+	 * looked up is itself the tracking entry.
+	 */
+	struct calico_ct_value *tracking_v = v;
+
 	switch (v->type) {
 	case CALI_CT_TYPE_NAT_FWD:
 		// This is a forward NAT entry; since we do the bookkeeping on the
@@ -731,6 +851,12 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		}
 		if (tcp_recycled(syn, tracking_v)) {
 			CALI_CT_DEBUG("TCP SYN recycles entry, NEW flow.");
+			/* Decrement the connlimit counter before deleting so the
+			 * upcoming check_and_increment in new_flow_entrypoint
+			 * stays net-neutral. The helper is idempotent — bails if
+			 * CONNLIMIT_DEC is already set by the close-time path.
+			 */
+			qos_connlimit_decrement_for_ct(tracking_v);
 			cali_ct_delete_elem(&k);
 			cali_ct_delete_elem(&v->nat_rev_key);
 			goto out_lookup_fail;
@@ -801,7 +927,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 			}
 		}
 
-		if (tracking_v->a_to_b.approved && tracking_v->b_to_a.approved) {
+		if (ct_leg_flag(&tracking_v->a_to_b, CALI_CT_LEG_APPROVED) &&
+				ct_leg_flag(&tracking_v->b_to_a, CALI_CT_LEG_APPROVED)) {
 			ct_result_set_flag(result.rc, CT_RES_CONFIRMED);
 		}
 
@@ -852,7 +979,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		snat |= result.flags & CALI_CT_FLAG_HOST_PSNAT;
 		snat |= result.flags & CALI_CT_FLAG_NP_LOOP;
 		snat |= result.flags & CALI_CT_FLAG_NP_REMOTE;
-		snat = snat && dst_to_src->opener;
+		snat = snat && ct_leg_flag(dst_to_src, CALI_CT_LEG_OPENER);
 
 		if (snat) {
 			CALI_CT_DEBUG("Hit! NAT REV entry at ingress to connection opener: SNAT.");
@@ -866,7 +993,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 			result.rc =	CALI_CT_ESTABLISHED;
 		}
 
-		if (v->a_to_b.approved && v->b_to_a.approved) {
+		if (ct_leg_flag(&v->a_to_b, CALI_CT_LEG_APPROVED) &&
+				ct_leg_flag(&v->b_to_a, CALI_CT_LEG_APPROVED)) {
 			ct_result_set_flag(result.rc, CT_RES_CONFIRMED);
 		}
 
@@ -876,28 +1004,25 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		CALI_CT_DEBUG("Hit! NORMAL entry.");
 		if (tcp_recycled(syn, v)) {
 			CALI_CT_DEBUG("TCP SYN recycles entry, NEW flow.");
+			/* Decrement the connlimit counter before deleting so the
+			 * upcoming check_and_increment in new_flow_entrypoint
+			 * stays net-neutral. The helper is idempotent — bails if
+			 * CONNLIMIT_DEC is already set by the close-time path.
+			 */
+			qos_connlimit_decrement_for_ct(v);
 			cali_ct_delete_elem(&k);
 			goto out_lookup_fail;
 		}
 		if (tcp_header) {
 			CALI_CT_VERB("Last seen: %llu.", v->last_seen);
 			CALI_CT_VERB("A-to-B: seqno %u.", bpf_ntohl(v->a_to_b.seqno));
-			CALI_CT_VERB("A-to-B: syn_seen %d.", v->a_to_b.syn_seen);
-			CALI_CT_VERB("A-to-B: ack_seen %d.", v->a_to_b.ack_seen);
-			CALI_CT_VERB("A-to-B: fin_seen %d.", v->a_to_b.fin_seen);
-			CALI_CT_VERB("A-to-B: rst_seen %d.", v->a_to_b.rst_seen);
-		}
-		CALI_CT_VERB("A: approved %d.", v->a_to_b.approved);
-		if (tcp_header) {
 			CALI_CT_VERB("B-to-A: seqno %u.", bpf_ntohl(v->b_to_a.seqno));
-			CALI_CT_VERB("B-to-A: syn_seen %d.", v->b_to_a.syn_seen);
-			CALI_CT_VERB("B-to-A: ack_seen %d.", v->b_to_a.ack_seen);
-			CALI_CT_VERB("B-to-A: fin_seen %d.", v->b_to_a.fin_seen);
-			CALI_CT_VERB("B-to-A: rst_seen %d.", v->b_to_a.rst_seen);
 		}
-		CALI_CT_VERB("B: approved %d.", v->b_to_a.approved);
+		CALI_CT_VERB("A-to-B: flags 0x%x.", v->a_to_b.bits_word);
+		CALI_CT_VERB("B-to-A: flags 0x%x.", v->b_to_a.bits_word);
 
-		if (v->a_to_b.approved && v->b_to_a.approved) {
+		if (ct_leg_flag(&v->a_to_b, CALI_CT_LEG_APPROVED) &&
+				ct_leg_flag(&v->b_to_a, CALI_CT_LEG_APPROVED)) {
 			result.rc = CALI_CT_ESTABLISHED_BYPASS;
 			ct_result_set_flag(result.rc, CT_RES_CONFIRMED);
 		} else {
@@ -921,7 +1046,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 	int ret_from_tun = CALI_F_FROM_HEP &&
 				!ip_void(ctx->state->tun_ip) &&
 				ct_result_rc(result.rc) == CALI_CT_ESTABLISHED_DNAT &&
-				src_to_dst->approved &&
+				ct_leg_flag(src_to_dst, CALI_CT_LEG_APPROVED) &&
 				result.flags & CALI_CT_FLAG_NP_FWD;
 
 	if (related) {
@@ -944,7 +1069,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		CALI_DEBUG("Packet returned from tunnel " IP_FMT "", debug_ip(ctx->state->tun_ip));
 	} else if (CALI_F_TO_HOST || (skb_from_host(ctx->skb) && result.flags & CALI_CT_FLAG_HOST_PSNAT)) {
 		/* Source of the packet is the endpoint, so check the src approval flag. */
-		if (CALI_F_LO || src_to_dst->approved || (related && dst_to_src->approved)) {
+		if (CALI_F_LO || ct_leg_flag(src_to_dst, CALI_CT_LEG_APPROVED) ||
+				(related && ct_leg_flag(dst_to_src, CALI_CT_LEG_APPROVED))) {
 			CALI_CT_VERB("Packet approved by this workload's policy.");
 		} else {
 			/* Only approved by the other side (so far)?  Unlike
@@ -957,7 +1083,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		}
 	} else if (CALI_F_FROM_HOST) {
 		/* Dest of the packet is the endpoint, so check the dest approval flag. */
-		if (CALI_F_LO || dst_to_src->approved || (related && src_to_dst->approved)) {
+		if (CALI_F_LO || ct_leg_flag(dst_to_src, CALI_CT_LEG_APPROVED) ||
+				(related && ct_leg_flag(src_to_dst, CALI_CT_LEG_APPROVED))) {
 			// Packet was approved by the policy attached to this endpoint.
 			CALI_CT_VERB("Packet approved by this workload's policy.");
 		} else {
@@ -984,22 +1111,50 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		}
 		if (tcp_header->rst) {
 			CALI_CT_DEBUG("RST seen, marking CT entry.");
-			src_to_dst->rst_seen = 1;
-			v->rst_seen = now;
-		} else if (v->rst_seen) {
-			if (now - v->rst_seen > 2 * 60 * 1000000000ull || now - v->rst_seen > (1ull << 63)) {
+			ct_leg_set_flags(src_to_dst, CALI_CT_LEG_RST_SEEN);
+			tracking_v->rst_seen = now;
+		} else if (tracking_v->rst_seen) {
+			if (now - tracking_v->rst_seen > 2 * 60 * 1000000000ull || now - tracking_v->rst_seen > (1ull << 63)) {
 				/* It's been a looong time (2m) since we saw the RST, we still see
 				 * traffic, we must have seen traffic between now and rst_seen,
 				 * otherwise the entry would have been GCed, the connection is
 				 * likely established and the RST was spurious.
 				 */
-				v->rst_seen = 0;
+				tracking_v->rst_seen = 0;
+
+				/* The RST also decremented the connlimit counter and
+				 * claimed CONNLIMIT_DEC below. The recount has since
+				 * restored the slot, so that claim is stale: release it,
+				 * or this connection's real close finds the latch taken
+				 * and frees its slot only at recount speed. Atomic AND to
+				 * match the atomic OR that claims it -- a byte-wide RMW
+				 * on flags3 would race with a claim on another CPU.
+				 */
+				__sync_fetch_and_and(&v->type_flags_word, ~(__u32)CALI_CT_FLAG_CONNLIMIT_DEC);
 			}
 		}
 		ct_tcp_entry_update(ctx, tcp_header, src_to_dst, dst_to_src);
+
+		/* Decrement connlimit counter when a TCP connection closes. Both
+		 * FINs means both endpoints agreed, which one party cannot forge;
+		 * an RST is one packet from either side, so it releases nothing
+		 * here and the slot comes back when the entry is purged or the
+		 * recount rebases. The helper sets CONNLIMIT_DEC before
+		 * decrementing so concurrent paths bail.
+		 */
+		if (ct_leg_flag(src_to_dst, CALI_CT_LEG_FIN_SEEN) &&
+				ct_leg_flag(dst_to_src, CALI_CT_LEG_FIN_SEEN)) {
+			qos_connlimit_decrement_for_ct(tracking_v);
+		}
 	}
 
-	__u32 ifindex = CALI_F_TO_HOST ? ctx->skb->ifindex : skb_ingress_ifindex(ctx->skb);
+	/* host_ifindex fallback for netkit: skb->ifindex is the peer there;
+	 * we want to compare against the host-side primary that src_to_dst
+	 * stores.
+	 */
+	__u32 ifindex = CALI_F_TO_HOST
+		? (ctx->globals->data.host_ifindex ? ctx->globals->data.host_ifindex : ctx->skb->ifindex)
+		: skb_ingress_ifindex(ctx->skb);
 
 	if (src_to_dst->ifindex != ifindex) {
 		// Conntrack entry records a different ingress interface than the one the
@@ -1065,12 +1220,12 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 		 * packets in the opposite direction are coming from.
 		 */
 		result.ifindex_fwd = dst_to_src->ifindex;
-		if (dst_to_src->workload) {
+		if (ct_leg_flag(dst_to_src, CALI_CT_LEG_WORKLOAD)) {
 			ct_result_set_flag(result.rc, CT_RES_TO_WORKLOAD);
 		}
 	}
 
-	if ((CALI_F_INGRESS && CALI_F_TUNNEL) || !skb_seen(ctx->skb) ||
+	if ((CALI_F_INGRESS && IFACE_ENCAPS) || !skb_seen(ctx->skb) ||
 			(result.flags & CALI_CT_FLAG_NAT_OUT)) {
 		/* Account for the src->dst leg if we haven't seen the packet yet.
 		 * Since when the traffic is tunneled, BPF program on the host
@@ -1097,8 +1252,24 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_lookup(struct cali_tc_c
 	if (syn) {
 		CALI_CT_DEBUG("packet is SYN");
 		ct_result_set_flag(result.rc, CT_RES_SYN);
-	}
 
+		/* For ingress connection limit, propagate the CT entry's
+		 * CONNLIMIT_INGRESS / CONNLIMIT_INGRESS_REJECTED flags to the result
+		 * so accepted_entrypoint can decide what to do without an
+		 * extra CT lookup. The flags themselves are written by
+		 * accepted_entrypoint after the limit check resolves —
+		 * INGRESS on success, REJECTED on failure, never both
+		 */
+		if (CALI_F_TO_WEP && INGRESS_CONN_LIMIT_CONFIGURED) {
+			__u32 cl = ct_value_get_flags(tracking_v);
+			if (cl & CALI_CT_FLAG_CONNLIMIT_INGRESS) {
+				result.flags |= CALI_CT_FLAG_CONNLIMIT_INGRESS;
+			}
+			if (cl & CALI_CT_FLAG_CONNLIMIT_INGRESS_REJECTED) {
+				result.flags |= CALI_CT_FLAG_CONNLIMIT_INGRESS_REJECTED;
+			}
+		}
+	}
 
 	CALI_CT_DEBUG("result: 0x%x", result.rc);
 
